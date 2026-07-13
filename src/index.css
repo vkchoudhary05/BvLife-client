@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-brand-green-50: #f9f7f2;
+  --color-brand-green-100: #f5f2eb;
+  --color-brand-green-200: #e5e1d8;
+  --color-brand-green-300: #d6d0c2;
+  --color-brand-green-400: #5a6355;
+  --color-brand-green-500: #2d4635;
+  --color-brand-green-600: #2d4635;
+  --color-brand-green-700: #1b4332;
+  --color-brand-green-800: #1b4332;
+  --color-brand-green-900: #143326;
+  --color-brand-cream-50: #fdfbf7;
+  --color-brand-cream-100: #f9f7f2;
+  --color-brand-cream-200: #f5f2eb;
+  --color-brand-cream-300: #e5e1d8;
+  --color-brand-gold-300: #f1e7d2;
+  --color-brand-gold-400: #dfc593;
+  --color-brand-gold-500: #c5a059;
+  --color-brand-gold-600: #c5a059;
+  --color-brand-gold-700: #b08c4a;
+}
+
+/* Custom visual styling to elevate the premium luxury brand feel */
+body {
+  background-color: var(--color-brand-cream-50);
+  color: var(--color-brand-green-900);
+  font-family: var(--font-sans);
+}
+
+.font-serif-header {
+  font-family: var(--font-serif);
+}
+
+/* Glassmorphism utility */
+.glass-effect {
+  background: rgba(253, 251, 247, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(66, 95, 60, 0.08);
+}
+
+.glass-dark-effect {
+  background: rgba(27, 38, 25, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(253, 251, 247, 0.1);
+}
+
+/* Smooth custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-brand-cream-50);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-brand-green-200);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-gold-500);
+}
+
+/* Hide scrollbars for horizontal panels */
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
