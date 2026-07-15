@@ -45,6 +45,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanQuery = searchVal.trim().toLowerCase();
+    if (
+      cleanQuery.includes('admin') || 
+      cleanQuery.includes('apothecary') || 
+      cleanQuery.includes('director') || 
+      cleanQuery.includes('staff') ||
+      ['healer', 'control panel', 'gateway'].includes(cleanQuery)
+    ) {
+      setSearchVal('');
+      onSearch('');
+      onNavigate('admin');
+      setIsMobileMenuOpen(false);
+      return;
+    }
     onSearch(searchVal);
   };
 
@@ -178,16 +192,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <LayoutDashboard className="w-4 h-4 text-brand-green-600" />
                         <span>Customer Dashboard</span>
                       </button>
-                      
-                      {currentUser.role === 'admin' && (
-                        <button 
-                          onClick={() => { setShowProfileMenu(false); onNavigate('admin'); }}
-                          className="w-full text-left px-4 py-2.5 text-sm text-brand-gold-700 font-bold hover:bg-brand-cream-100 flex items-center gap-2 border-t border-b border-brand-green-600/5 bg-brand-cream-100/30"
-                        >
-                          <Shield className="w-4 h-4 text-brand-gold-600" />
-                          <span>Admin Control Panel</span>
-                        </button>
-                      )}
 
                       <button 
                         onClick={() => { setShowProfileMenu(false); onLogout(); }}
@@ -301,16 +305,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <LayoutDashboard className="w-4 h-4 text-brand-green-600" />
                     <span>Customer Dashboard</span>
                   </button>
-
-                  {currentUser.role === 'admin' && (
-                    <button 
-                      onClick={() => { setIsMobileMenuOpen(false); onNavigate('admin'); }}
-                      className="w-full text-left py-2 px-2 text-sm font-semibold text-brand-gold-700 flex items-center gap-2 border-t border-brand-green-600/5 mt-1 pt-2 rounded-lg hover:bg-brand-green-50/50"
-                    >
-                      <Shield className="w-4 h-4 text-brand-gold-600" />
-                      <span>Admin Control Panel</span>
-                    </button>
-                  )}
 
                   <button 
                     onClick={() => { setIsMobileMenuOpen(false); onLogout(); }}

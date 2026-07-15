@@ -10,6 +10,7 @@ import { Footer } from './components/Footer';
 import { AIConsultantModal } from './components/AIConsultantModal';
 import { QuickViewModal } from './components/QuickViewModal';
 import { ProductCompare } from './components/ProductCompare';
+import { AdminGatewayLogin } from './components/AdminGatewayLogin';
 
 // Pages
 import { CustomerHome } from './pages/CustomerHome';
@@ -52,8 +53,8 @@ const getPageFromUrl = () => {
     return { page: 'product', params: { id } };
   }
   
-  if (cleanPath === 'admin') {
-    return { page: 'dashboard', params: null };
+  if (cleanPath === 'admin' || cleanPath === 'admin-login') {
+    return { page: 'admin', params: null };
   }
   
   // Check if it is a static page or blogs / faqs
@@ -62,8 +63,8 @@ const getPageFromUrl = () => {
     return { page: 'static', params: { page: cleanPath } };
   }
   
-  // Default match for other paths (cart, checkout, dashboard, login, admin-login, etc.)
-  const knownPages = ['cart', 'checkout', 'dashboard', 'login', 'admin-login'];
+  // Default match for other paths (cart, checkout, dashboard, login, etc.)
+  const knownPages = ['cart', 'checkout', 'dashboard', 'login'];
   if (knownPages.includes(cleanPath)) {
     return { page: cleanPath, params: null };
   }
@@ -532,10 +533,13 @@ export default function App() {
 
   // Add review dynamically
   const handlePostReview = async (reviewData: { productId: string, rating: number, comment: string }) => {
-    const newReview = {
+    const product = products.find(p => p.id === reviewData.productId);
+    const newReview: Review = {
       id: `rev-${Date.now()}`,
       productId: reviewData.productId,
-      userName: currentUser ? currentUser.name : 'Verified Healer',
+      productName: product ? product.name : 'Ayurvedic Remedy',
+      userName: currentUser ? currentUser.fullName : 'Verified Healer',
+      userEmail: currentUser ? currentUser.email : 'anonymous@gramslife.com',
       rating: reviewData.rating,
       comment: reviewData.comment,
       date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
@@ -694,7 +698,11 @@ export default function App() {
     }
   };
 
-  const activeSettings = settings || {
+  const activeSettings: WebsiteSettings = settings || {
+    logoName: "Grams Life",
+    contactEmail: "care@gramslife.com",
+    contactPhone: "+91 98765 43210",
+    address: "Kerala, India",
     freeShippingThreshold: 999,
     baseShippingCharge: 50,
     defaultTaxPercentage: 12
@@ -704,18 +712,20 @@ export default function App() {
     <div className="bg-brand-cream-50 min-h-screen text-brand-green-950 font-sans selection:bg-brand-gold-500/30 flex flex-col justify-between">
       
       {/* 1. Header Navigation Bar */}
-      <Navbar 
-        currentUser={currentUser}
-        onNavigate={handleNavigate}
-        cart={cart}
-        wishlist={wishlist}
-        onOpenConsultant={() => setIsConsultantOpen(true)}
-        onLogout={handleLogout}
-        onSearch={(query) => handleNavigate('shop', { search: query })}
-        language={language}
-        onLanguageChange={handleLanguageChange}
-        searchQuery={currentPage === 'shop' ? (pageParams?.search || '') : ''}
-      />
+      {currentPage !== 'admin' && (
+        <Navbar 
+          currentUser={currentUser}
+          onNavigate={handleNavigate}
+          cart={cart}
+          wishlist={wishlist}
+          onOpenConsultant={() => setIsConsultantOpen(true)}
+          onLogout={handleLogout}
+          onSearch={(query) => handleNavigate('shop', { search: query })}
+          language={language}
+          onLanguageChange={handleLanguageChange}
+          searchQuery={currentPage === 'shop' ? (pageParams?.search || '') : ''}
+        />
+      )}
 
       {/* 2. Main Routing Layout Viewport */}
       <main className="flex-grow">
@@ -798,8 +808,8 @@ export default function App() {
           />
         )}
 
-        {/* User / Admin Dashboard */}
-        {(currentPage === 'dashboard' || currentPage === 'admin') && (
+        {/* User Dashboard */}
+        {currentPage === 'dashboard' && (
           <Dashboard
             user={currentUser}
             orders={orders}
@@ -813,7 +823,35 @@ export default function App() {
             onAddCoupon={handleAdminAddCoupon}
             onAddAddress={handleAddAddress}
             onNavigate={handleNavigate}
+            onLogout={handleLogout}
           />
+        )}
+
+        {/* Secret Admin Panel Route */}
+        {currentPage === 'admin' && (
+          currentUser && currentUser.role === 'admin' ? (
+            <Dashboard
+              user={currentUser}
+              orders={orders}
+              products={products}
+              coupons={coupons}
+              settings={activeSettings}
+              onUpdateStatus={handleAdminUpdateOrderStatus}
+              onAddProduct={handleAdminAddProduct}
+              onEditProduct={handleAdminEditProduct}
+              onDeleteProduct={handleAdminDeleteProduct}
+              onAddCoupon={handleAdminAddCoupon}
+              onAddAddress={handleAddAddress}
+              onNavigate={handleNavigate}
+              onLogout={handleLogout}
+            />
+          ) : (
+            <AdminGatewayLogin 
+              onNavigate={handleNavigate}
+              onLoginSuccess={() => {}}
+              handleLogin={handleLogin}
+            />
+          )
         )}
 
         {/* Static Policies, FAQS, Blogs Chronicles */}
@@ -1257,213 +1295,37 @@ export default function App() {
 
               </form>
 
-              {/* Staff login shortcut */}
-              <div className="text-center pt-4 border-t border-brand-green-200/30 text-xs">
-                <button 
-                  onClick={() => {
-                    setAuthEmail('');
-                    setAuthName('');
-                    setAuthPhone('');
-                    setAuthPassword('');
-                    setAuthConfirmPassword('');
-                    setLoginError('');
-                    setOtpStep(false);
-                    handleNavigate('admin-login');
-                  }}
-                  className="inline-flex items-center gap-1.5 text-brand-gold-700 hover:text-brand-gold-800 font-bold tracking-wide transition-colors cursor-pointer"
-                >
-                  <Shield className="w-3.5 h-3.5 text-brand-gold-600 animate-pulse" />
-                  <span>Access Healer / Staff Portal ➔</span>
-                </button>
-              </div>
-
             </div>
           </div>
         )}
 
-        {/* Dedicated Admin/Staff Login Portal */}
-        {currentPage === 'admin-login' && (
-          <div className="max-w-md mx-auto my-16 px-4 sm:px-6 animate-in fade-in zoom-in-95 duration-300">
-            <div className="bg-[#0f2015] border border-brand-gold-500/20 rounded-[2.5rem] p-6 sm:p-10 shadow-2xl flex flex-col space-y-8 relative overflow-hidden text-brand-cream-100">
-              
-              {/* Subtle top decorative ambient gold line */}
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-gold-500 via-brand-gold-300 to-brand-gold-700" />
 
-              {/* Intro Headers */}
-              <div className="text-center space-y-3">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-gold-500/15 border border-brand-gold-500/30 text-brand-gold-400 text-[10px] font-bold uppercase tracking-wider mx-auto">
-                  <Shield className="w-3.5 h-3.5 text-brand-gold-500" />
-                  <span>Sanctuary Registry</span>
-                </div>
-                <div className="space-y-1.5">
-                  <h2 className="font-serif text-2xl sm:text-3xl font-bold text-brand-cream-50 tracking-tight">
-                    Authorized Staff Portal
-                  </h2>
-                  <p className="text-xs text-brand-cream-100/70 max-w-xs mx-auto leading-relaxed">
-                    Provide certified credentials to synchronize compound records, customize tax matrixes, and process order dispatches.
-                  </p>
-                </div>
-              </div>
-
-              {/* Error Banner */}
-              {loginError && (
-                <div className="p-3.5 bg-red-900/50 border border-red-700/50 text-red-100 text-xs rounded-xl text-center font-semibold">
-                  {loginError}
-                </div>
-              )}
-
-              {/* Admin/Staff Only Autofill Panel */}
-              <div className="bg-[#142d1d] border border-brand-gold-500/10 p-4 rounded-2xl space-y-3 shadow-inner">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 text-brand-gold-400 animate-pulse" />
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-brand-cream-100/80">Staff Security Node (Autofill)</span>
-                  </div>
-                  <span className="text-[8px] text-brand-gold-400 font-extrabold bg-brand-gold-500/20 border border-brand-gold-500/30 px-2 py-0.5 rounded-full">Secure Node</span>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthEmail('vkchoudhary050607@gmail.com');
-                      setAuthPassword('password123');
-                      setAuthRole('admin');
-                      setLoginError('');
-                    }}
-                    className="p-3 text-left border border-brand-gold-500/15 hover:border-brand-gold-500 rounded-xl bg-brand-green-900/40 hover:bg-[#142d1d] transition-all duration-200 cursor-pointer flex flex-col shadow-sm"
-                  >
-                    <span className="text-xs font-bold text-brand-cream-50 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-brand-gold-500 inline-block animate-ping" />
-                      Vipin Choudhary
-                    </span>
-                    <span className="text-[10px] text-brand-cream-100/50 font-mono mt-1 break-all truncate">vkchoudhary050607@gmail.com</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthEmail('admin@gramslife.com');
-                      setAuthPassword('password123');
-                      setAuthRole('admin');
-                      setLoginError('');
-                    }}
-                    className="p-3 text-left border border-brand-gold-500/15 hover:border-brand-gold-500 rounded-xl bg-brand-green-900/40 hover:bg-[#142d1d] transition-all duration-200 cursor-pointer flex flex-col shadow-sm"
-                  >
-                    <span className="text-xs font-bold text-brand-cream-50 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-brand-gold-400/40 inline-block" />
-                      Lead Staff Node
-                    </span>
-                    <span className="text-[10px] text-brand-cream-100/50 font-mono mt-1 truncate">admin@gramslife.com</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Form Block */}
-              <form onSubmit={handleAuthSubmit} className="space-y-4">
-                
-                {/* Email address field */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase tracking-wider font-bold text-brand-gold-400/90 flex items-center gap-1.5 font-serif">
-                    <Mail className="w-3.5 h-3.5 text-brand-gold-500" />
-                    <span>Registry Email</span>
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="admin@example.com"
-                    value={authEmail}
-                    onChange={(e) => {
-                      setAuthEmail(e.target.value);
-                      setAuthRole('admin');
-                    }}
-                    className="w-full px-4 py-3 rounded-2xl bg-[#142d1d] border border-brand-gold-500/20 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-cream-100 transition-all placeholder-brand-cream-100/20 shadow-sm"
-                  />
-                </div>
-
-                {/* Password field */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase tracking-wider font-bold text-brand-gold-400/90 flex items-center gap-1.5 font-serif">
-                    <Lock className="w-3.5 h-3.5 text-brand-gold-500" />
-                    <span>Registry Password</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      placeholder="Enter security password"
-                      value={authPassword}
-                      onChange={(e) => setAuthPassword(e.target.value)}
-                      className="w-full pl-4 pr-10 py-3 rounded-2xl bg-[#142d1d] border border-brand-gold-500/20 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-cream-100 transition-all placeholder-brand-cream-100/20 shadow-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-cream-100/40 hover:text-brand-cream-100 transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Secure SSO Info Banner */}
-                <div className="text-[10px] text-brand-gold-300 bg-[#142d1d] p-3.5 rounded-2xl border border-brand-gold-500/20 leading-normal flex items-start gap-1.5 shadow-sm">
-                  <Shield className="w-4 h-4 text-brand-gold-500 shrink-0 mt-0.5" />
-                  <span>This portal is strictly restricted. All cryptographic access actions are logged securely under sovereign temple ledger audits.</span>
-                </div>
-
-                {/* Action Button */}
-                <button
-                  type="submit"
-                  disabled={authLoading}
-                  className="w-full py-4 bg-brand-gold-500 hover:bg-brand-gold-600 disabled:bg-brand-gold-500/45 text-brand-green-950 font-serif font-bold rounded-2xl text-xs uppercase tracking-wider transition-all duration-200 shadow-lg hover:shadow-brand-gold-500/10 flex items-center justify-center gap-1.5 cursor-pointer mt-4 border border-brand-gold-600"
-                >
-                  <span>{authLoading ? "Authenticating..." : "Sign In Admin"}</span>
-                  <Shield className="w-4 h-4 text-brand-green-950" />
-                </button>
-              </form>
-
-              {/* Back Link to Customer Portal */}
-              <div className="text-center pt-4 border-t border-brand-gold-500/10">
-                <button 
-                  onClick={() => {
-                    setAuthEmail('');
-                    setAuthName('');
-                    setAuthPhone('');
-                    setLoginError('');
-                    handleNavigate('login');
-                  }}
-                  className="text-xs text-brand-cream-100/60 hover:text-brand-gold-400 font-bold hover:underline cursor-pointer inline-flex items-center gap-1 transition-colors"
-                >
-                  ← Return to Member Sanctuary
-                </button>
-              </div>
-
-            </div>
-          </div>
-        )}
 
       </main>
 
       {/* 3. Footer */}
-      <Footer 
-        onNavigate={handleNavigate}
-        onOpenConsultant={() => setIsConsultantOpen(true)}
-        language={language}
-      />
+      {currentPage !== 'admin' && (
+        <Footer 
+          onNavigate={handleNavigate}
+          onOpenConsultant={() => setIsConsultantOpen(true)}
+          language={language}
+        />
+      )}
 
       {/* 4. FLOATING COMPARISON DRAWER */}
-      <ProductCompare 
-        compareList={compareList}
-        onRemoveFromCompare={handleRemoveFromCompare}
-        onClearCompare={handleClearCompare}
-        onAddToCart={handleAddToCart}
-        isOpen={isCompareOpen}
-        onClose={() => setIsCompareOpen(false)}
-      />
+      {currentPage !== 'admin' && (
+        <ProductCompare 
+          compareList={compareList}
+          onRemoveFromCompare={handleRemoveFromCompare}
+          onClearCompare={handleClearCompare}
+          onAddToCart={handleAddToCart}
+          isOpen={isCompareOpen}
+          onClose={() => setIsCompareOpen(false)}
+        />
+      )}
 
       {/* 5. FLOATING QUICK VIEW POPUP */}
-      {quickViewProduct && (
+      {currentPage !== 'admin' && quickViewProduct && (
         <QuickViewModal
           product={quickViewProduct}
           onClose={() => setQuickViewProduct(null)}
@@ -1473,7 +1335,7 @@ export default function App() {
       )}
 
       {/* 6. FLOATING VEDIC AI CONSULTANT MODAL */}
-      {isConsultantOpen && (
+      {currentPage !== 'admin' && isConsultantOpen && (
         <AIConsultantModal
           onClose={() => setIsConsultantOpen(false)}
           products={products}

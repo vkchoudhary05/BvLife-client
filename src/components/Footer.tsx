@@ -9,6 +9,7 @@ import { Mail, Phone, MapPin, ArrowRight, ShieldCheck, HeartHandshake, Sparkles 
 interface FooterProps {
   onNavigate: (page: string, params?: any) => void;
   onOpenConsultant: () => void;
+  language?: any;
 }
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant }) => {
@@ -161,14 +162,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant }) 
             <span className="hover:text-brand-gold-500 cursor-pointer">Security SSL Verified</span>
             <span>•</span>
             <span className="hover:text-brand-gold-500 cursor-pointer">Cards, UPI, COD Accepted</span>
-            <span>•</span>
-            <button 
-              onClick={() => onNavigate('admin-login')} 
-              className="text-brand-gold-400 hover:text-brand-gold-500 font-bold transition-colors cursor-pointer bg-transparent border-none p-0 flex items-center gap-1"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-gold-400 inline-block animate-pulse" />
-              Apothecary Staff Portal
-            </button>
           </div>
         </div>
       </div>

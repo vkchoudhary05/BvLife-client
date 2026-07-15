@@ -24,6 +24,7 @@ interface DashboardProps {
   onAddCoupon: (cpn: Coupon) => void;
   onAddAddress: (addr: Address) => void;
   onNavigate: (page: string, params?: any) => void;
+  onLogout?: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -38,7 +39,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onDeleteProduct,
   onAddCoupon,
   onAddAddress,
-  onNavigate
+  onNavigate,
+  onLogout
 }) => {
   const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState<string>(isAdmin ? 'admin-stats' : 'orders');
@@ -153,7 +155,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Filter orders for non-admin
   const userOrders = useMemo(() => {
     if (isAdmin) return orders;
-    return orders.filter(o => o.userId === user?.id);
+    return orders.filter(o => o.userEmail === user?.email);
   }, [orders, user, isAdmin]);
 
   // Calculations for admin stats dashboard (MySQL-Backed)
@@ -277,7 +279,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       discountType: 'percentage',
       value: cpnVal,
       active: true,
-      minOrderValue: cpnMin
+      minOrderValue: cpnMin,
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     });
 
     setShowAddCpn(false);
@@ -302,21 +305,61 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div id="dashboard-page" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       
-      {/* Title block */}
-      <div className="border-b border-brand-green-600/10 pb-5 mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">Personal Account</span>
-          <h2 className="font-serif text-3xl font-bold text-brand-green-900">
-            Welcome, {user.name} <span className="text-xs font-sans text-brand-gold-700 font-bold italic">({user.role === 'admin' ? 'Apothecary Director' : 'Vedic Practitioner'})</span>
-          </h2>
-          <p className="text-xs text-brand-green-600/70 mt-1">
-            {isAdmin ? "Manage store settings, CRUD remedies, and audit order dispatch statuses." : "Track package deliveries, biological diagnostic profile, and delivery endpoints."}
-          </p>
+      {/* Admin Title & Security Control Banner */}
+      {isAdmin && (
+        <div className="bg-brand-green-950 text-brand-cream-50 rounded-3xl p-6 mb-8 border border-brand-gold-500/20 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4 relative overflow-hidden">
+          {/* Subtle gold accent border glow */}
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-gold-500 via-brand-gold-300 to-brand-gold-600" />
+          
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-brand-green-900 rounded-2xl border border-brand-gold-500/20 shadow-inner">
+              <Shield className="w-6 h-6 text-brand-gold-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand-gold-400 bg-brand-gold-500/10 border border-brand-gold-500/20 px-2 py-0.5 rounded-full">Administrative Node</span>
+              </div>
+              <h1 className="font-serif text-2xl font-bold tracking-tight mt-1 text-brand-cream-50">Grams Life Admin Panel</h1>
+              <p className="text-xs text-brand-cream-300/80 mt-0.5">Apothecary Director: <span className="font-semibold text-brand-cream-50">{user.fullName}</span> ({user.email})</p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            <button
+              onClick={() => onNavigate('home')}
+              className="w-full sm:w-auto px-4 py-2.5 bg-brand-green-900 hover:bg-brand-green-850 border border-brand-gold-500/15 hover:border-brand-gold-500/30 text-brand-cream-100 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm text-center"
+            >
+              Return to Public Sanctuary
+            </button>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="w-full sm:w-auto px-4 py-2.5 bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer border border-brand-gold-400 shadow-md text-center"
+              >
+                Secure Sign Out
+              </button>
+            )}
+          </div>
         </div>
-        <div className="text-xs text-brand-green-600 font-mono">
-          Linked email: {user.email}
+      )}
+
+      {/* Regular Customer Title block */}
+      {!isAdmin && (
+        <div className="border-b border-brand-green-600/10 pb-5 mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">Personal Account</span>
+            <h2 className="font-serif text-3xl font-bold text-brand-green-900">
+              Welcome, {user.fullName} <span className="text-xs font-sans text-brand-gold-700 font-bold italic">({user.role === 'admin' ? 'Apothecary Director' : 'Vedic Practitioner'})</span>
+            </h2>
+            <p className="text-xs text-brand-green-600/70 mt-1">
+              Track package deliveries, biological diagnostic profile, and delivery endpoints.
+            </p>
+          </div>
+          <div className="text-xs text-brand-green-600 font-mono">
+            Linked email: {user.email}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
@@ -508,7 +551,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <div className="flex flex-col sm:flex-row justify-between text-xs border-b border-brand-green-600/5 pb-3 gap-2">
                         <div>
                           <p className="font-bold text-brand-green-950 font-mono">ORDER ID: {order.id}</p>
-                          <p className="text-brand-green-600/50">Placed: {order.createdAt}</p>
+                          <p className="text-brand-green-600/50">Placed: {order.orderDate}</p>
                         </div>
                         <div className="sm:text-right">
                           <p className="font-bold text-brand-green-900">Total Secured: ₹{order.finalTotal}</p>
@@ -1190,9 +1233,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-brand-green-600/70">Sanctuary Chronicle Ledger</h4>
                   <div className="space-y-1.5">
                     <p className="text-brand-green-950 font-medium">Invoice Number: <span className="font-mono font-bold text-brand-green-900">GL-INV-{invoiceOrder.id.slice(-6).toUpperCase()}</span></p>
-                    <p className="text-brand-green-950 font-medium">Sourcing Date: <span className="font-mono text-brand-green-900">{invoiceOrder.createdAt || invoiceOrder.orderDate || new Date().toLocaleDateString('en-IN')}</span></p>
+                    <p className="text-brand-green-950 font-medium">Sourcing Date: <span className="font-mono text-brand-green-900">{invoiceOrder.orderDate || new Date().toLocaleDateString('en-IN')}</span></p>
                     <p className="text-brand-green-950 font-medium">Payment Ledger: <span className="font-mono text-brand-green-900">{invoiceOrder.paymentMethod}</span></p>
-                    <p className="text-brand-green-950 font-medium">Status: <span className={`font-bold uppercase text-[9px] px-2 py-0.5 rounded-full ${invoiceOrder.paymentStatus === 'Paid' || invoiceOrder.paymentStatus === 'Completed' ? 'bg-brand-green-100 text-brand-green-700' : 'bg-brand-gold-500/10 text-brand-gold-700 border border-brand-gold-500/20'}`}>{invoiceOrder.paymentStatus}</span></p>
+                    <p className="text-brand-green-950 font-medium">Status: <span className={`font-bold uppercase text-[9px] px-2 py-0.5 rounded-full ${invoiceOrder.paymentStatus === 'Paid' ? 'bg-brand-green-100 text-brand-green-700' : 'bg-brand-gold-500/10 text-brand-gold-700 border border-brand-gold-500/20'}`}>{invoiceOrder.paymentStatus}</span></p>
                   </div>
                 </div>
               </div>

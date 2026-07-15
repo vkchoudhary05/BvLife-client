@@ -16,6 +16,7 @@ interface CartProps {
   settings: WebsiteSettings;
   onApplyCoupon: (coupon: Coupon | null) => void;
   appliedCoupon: Coupon | null;
+  language?: any;
 }
 
 export const Cart: React.FC<CartProps> = ({

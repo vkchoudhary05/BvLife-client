@@ -13,6 +13,7 @@ interface StaticPagesProps {
   blogs: Blog[];
   faqs: FAQ[];
   onNavigate: (page: string, params?: any) => void;
+  language?: any;
 }
 
 export const StaticPages: React.FC<StaticPagesProps> = ({
@@ -250,7 +251,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
                 
                 {/* Meta row */}
                 <div className="flex items-center gap-4 text-xs text-brand-green-600/60 pb-4 border-b border-brand-green-600/10">
-                  <span className="font-medium">Published: {selectedBlog.publishedAt}</span>
+                  <span className="font-medium">Published: {selectedBlog.date}</span>
                   <span>•</span>
                   <span>By {selectedBlog.author}</span>
                   <span>•</span>
