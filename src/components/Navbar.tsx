@@ -87,12 +87,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex-shrink-0 cursor-pointer flex items-center gap-1.5 sm:gap-2"
             onClick={() => onNavigate('home')}
           >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-green-700 flex items-center justify-center text-brand-cream-100 font-serif text-base sm:text-xl font-bold shadow-sm shrink-0">
-              G
-            </div>
             <div className="min-w-0">
               <h1 className="font-serif text-base sm:text-2xl font-bold tracking-tight text-brand-green-800 leading-none">
-                Grams <span className="text-brand-gold-600 font-sans font-normal italic text-sm sm:text-lg">Life</span>
+                Bv <span className="text-brand-gold-600 font-sans font-normal italic text-sm sm:text-lg">Life</span>
               </h1>
               <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-brand-green-600 font-medium mt-0.5 sm:-mt-1 truncate">
                 Organic Wellbeing

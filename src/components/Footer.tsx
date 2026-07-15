@@ -69,7 +69,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant }) 
               G
             </div>
             <span className="font-serif text-xl font-bold tracking-tight text-brand-cream-100">
-              Grams <span className="text-brand-gold-500 font-sans font-normal italic">Life</span>
+              Bv<span className="text-brand-gold-500 font-sans font-normal italic">Life</span>
             </span>
           </div>
           <p className="text-xs text-brand-cream-300/80 leading-relaxed">
