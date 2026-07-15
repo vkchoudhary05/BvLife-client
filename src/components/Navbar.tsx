@@ -204,7 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ) : (
                     <>
                       <div className="px-4 py-2 border-b border-brand-green-600/10">
-                        <p className="text-sm font-semibold text-brand-green-800">Welcome to Grams Life</p>
+                        <p className="text-sm font-semibold text-brand-green-800">Welcome to Bv Life</p>
                         <p className="text-xs text-brand-green-600/70">Connect to synchronize your holistic cart & health logs.</p>
                       </div>
                       <button 

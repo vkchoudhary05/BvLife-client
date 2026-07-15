@@ -86,7 +86,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant }) 
             </div>
             <div className="flex items-center gap-2.5">
               <MapPin className="w-4 h-4 text-brand-gold-500 flex-shrink-0" />
-              <span className="leading-tight">Grams Life Herbals, Silicon Valley, CA 94016</span>
+              <span className="leading-tight">Bv Life Herbals, Silicon Valley, CA 94016</span>
             </div>
           </div>
         </div>
@@ -157,7 +157,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant }) 
       {/* Sub Footer */}
       <div className="bg-brand-green-955 border-t border-brand-green-800/40 py-6 text-xs text-brand-cream-300/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>© 2026 Grams Life Inc. All Ayurvedic herbs strictly source from sustainable high-altitude farms.</p>
+          <p>© 2026 Bv Life Inc. All Ayurvedic herbs strictly source from sustainable high-altitude farms.</p>
           <div className="flex gap-4 items-center">
             <span className="hover:text-brand-gold-500 cursor-pointer">Security SSL Verified</span>
             <span>•</span>
