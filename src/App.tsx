@@ -25,7 +25,7 @@ import { StaticPages } from './pages/StaticPages';
 import { Product, Blog, FAQ, Coupon, WebsiteSettings, User, CartItem, Order, Address, Review } from './types';
 
 // Bilingual translations
-import { Language, t, translateProductAttr } from './lib/translations';
+// import { Language, t, translateProductAttr } from './lib/translations';
 import { validateAndFormatIndianPhone } from './utils';
 
 // Helper to parse current URL and return initial page + params
@@ -698,8 +698,25 @@ export default function App() {
     }
   };
 
+  const handleUpdateSettings = async (newSettings: WebsiteSettings) => {
+    setSettings(newSettings);
+    try {
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify(newSettings)
+      });
+    } catch (err) {
+      console.error("Error saving website settings: ", err);
+    }
+  };
+
   const activeSettings: WebsiteSettings = settings || {
     logoName: "Grams Life",
+    logoUrl: "",
     contactEmail: "care@gramslife.com",
     contactPhone: "+91 98765 43210",
     address: "Kerala, India",
@@ -724,6 +741,7 @@ export default function App() {
           language={language}
           onLanguageChange={handleLanguageChange}
           searchQuery={currentPage === 'shop' ? (pageParams?.search || '') : ''}
+          settings={activeSettings}
         />
       )}
 
@@ -743,7 +761,7 @@ export default function App() {
             onToggleWishlist={handleToggleWishlist}
             onAddToCompare={handleAddToCompare}
             compareList={compareList}
-            language={language}
+            // language={language}
           />
         )}
 
@@ -825,6 +843,7 @@ export default function App() {
             onNavigate={handleNavigate}
             onLogout={handleLogout}
             isAdminPanel={false}
+            onUpdateSettings={handleUpdateSettings}
           />
         )}
 
@@ -846,6 +865,7 @@ export default function App() {
               onNavigate={handleNavigate}
               onLogout={handleLogout}
               isAdminPanel={true}
+              onUpdateSettings={handleUpdateSettings}
             />
           ) : (
             <AdminGatewayLogin 
@@ -1311,6 +1331,7 @@ export default function App() {
           onNavigate={handleNavigate}
           onOpenConsultant={() => setIsConsultantOpen(true)}
           language={language}
+          settings={activeSettings}
         />
       )}
 

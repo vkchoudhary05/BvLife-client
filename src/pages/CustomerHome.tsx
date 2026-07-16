@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -410,6 +411,67 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
         </div>
       </section>
 
+
+      
+      {/* Floating Action Button for AI Acharya Consultant - Highly Compact, Elegant & Eye-catching */}
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999] pointer-events-none">
+        {/* Inject CSS styles directly for perfectly smooth, non-blurry, jitter-free floating */}
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes premium-acharya-float {
+            0%, 100% {
+              transform: translateY(0) translateZ(0);
+            }
+            50% {
+              transform: translateY(-6px) translateZ(0);
+            }
+          }
+          .premium-acharya-btn-container {
+            animation: premium-acharya-float 3.5s ease-in-out infinite;
+            will-change: transform;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+          }
+        `}} />
+
+        <div className="premium-acharya-btn-container relative group pointer-events-auto">
+          {/* External golden ambient pulse ring to draw attention elegantly */}
+          <div className="absolute inset-0 rounded-full bg-brand-gold-500/25 blur-md animate-pulse pointer-events-none scale-105" />
+          <div className="absolute -inset-[3px] rounded-full bg-gradient-to-r from-brand-gold-500 via-brand-gold-400 to-brand-gold-600 opacity-70 blur-xs group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+          <button
+            onClick={onOpenConsultant}
+            className="relative flex items-center gap-1.5 sm:gap-2.5 px-3.5 py-2.5 sm:px-4.5 sm:py-3.5 rounded-full bg-gradient-to-r from-brand-green-800 via-brand-green-900 to-brand-green-800 text-brand-cream-400 hover:text-brand-gold-500 font-bold transition-all duration-300 shadow-[0_8px_25px_rgba(0,0,0,0.45)] hover:scale-105 active:scale-95 cursor-pointer border border-brand-gold-100 shrink-0 overflow-hidden"
+            // title={t('btnAskAcharya', language)}
+          >
+            {/* Shimmer line effect across the button */}
+            <div className="absolute inset-0 bg-gradient-to-r from-brand-gold-500/0 via-brand-gold-500/15 to-brand-gold-500/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+
+            {/* Glowing sparkle icon */}
+            <div className="relative flex items-center justify-center bg-brand-gold-500/20 p-1 sm:p-1.5 rounded-full border border-brand-gold-400/30">
+              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-gold-300 animate-pulse" />
+            </div>
+
+            <div className="flex flex-col items-start leading-tight text-left">
+              <span className="text-[8px] sm:text-[9px] tracking-widest uppercase font-sans font-extrabold text-brand-gold-400">
+                AI Consult
+              </span>
+              <span className="text-[11px] sm:text-xs tracking-wide font-serif font-bold text-brand-cream-50 group-hover:text-brand-gold-200 transition-colors">
+                Ask Acharya
+              </span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      
+
+
+
+      
+
     </div>
   );
 };
+

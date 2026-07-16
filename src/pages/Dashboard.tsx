@@ -7,7 +7,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   History, MapPin, User, LayoutDashboard, Leaf, ShoppingBag, 
   Tag, Plus, Trash2, Edit2, ShieldAlert, Sparkles, Check, CheckCircle2, Shield, Activity,
-  Printer, FileText, X, Download
+  Printer, FileText, X, Download, Settings
 } from 'lucide-react';
 import { User as UserType, Order, Address, Product, Coupon, WebsiteSettings } from '../types';
 
@@ -26,6 +26,7 @@ interface DashboardProps {
   onNavigate: (page: string, params?: any) => void;
   onLogout?: () => void;
   isAdminPanel?: boolean;
+  onUpdateSettings?: (settings: WebsiteSettings) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -42,11 +43,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onAddAddress,
   onNavigate,
   onLogout,
-  isAdminPanel = false
+  isAdminPanel = false,
+  onUpdateSettings
 }) => {
   const isAdmin = (user?.role === 'admin' && isAdminPanel) || false;
   const [activeTab, setActiveTab] = useState<string>(isAdmin ? 'admin-stats' : 'orders');
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
+  const [settingsSaved, setSettingsSaved] = useState(false);
 
   // Payments Ledger state
   const [payments, setPayments] = useState<any[]>([]);
@@ -391,10 +394,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand-gold-500 bg-brand-gold-500/10 border border-brand-gold-500/20 px-2 py-0.5 rounded-full">Administrative Node</span>
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand-gold-400 bg-brand-gold-500/10 border border-brand-gold-500/20 px-2 py-0.5 rounded-full">Administrative Node</span>
               </div>
-              <h1 className="font-serif text-2xl font-bold tracking-tight mt-1 text-brand-cream-50">BV Life Admin Panel</h1>
-              <p className="text-xs text-brand-green-800 mt-0.5">Apothecary Director: <span className="font-semibold text-brand-green-800">{user.fullName}</span> ({user.email})</p>
+              <h1 className="font-serif text-2xl font-bold tracking-tight mt-1 text-brand-cream-50">Grams Life Admin Panel</h1>
+              <p className="text-xs text-brand-cream-300/80 mt-0.5">Apothecary Director: <span className="font-semibold text-brand-cream-50">{user.fullName}</span> ({user.email})</p>
             </div>
           </div>
           
@@ -585,6 +588,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 >
                   <Activity className="w-4 h-4 shrink-0" />
                   <span>Security & Activity Logs</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('admin-settings')}
+                  className={`shrink-0 snap-start lg:w-full text-left px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer ${
+                    activeTab === 'admin-settings' ? 'bg-brand-green-700 text-brand-cream-50' : 'text-brand-green-700 hover:bg-brand-green-50'
+                  }`}
+                >
+                  <Settings className="w-4 h-4 shrink-0" />
+                  <span>Website Settings</span>
                 </button>
               </>
             )}
@@ -1372,6 +1384,179 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB: WEBSITE SETTINGS (ADMIN) */}
+          {activeTab === 'admin-settings' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="border-b border-brand-green-600/5 pb-2">
+                <h3 className="font-serif text-lg font-bold text-brand-green-900">
+                  Global Website Settings
+                </h3>
+                <p className="text-xs text-brand-green-600/70 mt-1">
+                  Configure your brand logo, name, taxes, shipping, and store details.
+                </p>
+              </div>
+
+              {settingsSaved && (
+                <div className="p-3 bg-brand-green-100 border border-brand-green-200 text-brand-green-800 text-xs font-bold rounded-xl flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-brand-green-700" />
+                  <span>Ayurvedic settings aligned and saved securely.</span>
+                </div>
+              )}
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                const updatedSettings: WebsiteSettings = {
+                  logoName: fd.get('logoName') as string || 'Grams Life',
+                  logoUrl: fd.get('logoUrl') as string || '',
+                  contactEmail: fd.get('contactEmail') as string || '',
+                  contactPhone: fd.get('contactPhone') as string || '',
+                  address: fd.get('address') as string || '',
+                  facebook: fd.get('facebook') as string || '',
+                  instagram: fd.get('instagram') as string || '',
+                  twitter: fd.get('twitter') as string || '',
+                  defaultTaxPercentage: Number(fd.get('defaultTaxPercentage') || 0),
+                  baseShippingCharge: Number(fd.get('baseShippingCharge') || 0),
+                  freeShippingThreshold: Number(fd.get('freeShippingThreshold') || 0),
+                };
+                if (onUpdateSettings) {
+                  onUpdateSettings(updatedSettings);
+                  setSettingsSaved(true);
+                  setTimeout(() => setSettingsSaved(false), 3000);
+                }
+              }} className="space-y-4 max-w-xl">
+                <div>
+                  <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Store Name (Logo Text)</label>
+                  <input
+                    type="text"
+                    name="logoName"
+                    defaultValue={settings.logoName}
+                    required
+                    className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Logo Image URL</label>
+                  <input
+                    type="text"
+                    name="logoUrl"
+                    defaultValue={settings.logoUrl || ''}
+                    placeholder="https://example.com/logo.png"
+                    className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                  />
+                  <p className="text-[10px] text-brand-green-600/60 mt-1">
+                    Provide a public image link or a base64 encoded image to display your brand logo.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Contact Email</label>
+                    <input
+                      type="email"
+                      name="contactEmail"
+                      defaultValue={settings.contactEmail}
+                      required
+                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Contact Phone</label>
+                    <input
+                      type="text"
+                      name="contactPhone"
+                      defaultValue={settings.contactPhone}
+                      required
+                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Address</label>
+                  <input
+                    type="text"
+                    name="address"
+                    defaultValue={settings.address}
+                    required
+                    className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Tax Percentage (%)</label>
+                    <input
+                      type="number"
+                      name="defaultTaxPercentage"
+                      defaultValue={settings.defaultTaxPercentage}
+                      required
+                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Shipping Charge (₹)</label>
+                    <input
+                      type="number"
+                      name="baseShippingCharge"
+                      defaultValue={settings.baseShippingCharge}
+                      required
+                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Free Shipping Min (₹)</label>
+                    <input
+                      type="number"
+                      name="freeShippingThreshold"
+                      defaultValue={settings.freeShippingThreshold}
+                      required
+                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Facebook URL</label>
+                    <input
+                      type="text"
+                      name="facebook"
+                      defaultValue={settings.facebook || ''}
+                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Instagram URL</label>
+                    <input
+                      type="text"
+                      name="instagram"
+                      defaultValue={settings.instagram || ''}
+                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Twitter URL</label>
+                    <input
+                      type="text"
+                      name="twitter"
+                      defaultValue={settings.twitter || ''}
+                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wide transition-all shadow-md cursor-pointer mt-2"
+                >
+                  Save Settings
+                </button>
+              </form>
             </div>
           )}
 

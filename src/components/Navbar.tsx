@@ -5,9 +5,8 @@
 
 import React, { useState } from 'react';
 import { Search, Heart, ShoppingBag, User, Sparkles, LogOut, LayoutDashboard, Shield, Menu, X } from 'lucide-react';
-import { User as UserType, CartItem } from '../types';
+import { User as UserType, CartItem, WebsiteSettings } from '../types';
 import { Language, t } from '../lib/translations';
-import logo from "@/assets/Bvlogo.png";
 
 interface NavbarProps {
   currentUser: UserType | null;
@@ -20,6 +19,7 @@ interface NavbarProps {
   language: Language;
   onLanguageChange: (lang: Language) => void;
   searchQuery?: string;
+  settings?: WebsiteSettings;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -32,7 +32,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSearch,
   language,
   onLanguageChange,
-  searchQuery = ''
+  searchQuery = '',
+  settings
 }) => {
   const [searchVal, setSearchVal] = useState(searchQuery);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -83,17 +84,34 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Brand Logo */}
-<div
-  id="brand-logo-container"
-  className="flex-shrink-0 cursor-pointer flex items-center"
-  onClick={() => onNavigate("home")}
->
-  <img
-    src={logo}
-    alt="BV Life"
-    className="h-12 sm:h-16 lg:h-18 w-auto object-contain"
-  />
-</div>
+          <div 
+            id="brand-logo-container" 
+            className="flex-shrink-0 cursor-pointer flex items-center gap-1.5 sm:gap-2"
+            onClick={() => onNavigate('home')}
+          >
+            {settings?.logoUrl ? (
+              <img 
+                src={settings.logoUrl} 
+                alt={settings.logoName || "Grams Life"} 
+                className="h-10 sm:h-12 w-auto object-contain max-w-[150px]" 
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <>
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-green-700 flex items-center justify-center text-brand-cream-100 font-serif text-base sm:text-xl font-bold shadow-sm shrink-0">
+                  {(settings?.logoName || "Grams Life").charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <h1 className="font-serif text-base sm:text-2xl font-bold tracking-tight text-brand-green-800 leading-none">
+                    {(settings?.logoName || "Grams Life").split(' ')[0]} <span className="text-brand-gold-600 font-sans font-normal italic text-sm sm:text-lg">{(settings?.logoName || "Grams Life").split(' ').slice(1).join(' ') || 'Life'}</span>
+                  </h1>
+                  <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-brand-green-600 font-medium mt-0.5 sm:-mt-1 truncate">
+                    Organic Wellbeing
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Desktop Search Bar */}
           <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center flex-1 max-w-xs lg:max-w-md relative">
@@ -122,15 +140,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-1 sm:gap-2.5 md:gap-4">
             
 
-            {/* AI consultant button */}
-            <button 
-              onClick={onOpenConsultant}
-              className="flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 text-[11px] sm:text-sm font-semibold transition-all duration-300 shadow-sm cursor-pointer border border-brand-gold-500/30 group animate-pulse shrink-0"
-              title={t('btnAskAcharya', language)}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-brand-gold-300 group-hover:rotate-12 transition-transform shrink-0" />
-              <span className="hidden sm:inline">{t('btnAskAcharya', language)}</span>
-            </button>
+            {/* AI consultant button removed from nav as requested */}
 
             {/* Wishlist */}
             <button 
@@ -199,7 +209,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ) : (
                     <>
                       <div className="px-4 py-2 border-b border-brand-green-600/10">
-                        <p className="text-sm font-semibold text-brand-green-800">Welcome to Bv Life</p>
+                        <p className="text-sm font-semibold text-brand-green-800">Welcome to Grams Life</p>
                         <p className="text-xs text-brand-green-600/70">Connect to synchronize your holistic cart & health logs.</p>
                       </div>
                       <button 
