@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Search, Heart, ShoppingBag, User, Sparkles, LogOut, LayoutDashboard, Shield, Menu, X } from 'lucide-react';
 import { User as UserType, CartItem } from '../types';
 import { Language, t } from '../lib/translations';
+import logo from "@/assets/Bvlogo.png";
 
 interface NavbarProps {
   currentUser: UserType | null;
@@ -82,20 +83,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Brand Logo */}
-          <div 
-            id="brand-logo-container" 
-            className="flex-shrink-0 cursor-pointer flex items-center gap-1.5 sm:gap-2"
-            onClick={() => onNavigate('home')}
-          >
-            <div className="min-w-0">
-              <h1 className="font-serif text-base sm:text-2xl font-bold tracking-tight text-brand-green-800 leading-none">
-                Bv <span className="text-brand-gold-600 font-sans font-normal italic text-sm sm:text-lg">Life</span>
-              </h1>
-              <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-brand-green-600 font-medium mt-0.5 sm:-mt-1 truncate">
-                Organic Wellbeing
-              </p>
-            </div>
-          </div>
+<div
+  id="brand-logo-container"
+  className="flex-shrink-0 cursor-pointer flex items-center"
+  onClick={() => onNavigate("home")}
+>
+  <img
+    src={logo}
+    alt="BV Life"
+    className="h-12 sm:h-16 lg:h-18 w-auto object-contain"
+  />
+</div>
 
           {/* Desktop Search Bar */}
           <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center flex-1 max-w-xs lg:max-w-md relative">

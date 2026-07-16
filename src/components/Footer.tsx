@@ -6,6 +6,8 @@
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, ArrowRight, ShieldCheck, HeartHandshake, Sparkles } from 'lucide-react';
 
+import logo from "@/assets/Bvlogo1.jpeg";
+
 interface FooterProps {
   onNavigate: (page: string, params?: any) => void;
   onOpenConsultant: () => void;
@@ -64,14 +66,16 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant }) 
         
         {/* Brand Column */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate('home')}>
-            <div className="w-8 h-8 rounded-full bg-brand-gold-500 flex items-center justify-center text-brand-green-900 font-serif text-sm font-bold">
-              G
-            </div>
-            <span className="font-serif text-xl font-bold tracking-tight text-brand-cream-100">
-              Bv<span className="text-brand-gold-500 font-sans font-normal italic">Life</span>
-            </span>
-          </div>
+       <div
+  className="cursor-pointer"
+  onClick={() => onNavigate("home")}
+>
+  <img
+    src={logo}
+    alt="BV Life"
+    className="h-14 w-auto object-contain"
+  />
+</div>
           <p className="text-xs text-brand-cream-300/80 leading-relaxed">
             Sourcing deep wild herbs, hand-crafting pure oils, and formulating clinically researched solutions. We bridge Vedic secrets with modern bio-technology to heal your life, naturally.
           </p>
