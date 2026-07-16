@@ -25,6 +25,7 @@ interface DashboardProps {
   onAddAddress: (addr: Address) => void;
   onNavigate: (page: string, params?: any) => void;
   onLogout?: () => void;
+  isAdminPanel?: boolean;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -40,9 +41,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onAddCoupon,
   onAddAddress,
   onNavigate,
-  onLogout
+  onLogout,
+  isAdminPanel = false
 }) => {
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = (user?.role === 'admin' && isAdminPanel) || false;
   const [activeTab, setActiveTab] = useState<string>(isAdmin ? 'admin-stats' : 'orders');
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
 
@@ -143,8 +145,47 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [prodCategory, setProdCategory] = useState('Immunity');
   const [prodDesc, setProdDesc] = useState('');
   const [prodImg, setProdImg] = useState('');
+  const [prodImg2, setProdImg2] = useState('');
+  const [prodImg3, setProdImg3] = useState('');
+  const [prodImg4, setProdImg4] = useState('');
   const [prodBenefits, setProdBenefits] = useState('');
   const [prodDosage, setProdDosage] = useState('');
+  const [prodBrand, setProdBrand] = useState('Grams Life');
+  const [prodSubcategory, setProdSubcategory] = useState('');
+  const [prodUsageInstructions, setProdUsageInstructions] = useState('As directed');
+  const [prodFeatured, setProdFeatured] = useState(false);
+  const [prodBestSeller, setProdBestSeller] = useState(false);
+  const [prodLowStockAlertLimit, setProdLowStockAlertLimit] = useState(5);
+  const [prodIngredients, setProdIngredients] = useState<{name: string, description: string}[]>([]);
+  const [prodFaqs, setProdFaqs] = useState<{question: string, answer: string}[]>([]);
+
+  // Temporary inline input states for ingredients & FAQs
+  const [ingName, setIngName] = useState('');
+  const [ingDesc, setIngDesc] = useState('');
+  const [faqQ, setFaqQ] = useState('');
+  const [faqA, setFaqA] = useState('');
+
+  const handleAddIngredient = () => {
+    if (!ingName || !ingDesc) return;
+    setProdIngredients(prev => [...prev, { name: ingName, description: ingDesc }]);
+    setIngName('');
+    setIngDesc('');
+  };
+
+  const handleRemoveIngredient = (index: number) => {
+    setProdIngredients(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddFaq = () => {
+    if (!faqQ || !faqA) return;
+    setProdFaqs(prev => [...prev, { question: faqQ, answer: faqA }]);
+    setFaqQ('');
+    setFaqA('');
+  };
+
+  const handleRemoveFaq = (index: number) => {
+    setProdFaqs(prev => prev.filter((_, i) => i !== index));
+  };
 
   // Admin coupon add state
   const [showAddCpn, setShowAddCpn] = useState(false);
@@ -224,8 +265,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdCategory(prod.category);
     setProdDesc(prod.description);
     setProdImg(prod.mainImage);
+    setProdImg2(prod.images?.[0] || '');
+    setProdImg3(prod.images?.[1] || '');
+    setProdImg4(prod.images?.[2] || '');
     setProdBenefits(prod.benefits.join(', '));
     setProdDosage(prod.dosage);
+    setProdBrand(prod.brand || 'Grams Life');
+    setProdSubcategory(prod.subcategory || '');
+    setProdUsageInstructions(prod.usageInstructions || 'As directed');
+    setProdFeatured(prod.featured || false);
+    setProdBestSeller(prod.bestSeller || false);
+    setProdLowStockAlertLimit(prod.lowStockAlertLimit !== undefined ? prod.lowStockAlertLimit : 5);
+    setProdIngredients(prod.ingredients || []);
+    setProdFaqs(prod.faqs || []);
     setShowAddProd(true);
   };
 
@@ -240,8 +292,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdCategory('Immunity');
     setProdDesc('');
     setProdImg('');
+    setProdImg2('');
+    setProdImg3('');
+    setProdImg4('');
     setProdBenefits('');
     setProdDosage('');
+    setProdBrand('Grams Life');
+    setProdSubcategory('');
+    setProdUsageInstructions('As directed');
+    setProdFeatured(false);
+    setProdBestSeller(false);
+    setProdLowStockAlertLimit(5);
+    setProdIngredients([]);
+    setProdFaqs([]);
   };
 
   // Handle Product Save (Add/Edit)
@@ -249,16 +312,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
     e.preventDefault();
     if (!prodName || !prodDesc) return;
 
+    const extraImages = [prodImg2, prodImg3, prodImg4].map(img => img.trim()).filter(Boolean);
+
     const payload: Partial<Product> = {
       name: prodName,
       price: prodPrice,
       originalPrice: prodOrigPrice,
       stock: prodStock,
       category: prodCategory,
+      subcategory: prodSubcategory,
+      brand: prodBrand,
       description: prodDesc,
       mainImage: prodImg || 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&q=80&w=200',
+      images: extraImages,
       benefits: prodBenefits.split(',').map(b => b.trim()).filter(Boolean),
-      dosage: prodDosage || 'Take 1 capsule daily after breakfast.'
+      dosage: prodDosage || 'Take 1 capsule daily after breakfast.',
+      usageInstructions: prodUsageInstructions || 'As directed',
+      featured: prodFeatured,
+      bestSeller: prodBestSeller,
+      lowStockAlertLimit: prodLowStockAlertLimit,
+      ingredients: prodIngredients,
+      faqs: prodFaqs
     };
 
     if (editProdId) {
@@ -294,7 +368,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="max-w-md mx-auto text-center py-20 space-y-4">
         <ShieldAlert className="w-12 h-12 text-brand-gold-500 mx-auto" />
         <h3 className="font-serif text-xl font-bold text-brand-green-800">Sacred Access Required</h3>
-        <p className="text-xs text-brand-green-600/70">Please authenticate with Bv Life to review your order chronicles.</p>
+        <p className="text-xs text-brand-green-600/70">Please authenticate with Grams Life to review your order chronicles.</p>
         <button onClick={() => onNavigate('home')} className="bg-brand-green-700 text-brand-cream-100 font-bold px-6 py-2.5 rounded-xl text-xs">
           Return to home
         </button>
@@ -317,20 +391,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand-gold-400 bg-brand-gold-500/10 border border-brand-gold-500/20 px-2 py-0.5 rounded-full">Administrative Node</span>
+                <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand-gold-500 bg-brand-gold-500/10 border border-brand-gold-500/20 px-2 py-0.5 rounded-full">Administrative Node</span>
               </div>
-              <h1 className="font-serif text-2xl font-bold tracking-tight mt-1 text-brand-cream-50">Bv Life Admin Panel</h1>
-              <p className="text-xs text-brand-cream-300/80 mt-0.5">Apothecary Director: <span className="font-semibold text-brand-cream-50">{user.fullName}</span> ({user.email})</p>
+              <h1 className="font-serif text-2xl font-bold tracking-tight mt-1 text-brand-cream-50">BV Life Admin Panel</h1>
+              <p className="text-xs text-brand-green-800 mt-0.5">Apothecary Director: <span className="font-semibold text-brand-green-800">{user.fullName}</span> ({user.email})</p>
             </div>
           </div>
           
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-            <button
-              onClick={() => onNavigate('home')}
-              className="w-full sm:w-auto px-4 py-2.5 bg-brand-green-900 hover:bg-brand-green-850 border border-brand-gold-500/15 hover:border-brand-gold-500/30 text-brand-cream-100 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm text-center"
-            >
-              Return to Public Sanctuary
-            </button>
             {onLogout && (
               <button
                 onClick={onLogout}
@@ -636,7 +704,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                   <input required type="text" placeholder="Address Line 1" value={addrLine1} onChange={e => setAddrLine1(e.target.value)} className="w-full bg-white border rounded-lg px-3 py-2" />
                   <input type="text" placeholder="Address Line 2 (Optional)" value={addrLine2} onChange={e => setAddrLine2(e.target.value)} className="w-full bg-white border rounded-lg px-3 py-2" />
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <input required type="text" placeholder="City" value={addrCity} onChange={e => setAddrCity(e.target.value)} className="bg-white border rounded-lg px-3 py-2" />
                     <input required type="text" placeholder="State" value={addrState} onChange={e => setAddrState(e.target.value)} className="bg-white border rounded-lg px-3 py-2" />
                     <input required type="text" placeholder="ZIP Code" value={addrZip} onChange={e => setAddrZip(e.target.value)} className="bg-white border rounded-lg px-3 py-2" />
@@ -877,11 +945,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="font-bold">Product Name</label>
+                      <label className="font-bold text-brand-green-900">Product Name</label>
                       <input required type="text" value={prodName} onChange={e => setProdName(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
                     </div>
                     <div className="space-y-1">
-                      <label className="font-bold">Category</label>
+                      <label className="font-bold text-brand-green-900">Category</label>
                       <select value={prodCategory} onChange={e => setProdCategory(e.target.value)} className="w-full bg-white border p-2 rounded-lg">
                         <option value="Immunity">Immunity</option>
                         <option value="Skin Care">Skin Care</option>
@@ -890,43 +958,214 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <option value="Diabetes">Diabetes</option>
                         <option value="Joint Care">Joint Care</option>
                         <option value="Women's Health">Women's Health</option>
+                        <option value="Men's Health">Men's Health</option>
+                        <option value="Brain & Memory">Brain & Memory</option>
+                        <option value="Sleep & Stress">Sleep & Stress</option>
+                        <option value="Sexual Wellness">Sexual Wellness</option>
+                        <option value="Liver & Detox">Liver & Detox</option>
+                        <option value="Heart Health">Heart Health</option>
+                        <option value="Respiratory Care">Respiratory Care</option>
                       </select>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="font-bold">Price (₹)</label>
+                      <label className="font-bold text-brand-green-900">Brand</label>
+                      <input required type="text" value={prodBrand} onChange={e => setProdBrand(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-bold text-brand-green-900">Subcategory (Optional)</label>
+                      <input type="text" placeholder="E.g. Herbal Drops, Oils" value={prodSubcategory} onChange={e => setProdSubcategory(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="font-bold text-brand-green-900">Price (₹)</label>
                       <input required type="number" value={prodPrice} onChange={e => setProdPrice(Number(e.target.value))} className="w-full bg-white border p-2 rounded-lg" />
                     </div>
                     <div className="space-y-1">
-                      <label className="font-bold">Original Price (₹)</label>
+                      <label className="font-bold text-brand-green-900">Original Price (₹)</label>
                       <input required type="number" value={prodOrigPrice} onChange={e => setProdOrigPrice(Number(e.target.value))} className="w-full bg-white border p-2 rounded-lg" />
                     </div>
                     <div className="space-y-1">
-                      <label className="font-bold">Stock Count</label>
+                      <label className="font-bold text-brand-green-900">Stock Count</label>
                       <input required type="number" value={prodStock} onChange={e => setProdStock(Number(e.target.value))} className="w-full bg-white border p-2 rounded-lg" />
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="font-bold">Image URL</label>
-                    <input type="text" placeholder="https://..." value={prodImg} onChange={e => setProdImg(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
+                  <div className="bg-brand-green-50/30 border border-brand-green-600/5 p-3.5 rounded-xl space-y-3">
+                    <span className="block font-bold text-brand-green-950 text-[11px] uppercase tracking-wider">Product Visuals (Image Gallery)</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div className="space-y-1">
+                        <label className="font-semibold text-brand-green-900">Primary Image URL</label>
+                        <input type="text" placeholder="https://..." value={prodImg} onChange={e => setProdImg(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-semibold text-brand-green-900">Second Image URL (Optional)</label>
+                        <input type="text" placeholder="https://..." value={prodImg2} onChange={e => setProdImg2(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-semibold text-brand-green-900">Third Image URL (Optional)</label>
+                        <input type="text" placeholder="https://..." value={prodImg3} onChange={e => setProdImg3(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-semibold text-brand-green-900">Fourth Image URL (Optional)</label>
+                        <input type="text" placeholder="https://..." value={prodImg4} onChange={e => setProdImg4(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="font-bold text-brand-green-900">Dosage</label>
+                      <input type="text" placeholder="E.g. Take 1 capsule daily" value={prodDosage} onChange={e => setProdDosage(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-bold text-brand-green-900">Usage Instructions</label>
+                      <input type="text" placeholder="E.g. With warm water after meal" value={prodUsageInstructions} onChange={e => setProdUsageInstructions(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-bold text-brand-green-900">Low Stock Limit Alert</label>
+                      <input type="number" value={prodLowStockAlertLimit} onChange={e => setProdLowStockAlertLimit(Number(e.target.value))} className="w-full bg-white border p-2 rounded-lg" />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-6 items-center bg-brand-green-50/20 p-3 rounded-xl border border-brand-green-600/5">
+                    <label className="flex items-center gap-2 font-bold text-brand-green-900 cursor-pointer select-none">
+                      <input type="checkbox" checked={prodFeatured} onChange={e => setProdFeatured(e.target.checked)} className="w-4 h-4 rounded text-brand-green-700" />
+                      <span>Featured Remedy</span>
+                    </label>
+                    <label className="flex items-center gap-2 font-bold text-brand-green-900 cursor-pointer select-none">
+                      <input type="checkbox" checked={prodBestSeller} onChange={e => setProdBestSeller(e.target.checked)} className="w-4 h-4 rounded text-brand-green-700" />
+                      <span>Best Seller Tag</span>
+                    </label>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold">Benefits (Comma separated)</label>
-                    <input type="text" placeholder="Boosts immunity, Relieves fatigue" value={prodBenefits} onChange={e => setProdBenefits(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
+                    <label className="font-bold text-brand-green-900">Health Benefits (Comma separated)</label>
+                    <input type="text" placeholder="Boosts immunity, Relieves fatigue, Rejuvenates cells" value={prodBenefits} onChange={e => setProdBenefits(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-bold">Description</label>
+                    <label className="font-bold text-brand-green-900">Description</label>
                     <textarea required rows={3} value={prodDesc} onChange={e => setProdDesc(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
                   </div>
 
-                  <div className="flex gap-2 justify-end pt-2">
-                    <button type="button" onClick={handleResetProductForm} className="px-4 py-2 border rounded-lg font-bold">Cancel</button>
-                    <button type="submit" className="px-5 py-2 bg-brand-green-700 text-brand-cream-100 font-bold rounded-lg">Save Compound</button>
+                  {/* Botanical Ingredients Section */}
+                  <div className="bg-brand-cream-50/60 border border-brand-green-600/5 p-4 rounded-xl space-y-3.5">
+                    <div className="flex justify-between items-center border-b border-brand-green-600/5 pb-1.5">
+                      <span className="font-serif font-bold text-brand-green-950 text-xs">Vedic Botanical Ingredients ({prodIngredients.length})</span>
+                    </div>
+
+                    {prodIngredients.length > 0 && (
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {prodIngredients.map((ing, index) => (
+                          <div key={index} className="flex justify-between items-start gap-3 bg-white p-2.5 rounded-lg border border-brand-green-100 shadow-xs">
+                            <div className="space-y-0.5">
+                              <span className="font-bold text-brand-green-900 block">{ing.name}</span>
+                              <span className="text-[11px] text-brand-green-700/80 block">{ing.description}</span>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={() => handleRemoveIngredient(index)}
+                              className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="bg-white p-3 rounded-lg border border-brand-green-600/5 space-y-3">
+                      <span className="block font-semibold text-brand-green-900 text-[11px]">Add Botanical Ingredient</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <input 
+                          type="text" 
+                          placeholder="Ingredient Name (e.g. Ashwagandha)" 
+                          value={ingName} 
+                          onChange={e => setIngName(e.target.value)} 
+                          className="bg-white border rounded-lg px-2.5 py-2 text-xs" 
+                        />
+                        <input 
+                          type="text" 
+                          placeholder="Description / Benefit (e.g. Adapts to stress)" 
+                          value={ingDesc} 
+                          onChange={e => setIngDesc(e.target.value)} 
+                          className="bg-white border rounded-lg px-2.5 py-2 text-xs" 
+                        />
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={handleAddIngredient}
+                        className="bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 ml-auto cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Ingredient</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Product FAQs Section */}
+                  <div className="bg-brand-cream-50/60 border border-brand-green-600/5 p-4 rounded-xl space-y-3.5">
+                    <div className="flex justify-between items-center border-b border-brand-green-600/5 pb-1.5">
+                      <span className="font-serif font-bold text-brand-green-950 text-xs">Product FAQs ({prodFaqs.length})</span>
+                    </div>
+
+                    {prodFaqs.length > 0 && (
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {prodFaqs.map((faq, index) => (
+                          <div key={index} className="flex justify-between items-start gap-3 bg-white p-2.5 rounded-lg border border-brand-green-100 shadow-xs">
+                            <div className="space-y-0.5">
+                              <span className="font-bold text-brand-green-900 block">Q: {faq.question}</span>
+                              <span className="text-[11px] text-brand-green-700/80 block">A: {faq.answer}</span>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={() => handleRemoveFaq(index)}
+                              className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="bg-white p-3 rounded-lg border border-brand-green-600/5 space-y-3">
+                      <span className="block font-semibold text-brand-green-900 text-[11px]">Add FAQ Item</span>
+                      <div className="space-y-2.5">
+                        <input 
+                          type="text" 
+                          placeholder="Question (e.g. Can I take this with milk?)" 
+                          value={faqQ} 
+                          onChange={e => setFaqQ(e.target.value)} 
+                          className="w-full bg-white border rounded-lg px-2.5 py-2 text-xs" 
+                        />
+                        <textarea 
+                          rows={2} 
+                          placeholder="Answer (e.g. Yes, warm milk is highly recommended.)" 
+                          value={faqA} 
+                          onChange={e => setFaqA(e.target.value)} 
+                          className="w-full bg-white border rounded-lg px-2.5 py-2 text-xs" 
+                        />
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={handleAddFaq}
+                        className="bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 ml-auto cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add FAQ</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 justify-end pt-2 border-t border-brand-green-600/5">
+                    <button type="button" onClick={handleResetProductForm} className="px-4 py-2 border rounded-lg font-bold hover:bg-brand-cream-50">Cancel</button>
+                    <button type="submit" className="px-5 py-2 bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 font-bold rounded-lg cursor-pointer">Save Compound</button>
                   </div>
                 </form>
               )}
@@ -1051,7 +1290,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {/* Add Coupon form inline */}
               {showAddCpn && (
                 <form onSubmit={handleAddCouponSubmit} className="bg-brand-cream-100/30 border border-brand-green-600/10 p-5 rounded-xl space-y-4 text-xs">
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <label className="font-bold">Code (Uppercase)</label>
                       <input required type="text" placeholder="E.g. AYUR20" value={cpnCode} onChange={e => setCpnCode(e.target.value)} className="w-full bg-white border p-1.5 rounded" />
@@ -1204,7 +1443,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     G
                   </div>
                   <div>
-                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Bv Life</h2>
+                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Grams Life</h2>
                     <span className="text-[10px] uppercase tracking-widest text-brand-gold-700 font-extrabold mt-1 block">Ayurvedic Sanctuary</span>
                   </div>
                 </div>
@@ -1305,7 +1544,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </p>
                 <div className="space-y-0.5">
                   <p className="text-[10px] font-bold text-brand-gold-700 uppercase tracking-widest">Aacharya Dhanvantari</p>
-                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Bv Life Sanctuary</p>
+                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Grams Life Sanctuary</p>
                 </div>
               </div>
 

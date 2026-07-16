@@ -174,7 +174,7 @@ export default function App() {
         if (Array.isArray(rRes)) setReviews(rRes);
 
       } catch (err) {
-        console.error("Error loading Bv Life baseline data: ", err);
+        console.error("Error loading Grams Life baseline data: ", err);
       }
     };
 
@@ -699,7 +699,7 @@ export default function App() {
   };
 
   const activeSettings: WebsiteSettings = settings || {
-    logoName: "Bv Life",
+    logoName: "Grams Life",
     contactEmail: "care@gramslife.com",
     contactPhone: "+91 98765 43210",
     address: "Kerala, India",
@@ -824,6 +824,7 @@ export default function App() {
             onAddAddress={handleAddAddress}
             onNavigate={handleNavigate}
             onLogout={handleLogout}
+            isAdminPanel={false}
           />
         )}
 
@@ -844,6 +845,7 @@ export default function App() {
               onAddAddress={handleAddAddress}
               onNavigate={handleNavigate}
               onLogout={handleLogout}
+              isAdminPanel={true}
             />
           ) : (
             <AdminGatewayLogin 

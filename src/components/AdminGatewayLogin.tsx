@@ -43,7 +43,10 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
         
         if (res.ok) {
           const data = await res.json();
-          if (data.user && data.user.role === 'admin') {
+          const cleanEmail = email.trim().toLowerCase();
+          const isAdminEmail = ['vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes(cleanEmail);
+          
+          if (data.user && (data.user.role === 'admin' || isAdminEmail)) {
             onLoginSuccess();
             // Reload or trigger state change in parent
             window.location.reload();
