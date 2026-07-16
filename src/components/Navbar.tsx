@@ -74,26 +74,17 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20 gap-1.5 sm:gap-4">
           
-          {/* Mobile Menu Button */}
-          <button 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-1.5 sm:p-2 text-brand-green-800 hover:text-brand-gold-600 transition-colors focus:outline-none cursor-pointer flex items-center justify-center rounded-lg hover:bg-brand-green-50/50"
-            aria-label="Toggle navigation menu"
-          >
-            {isMobileMenuOpen ? <X className="w-5.5 h-5.5 sm:w-6 sm:h-6" /> : <Menu className="w-5.5 h-5.5 sm:w-6 sm:h-6" />}
-          </button>
-
-          {/* Brand Logo */}
+          {/* Brand Logo - Aligned to left */}
           <div 
             id="brand-logo-container" 
-            className="flex-shrink-0 cursor-pointer flex items-center gap-1.5 sm:gap-2"
+            className="flex-shrink-0 cursor-pointer flex items-center gap-1.5 sm:gap-2 mr-auto md:mr-0"
             onClick={() => onNavigate('home')}
           >
             {settings?.logoUrl ? (
               <img 
                 src={settings.logoUrl} 
                 alt={settings.logoName || "Grams Life"} 
-                className="h-10 sm:h-12 w-auto object-contain max-w-[150px]" 
+                className="h-9 sm:h-12 w-auto object-contain max-w-[130px] sm:max-w-[160px]" 
                 referrerPolicy="no-referrer"
               />
             ) : (
@@ -102,10 +93,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {(settings?.logoName || "Grams Life").charAt(0)}
                 </div>
                 <div className="min-w-0">
-                  <h1 className="font-serif text-base sm:text-2xl font-bold tracking-tight text-brand-green-800 leading-none">
-                    {(settings?.logoName || "Grams Life").split(' ')[0]} <span className="text-brand-gold-600 font-sans font-normal italic text-sm sm:text-lg">{(settings?.logoName || "Grams Life").split(' ').slice(1).join(' ') || 'Life'}</span>
+                  <h1 className="font-serif text-sm sm:text-2xl font-bold tracking-tight text-brand-green-800 leading-none">
+                    {(settings?.logoName || "Grams Life").split(' ')[0]} <span className="text-brand-gold-600 font-sans font-normal italic text-xs sm:text-lg">{(settings?.logoName || "Grams Life").split(' ').slice(1).join(' ') || 'Life'}</span>
                   </h1>
-                  <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-brand-green-600 font-medium mt-0.5 sm:-mt-1 truncate">
+                  <p className="text-[7px] sm:text-[9px] uppercase tracking-widest text-brand-green-600 font-medium mt-0.5 sm:-mt-1 truncate">
                     Organic Wellbeing
                   </p>
                 </div>
@@ -136,8 +127,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button onClick={() => onNavigate('static', { page: 'contact' })} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navContact', language)}</button>
           </nav>
 
-          {/* User & Checkout Quick Icons */}
-          <div className="flex items-center gap-1 sm:gap-2.5 md:gap-4">
+          {/* User, Checkout & Mobile Menu Quick Icons - Aligned to right */}
+          <div className="flex items-center gap-1 sm:gap-2.5 md:gap-4 ml-auto md:ml-0">
             
 
             {/* AI consultant button removed from nav as requested */}
@@ -223,6 +214,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Mobile Menu Button - Aligned to far right on mobile, hidden on desktop */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden p-1.5 sm:p-2.5 text-brand-green-800 hover:text-brand-gold-600 transition-colors focus:outline-none cursor-pointer flex items-center justify-center rounded-lg hover:bg-brand-green-50/50 shrink-0"
+              aria-label="Toggle navigation menu"
+            >
+              {isMobileMenuOpen ? <X className="w-5.5 h-5.5 sm:w-6 sm:h-6" /> : <Menu className="w-5.5 h-5.5 sm:w-6 sm:h-6" />}
+            </button>
 
           </div>
 
