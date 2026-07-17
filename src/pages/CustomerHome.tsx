@@ -24,9 +24,9 @@ import {
 } from 'lucide-react';
 import { Product, Blog } from '../types';
 import { ProductCard } from '../components/ProductCard';
-import productImage from "@/assets/banner9.png"
-import productImage2 from "@/assets/banner9.png"
-import productImage3 from "@/assets/banner9.png"
+import productImage from "@/assets/banner5.png"
+import productImage2 from "@/assets/banner5.png"
+import productImage3 from "@/assets/banner5.png"
 
 interface CustomerHomeProps {
   products: Product[];
@@ -116,10 +116,10 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
        className="
 relative
 w-full
-h-[120px]
-xs:h-[150px]
-sm:h-[150px]
-md:h-[299px]
+h-[180px]
+xs:h-[200px]
+sm:h-[220px]
+md:h-[240px]
 lg:h-[340px]
 xl:h-[380px]
 2xl:h-[420px]
