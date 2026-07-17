@@ -24,9 +24,9 @@ import {
 } from 'lucide-react';
 import { Product, Blog } from '../types';
 import { ProductCard } from '../components/ProductCard';
-import productImage from "@/assets/banner7.png"
-import productImage2 from "@/assets/banner7.png"
-import productImage3 from "@/assets/banner7.png"
+import productImage from "@/assets/banner9.png"
+import productImage2 from "@/assets/banner9.png"
+import productImage3 from "@/assets/banner9.png"
 
 interface CustomerHomeProps {
   products: Product[];
@@ -113,15 +113,24 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
         onClick={handleHeroClick}
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
-        className="relative w-full
-h-[180px]
-xs:h-[210px]
-sm:h-[250px]
-md:h-[300px]
+       className="
+relative
+w-full
+h-[120px]
+xs:h-[150px]
+sm:h-[150px]
+md:h-[299px]
 lg:h-[340px]
-xl:h-[385px]
-2xl:h-[400px]
-rounded-2xl overflow-hidden flex items-center justify-center cursor-pointer group"
+xl:h-[380px]
+2xl:h-[420px]
+rounded-xl
+overflow-hidden
+flex
+items-center
+justify-center
+cursor-pointer
+group
+"
       >
         <div className="absolute inset-0">
           <img
