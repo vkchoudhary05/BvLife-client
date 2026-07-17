@@ -15,7 +15,7 @@
   --color-brand-green-700: #1b4332;
   --color-brand-green-800: #1b4332;
   --color-brand-green-900: #143326;
-  --color-brand-cream-50: #fdfbf7;
+  --color-brand-cream-50: #ffffff;
   --color-brand-cream-100: #f9f7f2;
   --color-brand-cream-200: #f5f2eb;
   --color-brand-cream-300: #e5e1d8;
@@ -76,3 +76,18 @@ body {
 .scrollbar-none::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
 }
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 35s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+

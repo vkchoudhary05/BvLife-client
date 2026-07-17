@@ -20,12 +20,13 @@ import { Cart } from './pages/Cart';
 import { Checkout } from './pages/Checkout';
 import { Dashboard } from './pages/Dashboard';
 import { StaticPages } from './pages/StaticPages';
+import { TrackOrder } from './pages/TrackOrder';
 
 // Types
 import { Product, Blog, FAQ, Coupon, WebsiteSettings, User, CartItem, Order, Address, Review } from './types';
 
 // Bilingual translations
-// import { Language, t, translateProductAttr } from './lib/translations';
+import { Language, t, translateProductAttr } from './lib/translations';
 import { validateAndFormatIndianPhone } from './utils';
 
 // Helper to parse current URL and return initial page + params
@@ -64,7 +65,7 @@ const getPageFromUrl = () => {
   }
   
   // Default match for other paths (cart, checkout, dashboard, login, etc.)
-  const knownPages = ['cart', 'checkout', 'dashboard', 'login'];
+  const knownPages = ['cart', 'checkout', 'dashboard', 'login', 'track-order'];
   if (knownPages.includes(cleanPath)) {
     return { page: cleanPath, params: null };
   }
@@ -761,7 +762,7 @@ export default function App() {
             onToggleWishlist={handleToggleWishlist}
             onAddToCompare={handleAddToCompare}
             compareList={compareList}
-            // language={language}
+            language={language}
           />
         )}
 
@@ -823,6 +824,16 @@ export default function App() {
             settings={activeSettings}
             onPlaceOrder={handlePlaceOrder}
             language={language}
+          />
+        )}
+
+        {/* Track Order Portal */}
+        {currentPage === 'track-order' && (
+          <TrackOrder
+            onNavigate={handleNavigate}
+            language={language}
+            currentUser={currentUser}
+            authToken={authToken}
           />
         )}
 
