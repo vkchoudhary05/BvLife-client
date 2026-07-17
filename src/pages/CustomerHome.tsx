@@ -24,9 +24,9 @@ import {
 } from 'lucide-react';
 import { Product, Blog } from '../types';
 import { ProductCard } from '../components/ProductCard';
-import productImage from "@/assets/banner6.png"
-import productImage2 from "@/assets/banner6.png"
-import productImage3 from "@/assets/banner6.png"
+import productImage from "@/assets/banner7.png"
+import productImage2 from "@/assets/banner7.png"
+import productImage3 from "@/assets/banner7.png"
 
 interface CustomerHomeProps {
   products: Product[];
@@ -104,7 +104,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
   };
 
   return (
-    <div id ="customar-home-page" className ="px-2 sm:px-3 lg:px-4 xl:px-5 space-y-8 pb-8"> 
+    <div id ="customar-home-page" className ="px-2 sm:px-3 lg:px-4 xl:px-4 space-y-8 pb-8"> 
 
 
       {/* ===== HERO BANNER — Full Image Background, Reduced Height ===== */}

@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Search, Heart, ShoppingBag, User, Sparkles, LogOut, LayoutDashboard, Shield, Menu, X, ArrowLeft } from 'lucide-react';
+import { Search, Heart, ShoppingCart, User, Sparkles, LogOut, LayoutDashboard, Shield, Menu, X, ArrowLeft } from 'lucide-react';
 import { User as UserType, CartItem, WebsiteSettings } from '../types';
 import { Language, t } from '../lib/translations';
 
@@ -211,12 +211,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           </form>
 
           {/* Primary Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-base font-semibold text-black">
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-base font-medium text-black">
             <button onClick={() => onNavigate('home')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navHome', language)}</button>
             <button onClick={() => onNavigate('shop')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navShop', language)}</button>
             <button onClick={() => onNavigate('track-order')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">Track Order</button>
             <button onClick={() => onNavigate('static', { page: 'blog' })} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navBlogs', language)}</button>
-            <button onClick={() => onNavigate('static', { page: 'about' })} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('About', language)}</button>
+            <button onClick={() => onNavigate('static', { page: 'about' })} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navAbout', language)}</button>
             <button onClick={() => onNavigate('static', { page: 'contact' })} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navContact', language)}</button>
           </nav>
 
@@ -232,7 +232,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="relative p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 hidden sm:flex"
               aria-label="Wishlist"
             >
-              <Heart className="w-6 h-6" strokeWidth={2.5} />
+              <Heart className="w-6 h-6" strokeWidth={2} />
               {wishlist.length > 0 && (
                 <span className="absolute top-0 right-0 w-4 h-4 rounded-full bg-brand-gold-600 text-brand-cream-100 flex items-center justify-center text-[9px] font-bold">
                   {wishlist.length}
@@ -246,7 +246,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 md:hidden"
               aria-label="Search"
             >
-              <Search className="w-6 h-6" strokeWidth={2.5} />
+              <Search className="w-6 h-6" strokeWidth={2} />
             </button>
 
             {/* Cart */}
@@ -255,7 +255,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="relative p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0"
               aria-label="Shopping Cart"
             >
-              <ShoppingBag className="w-6 h-6" strokeWidth={2.5} />
+              <ShoppingCart className="w-6 h-6" strokeWidth={2} />
               {cartCount > 0 && (
                 <span className="absolute top-0 right-0 w-4 h-4 rounded-full bg-brand-green-700 text-brand-cream-100 flex items-center justify-center text-[9px] font-bold">
                   {cartCount}
@@ -270,8 +270,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer flex items-center gap-1"
                 aria-label="User Profile"
               >
-                <User className="w-6 h-6" strokeWidth={2.5} />
-                {currentUser && <span className="hidden md:inline text-sm font-semibold text-black">{currentUser.fullName.split(' ')[0]}</span>}
+                <User className="w-6 h-6" strokeWidth={2} />
+                {currentUser && <span className="hidden md:inline text-sm font-medium text-black">{currentUser.fullName.split(' ')[0]}</span>}
               </button>
 
               {showProfileMenu && (
@@ -341,7 +341,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="lg:hidden p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors focus:outline-none cursor-pointer flex items-center justify-center rounded-lg hover:bg-brand-green-50/50 shrink-0"
               aria-label="Toggle navigation menu"
             >
-              {isMobileMenuOpen ? <X className="w-6.5 h-6.5 sm:w-7.5 sm:h-7.5" strokeWidth={2.5} /> : <Menu className="w-6.5 h-6.5 sm:w-7.5 sm:h-7.5" strokeWidth={2.5} />}
+              {isMobileMenuOpen ? <X className="w-6.5 h-6.5 sm:w-7.5 sm:h-7.5" strokeWidth={2} /> : <Menu className="w-6.5 h-6.5 sm:w-7.5 sm:h-7.5" strokeWidth={2} />}
             </button>
 
           </div>
@@ -354,37 +354,37 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="flex flex-col gap-1">
               <button 
                 onClick={() => { onNavigate('home'); setIsMobileMenuOpen(false); }} 
-                className="text-left px-4 py-2.5 text-base font-semibold text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
+                className="text-left px-4 py-2.5 text-base font-medium text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
               >
                 {t('navHome', language)}
               </button>
               <button 
                 onClick={() => { onNavigate('shop'); setIsMobileMenuOpen(false); }} 
-                className="text-left px-4 py-2.5 text-base font-semibold text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
+                className="text-left px-4 py-2.5 text-base font-medium text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
               >
                 {t('navShop', language)}
               </button>
               <button 
                 onClick={() => { onNavigate('track-order'); setIsMobileMenuOpen(false); }} 
-                className="text-left px-4 py-2.5 text-base font-semibold text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
+                className="text-left px-4 py-2.5 text-base font-medium text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
               >
                 Track Order
               </button>
               <button 
                 onClick={() => { onNavigate('static', { page: 'blog' }); setIsMobileMenuOpen(false); }} 
-                className="text-left px-4 py-2.5 text-base font-semibold text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
+                className="text-left px-4 py-2.5 text-base font-medium text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
               >
                 {t('navBlogs', language)}
               </button>
               <button 
                 onClick={() => { onNavigate('static', { page: 'about' }); setIsMobileMenuOpen(false); }} 
-                className="text-left px-4 py-2.5 text-base font-semibold text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
+                className="text-left px-4 py-2.5 text-base font-medium text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
               >
-                {t('About', language)}
+                {t('navAbout', language)}
               </button>
               <button 
                 onClick={() => { onNavigate('static', { page: 'contact' }); setIsMobileMenuOpen(false); }} 
-                className="text-left px-4 py-2.5 text-base font-semibold text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
+                className="text-left px-4 py-2.5 text-base font-medium text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
               >
                 {t('navContact', language)}
               </button>
