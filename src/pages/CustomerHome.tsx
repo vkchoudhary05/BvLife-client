@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -13,20 +12,21 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
-  Leaf,
-  Shield,
-  Clock,
-  Users,
-  ShoppingBag,
-  Droplets,
-  Zap,
-  HeartPulse
 } from 'lucide-react';
 import { Product, Blog } from '../types';
 import { ProductCard } from '../components/ProductCard';
+
+// Desktop (wide, landscape) hero banners
 import productImage from "@/assets/banner5.png"
 import productImage2 from "@/assets/banner5.png"
 import productImage3 from "@/assets/banner5.png"
+
+// Mobile (tall/square, portrait-friendly) hero banners
+// Swap these for dedicated mobile crops of the same artwork —
+// mobile screens need a tighter, more vertical crop than desktop.
+import productImageMobile from "@/assets/bannerN.png"
+import productImageMobile2 from "@/assets/bannerN.png"
+import productImageMobile3 from "@/assets/bannerN.png"
 
 interface CustomerHomeProps {
   products: Product[];
@@ -44,17 +44,20 @@ interface CustomerHomeProps {
 const heroSlides = [
   {
     id: "slide-1",
-    productImage: productImage,
+    desktopImage: productImage,
+    mobileImage: productImageMobile,
     productId: "prod-2",
   },
   {
     id: "slide-2",
-    productImage: productImage2,
+    desktopImage: productImage2,
+    mobileImage: productImageMobile2,
     productId: "prod-12",
   },
   {
     id: "slide-3",
-    productImage: productImage3,
+    desktopImage: productImage3,
+    mobileImage: productImageMobile3,
     productId: "prod-4",
   }
 ];
@@ -104,70 +107,86 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
   };
 
   return (
-    <div id ="customar-home-page" className ="px-2 sm:px-3 lg:px-4 xl:px-4 space-y-8 pb-8"> 
+    <div id="customar-home-page" className="px-2 sm:px-3 lg:px-4 xl:px-4 space-y-8 pb-8">
 
-
-      {/* ===== HERO BANNER — Full Image Background, Reduced Height ===== */}
+      {/* ===== HERO BANNER — separate mobile / desktop art, fully responsive ===== */}
       <section
         id="hero-banner"
         onClick={handleHeroClick}
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
-       className="
-relative
-w-full
-h-[180px]
-xs:h-[200px]
-sm:h-[220px]
-md:h-[240px]
-lg:h-[340px]
-xl:h-[380px]
-2xl:h-[420px]
-rounded-xl
-overflow-hidden
-flex
-items-center
-justify-center
-cursor-pointer
-group
-"
+        className="
+          relative
+          w-full
+          h-[195px]
+          xs:h-[280px]
+          sm:h-[220px]
+          md:h-[350px]
+          lg:h-[340px]
+          xl:h-[380px]
+          2xl:h-[420px]
+          rounded-xl
+          overflow-hidden
+          flex
+          items-center
+          justify-center
+          cursor-pointer
+          group
+          shadow-sm
+        "
       >
         <div className="absolute inset-0">
-          <img
-            src={slide.productImage}
-            alt="Product"
-            className="w-full h-full object-cover object-center"
-          />
-          {/* Dark overlay for better visibility of navigation buttons */}
-          <div className="absolute inset-0 bg-black/20" />
+          {/*
+            <picture> lets the browser pick the right art direction per
+            viewport instead of just scaling one image:
+            - < 640px  -> tall/portrait mobile crop
+            - >= 640px -> wide/landscape desktop crop
+          */}
+        <picture>
+  <source
+    media="(max-width:768px)"
+    srcSet={slide.mobileImage}
+  />
+
+  <img
+    src={slide.desktopImage}
+    alt="BV Life"
+    className="w-full h-full object-cover"
+  />
+</picture>
+          {/* Gradient overlay: subtle on desktop, stronger on mobile for dot/button contrast */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent sm:from-black/20 sm:via-transparent sm:to-transparent" />
         </div>
 
         {/* ===== NAVIGATION BUTTONS ===== */}
- <button
-  onClick={(e) => {
-    e.stopPropagation();
-    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
-  }}
-  className="hidden sm:flex absolute left-3 md:left-4 lg:left-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
->
-  <ChevronLeft className="w-4 h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
-</button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+          }}
+          aria-label="Previous slide"
+          className="flex absolute left-2 xs:left-3 md:left-4 lg:left-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
+        >
+          <ChevronLeft className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
+        </button>
 
-<button
-  onClick={(e) => {
-    e.stopPropagation();
-    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-  }}
-  className="hidden sm:flex absolute right-3 md:right-4 lg:right-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
->
-  <ChevronRight className="w-4 h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
-</button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+          }}
+          aria-label="Next slide"
+          className="flex absolute right-2 xs:right-3 md:right-4 lg:right-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
+        >
+          <ChevronRight className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
+        </button>
 
         {/* ===== SLIDE INDICATOR DOTS ===== */}
         <div className="absolute bottom-2 xs:bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 xs:gap-2">
           {heroSlides.map((_, i) => (
             <button
               key={i}
+              aria-label={`Go to slide ${i + 1}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setCurrentSlide(i);
@@ -182,39 +201,39 @@ group
       </section>
 
       {/* 2. CATEGORY BROWSE SECTION */}
-    <section id="category-browse"  className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-8">
- <div className="w-full text-left mb-8">
-  <h3 className="text-2xl sm:text-xl font-semibold text-black">
-   Discover Ayurvedic Care
-  </h3>
-</div>
-
-  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-5">
-    {categories.map((cat, i) => (
-      <div
-        key={i}
-        onClick={() => onNavigate("shop", { category: cat.name })}
-        className="group bg-white border border-gray-100 hover:border-green-600/20 p-3 sm:p-5 rounded-xl sm:rounded-2xl text-center cursor-pointer hover:shadow-md transition-all duration-300"
-      >
-        <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden mx-auto mb-2 sm:mb-4 border-2 border-gray-100 group-hover:border-green-600 transition-colors">
-          <img
-            src={cat.img}
-            alt={cat.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-          />
+      <section id="category-browse" className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-8">
+        <div className="w-full text-left mb-8">
+          <h3 className="text-2xl sm:text-xl font-semibold text-black">
+            Discover Ayurvedic Care
+          </h3>
         </div>
 
-        <h4 className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-green-700 transition-colors line-clamp-2">
-          {cat.name}
-        </h4>
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-5">
+          {categories.map((cat, i) => (
+            <div
+              key={i}
+              onClick={() => onNavigate("shop", { category: cat.name })}
+              className="group bg-white border border-gray-100 hover:border-green-600/20 p-3 sm:p-5 rounded-xl sm:rounded-2xl text-center cursor-pointer hover:shadow-md transition-all duration-300"
+            >
+              <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden mx-auto mb-2 sm:mb-4 border-2 border-gray-100 group-hover:border-green-600 transition-colors">
+                <img
+                  src={cat.img}
+                  alt={cat.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                />
+              </div>
 
-        <p className="hidden sm:block text-[10px] text-gray-500 mt-1">
-          {cat.count}+ Products
-        </p>
-      </div>
-    ))}
-  </div>
-</section>
+              <h4 className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-green-700 transition-colors line-clamp-2">
+                {cat.name}
+              </h4>
+
+              <p className="hidden sm:block text-[10px] text-gray-500 mt-1">
+                {cat.count}+ Products
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* 3. FEATURED PRODUCTS GRID */}
       <section id="featured-products" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -439,11 +458,8 @@ group
         </div>
       </section>
 
-
-
-      {/* Floating Action Button for AI Acharya Consultant - Highly Compact, Elegant & Eye-catching */}
+      {/* Floating Action Button for AI Acharya Consultant */}
       <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999] pointer-events-none">
-        {/* Inject CSS styles directly for perfectly smooth, non-blurry, jitter-free floating */}
         <style dangerouslySetInnerHTML={{
           __html: `
           @keyframes premium-acharya-float {
@@ -465,19 +481,15 @@ group
         `}} />
 
         <div className="premium-acharya-btn-container relative group pointer-events-auto">
-          {/* External golden ambient pulse ring to draw attention elegantly */}
           <div className="absolute inset-0 rounded-full bg-brand-gold-500/25 blur-md animate-pulse pointer-events-none scale-105" />
           <div className="absolute -inset-[3px] rounded-full bg-gradient-to-r from-brand-gold-500 via-brand-gold-400 to-brand-gold-600 opacity-70 blur-xs group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
           <button
             onClick={onOpenConsultant}
             className="relative flex items-center gap-1.5 sm:gap-2.5 px-3.5 py-2.5 sm:px-4.5 sm:py-3.5 rounded-full bg-gradient-to-r from-brand-green-800 via-brand-green-900 to-brand-green-800 text-brand-cream-400 hover:text-brand-gold-500 font-bold transition-all duration-300 shadow-[0_8px_25px_rgba(0,0,0,0.45)] hover:scale-105 active:scale-95 cursor-pointer border border-brand-gold-100 shrink-0 overflow-hidden"
-          // title={t('btnAskAcharya', language)}
           >
-            {/* Shimmer line effect across the button */}
             <div className="absolute inset-0 bg-gradient-to-r from-brand-gold-500/0 via-brand-gold-500/15 to-brand-gold-500/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
 
-            {/* Glowing sparkle icon */}
             <div className="relative flex items-center justify-center bg-brand-gold-500/20 p-1 sm:p-1.5 rounded-full border border-brand-gold-400/30">
               <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-gold-300 animate-pulse" />
             </div>
@@ -494,13 +506,6 @@ group
         </div>
       </div>
 
-
-
-
-
-
-
     </div>
   );
 };
-
