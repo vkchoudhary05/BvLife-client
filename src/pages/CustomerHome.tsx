@@ -120,11 +120,11 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
           w-full
           h-[195px]
           xs:h-[280px]
-          sm:h-[220px]
+          sm:h-[335px]
           md:h-[350px]
-          lg:h-[340px]
-          xl:h-[380px]
-          2xl:h-[420px]
+          lg:h-[368px]
+          xl:h-[400px]
+          2xl:h-[550px]
           rounded-xl
           overflow-hidden
           flex

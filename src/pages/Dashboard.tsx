@@ -153,7 +153,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [prodImg4, setProdImg4] = useState('');
   const [prodBenefits, setProdBenefits] = useState('');
   const [prodDosage, setProdDosage] = useState('');
-  const [prodBrand, setProdBrand] = useState('Grams Life');
+  const [prodBrand, setProdBrand] = useState('Bv Life');
   const [prodSubcategory, setProdSubcategory] = useState('');
   const [prodUsageInstructions, setProdUsageInstructions] = useState('As directed');
   const [prodFeatured, setProdFeatured] = useState(false);
@@ -273,7 +273,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg4(prod.images?.[2] || '');
     setProdBenefits(prod.benefits.join(', '));
     setProdDosage(prod.dosage);
-    setProdBrand(prod.brand || 'Grams Life');
+    setProdBrand(prod.brand || 'Bv Life');
     setProdSubcategory(prod.subcategory || '');
     setProdUsageInstructions(prod.usageInstructions || 'As directed');
     setProdFeatured(prod.featured || false);
@@ -300,7 +300,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg4('');
     setProdBenefits('');
     setProdDosage('');
-    setProdBrand('Grams Life');
+    setProdBrand('Bv Life');
     setProdSubcategory('');
     setProdUsageInstructions('As directed');
     setProdFeatured(false);
@@ -371,7 +371,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="max-w-md mx-auto text-center py-20 space-y-4">
         <ShieldAlert className="w-12 h-12 text-brand-gold-500 mx-auto" />
         <h3 className="font-serif text-xl font-bold text-brand-green-800">Sacred Access Required</h3>
-        <p className="text-xs text-brand-green-600/70">Please authenticate with Grams Life to review your order chronicles.</p>
+        <p className="text-xs text-brand-green-600/70">Please authenticate with Bv Life to review your order chronicles.</p>
         <button onClick={() => onNavigate('home')} className="bg-brand-green-700 text-brand-cream-100 font-bold px-6 py-2.5 rounded-xl text-xs">
           Return to home
         </button>
@@ -396,7 +396,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand-gold-400 bg-brand-gold-500/10 border border-brand-gold-500/20 px-2 py-0.5 rounded-full">Administrative Node</span>
               </div>
-              <h1 className="font-serif text-2xl font-bold tracking-tight mt-1 text-brand-cream-50">Grams Life Admin Panel</h1>
+              <h1 className="font-serif text-2xl font-bold tracking-tight mt-1 text-brand-cream-50">Bv Life Admin Panel</h1>
               <p className="text-xs text-brand-cream-300/80 mt-0.5">Apothecary Director: <span className="font-semibold text-brand-cream-50">{user.fullName}</span> ({user.email})</p>
             </div>
           </div>
@@ -1410,7 +1410,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
                 const updatedSettings: WebsiteSettings = {
-                  logoName: fd.get('logoName') as string || 'Grams Life',
+                  logoName: fd.get('logoName') as string || 'Bv Life',
                   logoUrl: fd.get('logoUrl') as string || '',
                   contactEmail: fd.get('contactEmail') as string || '',
                   contactPhone: fd.get('contactPhone') as string || '',
@@ -1628,7 +1628,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     G
                   </div>
                   <div>
-                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Grams Life</h2>
+                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Bv Life</h2>
                     <span className="text-[10px] uppercase tracking-widest text-brand-gold-700 font-extrabold mt-1 block">Ayurvedic Sanctuary</span>
                   </div>
                 </div>
@@ -1729,7 +1729,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </p>
                 <div className="space-y-0.5">
                   <p className="text-[10px] font-bold text-brand-gold-700 uppercase tracking-widest">Aacharya Dhanvantari</p>
-                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Grams Life Sanctuary</p>
+                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Bv Life Sanctuary</p>
                 </div>
               </div>
 

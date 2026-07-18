@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, ArrowRight, ShieldCheck, HeartHandshake, Sparkles } from 'lucide-react';
 import { WebsiteSettings } from '../types';
+import { Logo } from './Logo';
 
 interface FooterProps {
   onNavigate: (page: string, params?: any) => void;
@@ -67,23 +68,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
         {/* Brand Column */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate('home')}>
-            {settings?.logoUrl ? (
-              <img 
-                src={settings.logoUrl} 
-                alt={settings.logoName || "Grams Life"} 
-                className="h-10 w-auto object-contain max-w-[150px]" 
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <>
-                <div className="w-8 h-8 rounded-full bg-brand-gold-500 flex items-center justify-center text-brand-green-900 font-serif text-sm font-bold">
-                  {(settings?.logoName || "Grams Life").charAt(0)}
-                </div>
-                <span className="font-serif text-xl font-bold tracking-tight text-brand-cream-100">
-                  {(settings?.logoName || "Grams Life").split(' ')[0]} <span className="text-brand-gold-500 font-sans font-normal italic">{(settings?.logoName || "Grams Life").split(' ').slice(1).join(' ') || 'Life'}</span>
-                </span>
-              </>
-            )}
+            <Logo variant="light" />
           </div>
           <p className="text-xs text-brand-cream-300/80 leading-relaxed">
             Sourcing deep wild herbs, hand-crafting pure oils, and formulating clinically researched solutions. We bridge Vedic secrets with modern bio-technology to heal your life, naturally.
@@ -99,7 +84,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
             </div>
             <div className="flex items-center gap-2.5">
               <MapPin className="w-4 h-4 text-brand-gold-500 flex-shrink-0" />
-              <span className="leading-tight">Bv Life Herbals, indian Valley, CA 94016</span>
+              <span className="leading-tight">Grams Life Herbals, Silicon Valley, CA 94016</span>
             </div>
           </div>
         </div>

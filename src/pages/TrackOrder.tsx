@@ -225,7 +225,7 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
                 </span>
                 {order.trackingNumber && (
                   <span className="text-[10px] font-extrabold uppercase tracking-widest bg-brand-gold-500/10 text-brand-gold-700 px-2.5 py-0.5 rounded-full border border-brand-gold-500/20">
-                    Carrier: Grams Express
+                    Carrier: Bv Express
                   </span>
                 )}
               </div>

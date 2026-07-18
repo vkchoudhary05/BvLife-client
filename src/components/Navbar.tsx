@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Search, Heart, ShoppingCart, User, Sparkles, LogOut, LayoutDashboard, Shield, Menu, X, ArrowLeft } from 'lucide-react';
 import { User as UserType, CartItem, WebsiteSettings } from '../types';
 import { Language, t } from '../lib/translations';
+import { Logo } from './Logo';
 
 interface NavbarProps {
   currentUser: UserType | null;
@@ -172,28 +173,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex-shrink-0 cursor-pointer flex items-center gap-1.5 sm:gap-2 mr-auto md:mr-0"
             onClick={() => onNavigate('home')}
           >
-            {settings?.logoUrl ? (
-              <img 
-                src={settings.logoUrl} 
-                alt={settings.logoName || "Grams Life"} 
-                className="h-9 sm:h-12 w-auto object-contain max-w-[130px] sm:max-w-[160px]" 
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <>
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-green-700 flex items-center justify-center text-brand-cream-100 font-serif text-base sm:text-xl font-bold shadow-sm shrink-0">
-                  {(settings?.logoName || "Grams Life").charAt(0)}
-                </div>
-                <div className="min-w-0">
-                  <h1 className="font-serif text-sm sm:text-2xl font-bold tracking-tight text-brand-green-800 leading-none">
-                    {(settings?.logoName || "Grams Life").split(' ')[0]} <span className="text-brand-gold-600 font-sans font-normal italic text-xs sm:text-lg">{(settings?.logoName || "Grams Life").split(' ').slice(1).join(' ') || 'Life'}</span>
-                  </h1>
-                  <p className="text-[7px] sm:text-[9px] uppercase tracking-widest text-brand-green-600 font-medium mt-0.5 sm:-mt-1 truncate">
-                    Organic Wellbeing
-                  </p>
-                </div>
-              </>
-            )}
+            <Logo variant="dark" />
           </div>
 
           {/* Desktop Search Bar */}

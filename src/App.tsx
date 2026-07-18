@@ -175,7 +175,7 @@ export default function App() {
         if (Array.isArray(rRes)) setReviews(rRes);
 
       } catch (err) {
-        console.error("Error loading Grams Life baseline data: ", err);
+        console.error("Error loading Bv Life baseline data: ", err);
       }
     };
 
@@ -716,7 +716,7 @@ export default function App() {
   };
 
   const activeSettings: WebsiteSettings = settings || {
-    logoName: "Grams Life",
+    logoName: "Bv Life",
     logoUrl: "",
     contactEmail: "care@gramslife.com",
     contactPhone: "+91 98765 43210",
