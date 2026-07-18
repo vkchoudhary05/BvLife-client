@@ -28,7 +28,7 @@ export const Logo: React.FC<LogoProps> = ({
       <img
         src={logo}
         alt="BV Life Logo"
-        className="h-15 sm:h-16 md:h-17 lg:h-18 w-auto object-contain max-w-[190px] sm:max-w-[260px] md:max-w-[320px]"
+        className="h-13 sm:h-15 md:h-16 lg:h-17 w-auto object-contain max-w-[190px] sm:max-w-[260px] md:max-w-[320px]"
       />
     </div>
   );
