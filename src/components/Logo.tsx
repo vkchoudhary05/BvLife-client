@@ -11,7 +11,6 @@ interface LogoProps {
 }
 
 const LOGO_PATHS = [
-  '/logo.png',
   '/assets/Bvlogo.png',
 ];
 
@@ -33,7 +32,7 @@ export const Logo: React.FC<LogoProps> = ({ className = '', variant = 'dark' }) 
       <div className={`inline-flex items-center gap-2 ${isDark ? '' : 'bg-white px-1 py-1 sm:px-2 sm:py-1 rounded-4xl shadow-md border border-brand-gold-500/10'} ${className}`}>
         <img
           src={LOGO_PATHS[pathIndex]}
-          alt="Grams Life Logo"
+          alt="Bv Life Logo"
           onError={handleImgError}
           className="h-14 sm:h-20 w-auto object-contain max-w-[190px] sm:max-w-[260px]"
           referrerPolicy="no-referrer"
@@ -78,7 +77,7 @@ export const Logo: React.FC<LogoProps> = ({ className = '', variant = 'dark' }) 
       {/* Typography */}
       <div className="min-w-0">
         <h1 className="font-serif text-xl sm:text-3xl font-bold tracking-tight leading-none">
-          <span className={isDark ? 'text-brand-green-800' : 'text-brand-cream-100'}>Grams</span>
+          <span className={isDark ? 'text-brand-green-800' : 'text-brand-cream-100'}>Bv</span>
           <span className="text-brand-gold-600 font-sans font-normal italic text-base sm:text-xl ml-1">Life</span>
         </h1>
         <p className={`text-[9px] sm:text-[11px] uppercase tracking-widest font-semibold mt-0.5 sm:-mt-0.5 truncate ${

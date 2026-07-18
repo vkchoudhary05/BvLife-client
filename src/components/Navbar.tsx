@@ -196,7 +196,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button onClick={() => onNavigate('shop')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navShop', language)}</button>
             <button onClick={() => onNavigate('track-order')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">Track Order</button>
             <button onClick={() => onNavigate('static', { page: 'blog' })} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navBlogs', language)}</button>
-            <button onClick={() => onNavigate('static', { page: 'about' })} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navAbout', language)}</button>
+            <button onClick={() => onNavigate('static', { page: 'about' })} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('About', language)}</button>
             <button onClick={() => onNavigate('static', { page: 'contact' })} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navContact', language)}</button>
           </nav>
 
@@ -292,7 +292,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <>
                       <div className="px-4 py-2 border-b border-brand-green-600/10 flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-brand-green-800">Welcome to Grams Life</p>
+                          <p className="text-sm font-semibold text-brand-green-800">Welcome to Bv Life</p>
                           <p className="text-xs text-brand-green-600/70">Connect to synchronize your holistic cart & health logs.</p>
                         </div>
                         <button
@@ -360,7 +360,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => { onNavigate('static', { page: 'about' }); setIsMobileMenuOpen(false); }} 
                 className="text-left px-4 py-2.5 text-base font-medium text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
               >
-                {t('navAbout', language)}
+                {t('About', language)}
               </button>
               <button 
                 onClick={() => { onNavigate('static', { page: 'contact' }); setIsMobileMenuOpen(false); }} 
