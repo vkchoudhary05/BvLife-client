@@ -90,14 +90,14 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
   const bestSellers = products.filter(p => p.bestSeller).slice(0, 4);
 
   const categories = [
-    { name: "Immunity", count: 12, img: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&q=80&w=200" },
-    { name: "Skin Care", count: 8, img: "https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?auto=format&fit=crop&q=80&w=200" },
-    { name: "Digestion", count: 15, img: "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&q=80&w=200" },
-    { name: "Hair Care", count: 9, img: "https://images.unsplash.com/photo-1617897903246-719242758050?auto=format&fit=crop&q=80&w=200" },
-    { name: "Oils", count: 14, img: "https://images.unsplash.com/photo-1608248597481-496100c80836?auto=format&fit=crop&q=80&w=200" },
-    { name: "Brain & Memory", count: 6, img: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=200" },
-    { name: "Sleep & Stress", count: 5, img: "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?auto=format&fit=crop&q=80&w=200" },
-    { name: "Sexual Wellness", count: 4, img: "https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?auto=format&fit=crop&q=80&w=200" }
+    { name: "Immunity", count: 12, img: "https://i.pinimg.com/736x/45/5b/ef/455befde743efeb9efb34a553d8223c1.jpg" },
+    { name: "Skin Care", count: 8, img: "https://i.pinimg.com/736x/d8/76/f5/d876f515b9fdca9721332e608ab31efb.jpg" },
+    { name: "Digestion", count: 15, img: "https://i.pinimg.com/736x/96/72/f7/9672f71b394e6f9a3eea2a331d31b0d4.jpg" },
+    { name: "Hair Care", count: 9, img: "https://i.pinimg.com/736x/ff/c6/e0/ffc6e0b078c922f7bd0a33e73cc8fc4a.jpg" },
+    { name: "Oils", count: 14, img: "https://i.pinimg.com/1200x/14/28/02/142802442fd42bc1c1e8deb3af002880.jpg" },
+    { name: "Brain & Memory", count: 6, img: "https://i.pinimg.com/1200x/e3/57/7f/e3577fe21b78f8a43bae9431b834d39c.jpg" },
+    { name: "Sleep & Stress", count: 5, img: "https://i.pinimg.com/736x/80/7b/73/807b735ec289f936911b302dcde23710.jpg" },
+    { name: "Sexual Wellness", count: 4, img: "https://i.pinimg.com/1200x/8e/a6/fa/8ea6fa554150c605a6a2339c65abe97b.jpg" }
   ];
 
   const slide = heroSlides[currentSlide];
