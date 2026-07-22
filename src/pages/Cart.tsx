@@ -112,9 +112,9 @@ export const Cart: React.FC<CartProps> = ({
   }
 
   return (
-    <div id="cart-page" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div id="cart-page" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       
-      <div className="border-b border-brand-green-600/10 pb-5 mb-8">
+      <div className="border-b border-brand-green-600/10 pb-4 mb-6">
         <h2 className="font-serif text-2xl sm:text-3xl font-bold text-brand-green-900">Your Apothecary Bag</h2>
         <p className="text-xs text-brand-green-600/70 mt-1">Review your selected Ayurvedic items before securing traditional checkout.</p>
       </div>

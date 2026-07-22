@@ -9,8 +9,8 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AIConsultantModal } from './components/AIConsultantModal';
 import { QuickViewModal } from './components/QuickViewModal';
-import { ProductCompare } from './components/ProductCompare';
 import { AdminGatewayLogin } from './components/AdminGatewayLogin';
+import { BuyNowModal } from './components/BuyNowModal';
 
 // Pages
 import { CustomerHome } from './pages/CustomerHome';
@@ -21,6 +21,7 @@ import { Checkout } from './pages/Checkout';
 import { Dashboard } from './pages/Dashboard';
 import { StaticPages } from './pages/StaticPages';
 import { TrackOrder } from './pages/TrackOrder';
+import { Wishlist } from './pages/Wishlist';
 
 // Types
 import { Product, Blog, FAQ, Coupon, WebsiteSettings, User, CartItem, Order, Address, Review } from './types';
@@ -108,7 +109,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(localStorage.getItem('grams_auth_token'));
 
-  // User Interactive states (Cart, Wishlist, Compare)
+  // User Interactive states (Cart, Wishlist)
   const [cart, setCart] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('grams_cart');
     return saved ? JSON.parse(saved) : [];
@@ -117,12 +118,12 @@ export default function App() {
     const saved = localStorage.getItem('grams_wishlist');
     return saved ? JSON.parse(saved) : [];
   });
-  const [compareList, setCompareList] = useState<Product[]>([]);
-  const [isCompareOpen, setIsCompareOpen] = useState(false);
 
   // Floating modals states
   const [isConsultantOpen, setIsConsultantOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const [buyNowProduct, setBuyNowProduct] = useState<Product | null>(null);
+  const [buyNowQty, setBuyNowQty] = useState<number>(1);
 
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 
@@ -416,6 +417,11 @@ export default function App() {
     }
   };
 
+  const handleLoginSuccess = (token: string) => {
+    localStorage.setItem('grams_auth_token', token);
+    setAuthToken(token);
+  };
+
   const handleLogin = async (credentials: { email: string, password?: string }): Promise<boolean> => {
     try {
       const res = await fetch('/api/auth/login', {
@@ -468,6 +474,7 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('grams_auth_token');
+    localStorage.removeItem('grams_recent_orders');
     setAuthToken(null);
     setCurrentUser(null);
     setOrders([]);
@@ -506,30 +513,6 @@ export default function App() {
         ? prev.filter(id => id !== product.id)
         : [...prev, product.id]
     );
-  };
-
-  const handleAddToCompare = (product: Product) => {
-    setCompareList(prev => {
-      const exists = prev.some(p => p.id === product.id);
-      if (exists) {
-        return prev.filter(p => p.id !== product.id);
-      }
-      if (prev.length >= 3) {
-        alert("You can compare up to 3 Ayurvedic remedies side by side.");
-        return prev;
-      }
-      setIsCompareOpen(true);
-      return [...prev, product];
-    });
-  };
-
-  const handleClearCompare = () => {
-    setCompareList([]);
-    setIsCompareOpen(false);
-  };
-
-  const handleRemoveFromCompare = (product: Product) => {
-    setCompareList(prev => prev.filter(p => p.id !== product.id));
   };
 
   // Add review dynamically
@@ -584,21 +567,59 @@ export default function App() {
   // Complete Place Order
   const handlePlaceOrder = async (orderData: Partial<Order>): Promise<Order | null> => {
     try {
+      const activeEmail = orderData.userEmail || currentUser?.email || 'guest@gramslife.com';
+      const orderPayload = {
+        ...orderData,
+        userEmail: activeEmail,
+        userName: orderData.userName || currentUser?.fullName || 'Guest Customer'
+      };
+
+      const currentToken = authToken || localStorage.getItem('grams_auth_token') || activeEmail;
+
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
+          'Authorization': `Bearer ${currentToken}`
         },
-        body: JSON.stringify(orderData)
+        body: JSON.stringify(orderPayload)
       });
 
       if (response.ok) {
-        const completeOrder = await response.json();
-        setOrders(prev => [completeOrder, ...prev]);
+        const completeData = await response.json();
+        const savedOrder: Order = completeData.order || completeData;
+
+        // Track recent order ID locally so it is instantly viewable in order history
+        try {
+          const stored = localStorage.getItem('grams_recent_orders');
+          const existingIds: string[] = stored ? JSON.parse(stored) : [];
+          if (!existingIds.includes(savedOrder.id)) {
+            localStorage.setItem('grams_recent_orders', JSON.stringify([savedOrder.id, ...existingIds]));
+          }
+        } catch (e) {}
+
+        // Auto persist login if guest or new account placed order
+        const effectiveEmail = savedOrder.userEmail || activeEmail;
+        if (!authToken && effectiveEmail && effectiveEmail !== 'guest@gramslife.com') {
+          localStorage.setItem('grams_auth_token', effectiveEmail);
+          setAuthToken(effectiveEmail);
+        }
+
+        setOrders(prev => [savedOrder, ...prev.filter(o => o.id !== savedOrder.id)]);
         setCart([]); // Reset Cart
         setAppliedCoupon(null);
-        return completeOrder;
+
+        // Refresh user profile if authenticated
+        const meToken = authToken || localStorage.getItem('grams_auth_token') || effectiveEmail;
+        if (meToken && meToken !== 'guest@gramslife.com') {
+          fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${meToken}` }
+          }).then(res => res.json()).then(userData => {
+            if (userData.user) setCurrentUser(userData.user);
+          }).catch(console.error);
+        }
+
+        return savedOrder;
       }
     } catch (err) {
       console.error(err);
@@ -716,7 +737,7 @@ export default function App() {
   };
 
   const activeSettings: WebsiteSettings = settings || {
-    logoName: "Bv Life",
+    logoName: "Grams Life",
     logoUrl: "",
     contactEmail: "care@gramslife.com",
     contactPhone: "+91 98765 43210",
@@ -760,9 +781,11 @@ export default function App() {
             onQuickView={(p) => setQuickViewProduct(p)}
             wishlist={wishlist}
             onToggleWishlist={handleToggleWishlist}
-            onAddToCompare={handleAddToCompare}
-            compareList={compareList}
             language={language}
+            onBuyNow={(prod, qty) => {
+              setBuyNowProduct(prod);
+              setBuyNowQty(qty);
+            }}
           />
         )}
 
@@ -775,11 +798,13 @@ export default function App() {
             onQuickView={(p) => setQuickViewProduct(p)}
             wishlist={wishlist}
             onToggleWishlist={handleToggleWishlist}
-            onAddToCompare={handleAddToCompare}
-            compareList={compareList}
             searchQuery={pageParams?.search || ''}
             categoryFilter={pageParams?.category || ''}
             language={language}
+            onBuyNow={(prod, qty) => {
+              setBuyNowProduct(prod);
+              setBuyNowQty(qty);
+            }}
           />
         )}
 
@@ -791,6 +816,10 @@ export default function App() {
             reviews={reviews}
             onNavigate={handleNavigate}
             onAddToCart={handleAddToCart}
+            onBuyNow={(prod, qty) => {
+              setBuyNowProduct(prod);
+              setBuyNowQty(qty);
+            }}
             wishlist={wishlist}
             onToggleWishlist={handleToggleWishlist}
             onPostReview={handlePostReview}
@@ -813,6 +842,23 @@ export default function App() {
           />
         )}
 
+        {/* Wishlist Page */}
+        {currentPage === 'wishlist' && (
+          <Wishlist
+            wishlist={wishlist}
+            products={products}
+            onNavigate={handleNavigate}
+            onAddToCart={handleAddToCart}
+            onToggleWishlist={handleToggleWishlist}
+            onQuickView={(p) => setQuickViewProduct(p)}
+            language={language}
+            onBuyNow={(prod, qty) => {
+              setBuyNowProduct(prod);
+              setBuyNowQty(qty);
+            }}
+          />
+        )}
+
         {/* Secure Checkout */}
         {currentPage === 'checkout' && (
           <Checkout
@@ -824,6 +870,9 @@ export default function App() {
             settings={activeSettings}
             onPlaceOrder={handlePlaceOrder}
             language={language}
+            currentUser={currentUser}
+            onLoginSuccess={handleLoginSuccess}
+            authToken={authToken}
           />
         )}
 
@@ -855,6 +904,7 @@ export default function App() {
             onLogout={handleLogout}
             isAdminPanel={false}
             onUpdateSettings={handleUpdateSettings}
+            onLoginSuccess={handleLoginSuccess}
           />
         )}
 
@@ -1346,18 +1396,6 @@ export default function App() {
         />
       )}
 
-      {/* 4. FLOATING COMPARISON DRAWER */}
-      {currentPage !== 'admin' && (
-        <ProductCompare 
-          compareList={compareList}
-          onRemoveFromCompare={handleRemoveFromCompare}
-          onClearCompare={handleClearCompare}
-          onAddToCart={handleAddToCart}
-          isOpen={isCompareOpen}
-          onClose={() => setIsCompareOpen(false)}
-        />
-      )}
-
       {/* 5. FLOATING QUICK VIEW POPUP */}
       {currentPage !== 'admin' && quickViewProduct && (
         <QuickViewModal
@@ -1365,6 +1403,10 @@ export default function App() {
           onClose={() => setQuickViewProduct(null)}
           onAddToCart={handleAddToCart}
           onNavigate={handleNavigate}
+          onBuyNow={(prod, qty) => {
+            setBuyNowProduct(prod);
+            setBuyNowQty(qty);
+          }}
         />
       )}
 
@@ -1378,6 +1420,27 @@ export default function App() {
           language={language}
           currentUser={currentUser}
           authToken={authToken}
+        />
+      )}
+
+      {/* 7. FLOATING EXPRESS BUY NOW MODAL */}
+      {currentPage !== 'admin' && buyNowProduct && (
+        <BuyNowModal
+          product={buyNowProduct}
+          quantity={buyNowQty}
+          onClose={() => {
+            setBuyNowProduct(null);
+            setBuyNowQty(1);
+          }}
+          onPlaceOrder={handlePlaceOrder}
+          onNavigate={handleNavigate}
+          language={language}
+          currentUser={currentUser}
+          onAddAddress={handleAddAddress}
+          onLoginSuccess={(token) => {
+            localStorage.setItem('grams_auth_token', token);
+            setAuthToken(token);
+          }}
         />
       )}
 

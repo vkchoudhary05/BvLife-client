@@ -17,11 +17,10 @@ interface ShopProps {
   onQuickView: (product: Product) => void;
   wishlist: string[];
   onToggleWishlist: (product: Product) => void;
-  onAddToCompare: (product: Product) => void;
-  compareList: Product[];
   searchQuery?: string;
   categoryFilter?: string;
   language: Language;
+  onBuyNow?: (product: Product, qty: number) => void;
 }
 
 export const Shop: React.FC<ShopProps> = ({
@@ -31,11 +30,10 @@ export const Shop: React.FC<ShopProps> = ({
   onQuickView,
   wishlist,
   onToggleWishlist,
-  onAddToCompare,
-  compareList,
   searchQuery = '',
   categoryFilter = '',
-  language
+  language,
+  onBuyNow
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryFilter);
   const [priceRange, setPriceRange] = useState<number>(2500);
@@ -104,10 +102,10 @@ export const Shop: React.FC<ShopProps> = ({
   }, [products, search, selectedCategory, priceRange, sortBy]);
 
   return (
-    <div id="shop-page" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div id="shop-page" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       
       {/* Title */}
-      <div className="border-b border-brand-green-600/10 pb-5 mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+      <div className="border-b border-brand-green-600/10 pb-4 mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">
             {language === 'hi' ? 'आयुर्वेदिक औषधालय' : 'Apothecary Dispensary'}
@@ -311,7 +309,6 @@ export const Shop: React.FC<ShopProps> = ({
             }>
               {filteredProducts.map(p => {
                 const isWishlisted = wishlist.includes(p.id);
-                const isCompared = compareList.some(item => item.id === p.id);
 
                 if (viewMode === 'grid') {
                   return (
@@ -323,8 +320,7 @@ export const Shop: React.FC<ShopProps> = ({
                       onQuickView={onQuickView}
                       isWishlisted={isWishlisted}
                       onToggleWishlist={onToggleWishlist}
-                      onAddToCompare={onAddToCompare}
-                      isCompared={isCompared}
+                      onBuyNow={onBuyNow}
                     />
                   );
                 } else {

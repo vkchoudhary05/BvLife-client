@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Star, ShieldCheck, Heart, Sparkles, Share2, Info, ChevronRight, MessageSquare } from 'lucide-react';
+import { Star, ShieldCheck, Heart, Sparkles, Share2, Info, ChevronRight, MessageSquare, ShoppingCart } from 'lucide-react';
 import { Product, Review } from '../types';
 import { Language, t, translateProductAttr } from '../lib/translations';
 
@@ -18,6 +18,7 @@ interface ProductDetailProps {
   onToggleWishlist: (product: Product) => void;
   onPostReview: (reviewData: { productId: string, rating: number, comment: string }) => void;
   language: Language;
+  onBuyNow?: (product: Product, qty: number) => void;
 }
 
 export const ProductDetail: React.FC<ProductDetailProps> = ({
@@ -29,7 +30,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   wishlist,
   onToggleWishlist,
   onPostReview,
-  language
+  language,
+  onBuyNow
 }) => {
   const [activeTab, setActiveTab] = useState<'ingredients' | 'benefits' | 'dosage' | 'faqs' | 'reviews'>('ingredients');
   const [selectedImage, setSelectedImage] = useState<string>('');
@@ -101,14 +103,15 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   const relatedProducts = products.filter(p => p.category === product.category && p.id !== product.id).slice(0, 3);
 
   return (
-    <div id="product-detail-page" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-16">
+    <div id="product-detail-page" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6 sm:space-y-8">
       
       {/* Breadcrumbs */}
       <div className="flex items-center gap-1.5 text-xs text-brand-green-600/60 font-medium">
-        <button onClick={() => onNavigate('home')} className="hover:text-brand-gold-600">
+        <button onClick={() => onNavigate('home')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">
           {language === 'hi' ? 'मुख्य पृष्ठ' : 'Home'}
         </button>
-                <button onClick={() => onNavigate('shop', { category: product.category })} className="hover:text-brand-gold-600">
+        <ChevronRight className="w-3.5 h-3.5" />
+        <button onClick={() => onNavigate('shop', { category: product.category })} className="hover:text-brand-gold-600 transition-colors cursor-pointer">
           {translateProductAttr(product.category, language)}
         </button>
         <ChevronRight className="w-3.5 h-3.5" />
@@ -116,19 +119,19 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
       </div>
 
       {/* Main product showcase */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
         
         {/* Left Column: Image Gallery */}
-        <div className="space-y-4">
-          <div className="aspect-square bg-white border border-brand-green-600/10 rounded-2xl p-6 flex items-center justify-center overflow-hidden shadow-sm relative">
+        <div className="lg:col-span-5 space-y-4">
+          <div className="aspect-square bg-white border border-brand-green-600/10 rounded-2xl p-6 flex items-center justify-center overflow-hidden shadow-xs relative">
             <img 
               src={selectedImage || product.mainImage} 
               alt={product.name} 
-              className="max-h-[420px] object-contain hover:scale-105 transition-transform duration-300"
+              className="max-h-[420px] object-contain hover:scale-102 transition-transform duration-300"
               referrerPolicy="no-referrer"
             />
             {discountPercent > 0 && (
-              <span className="absolute top-4 left-4 bg-brand-gold-500 text-brand-green-950 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wider shadow-sm">
+              <span className="absolute top-4 left-4 bg-brand-gold-500 text-brand-green-950 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider shadow-sm">
                 {discountPercent}% {language === 'hi' ? 'छूट' : 'OFF'}
               </span>
             )}
@@ -141,9 +144,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 <button
                   key={i}
                   onClick={() => setSelectedImage(img)}
-                  className={`w-20 h-20 bg-white border-2 rounded-xl overflow-hidden flex items-center justify-center p-2.5 flex-shrink-0 cursor-pointer transition-all ${
+                  className={`w-18 h-18 bg-white border-2 rounded-xl overflow-hidden flex items-center justify-center p-2 flex-shrink-0 cursor-pointer transition-all ${
                     (selectedImage || product.mainImage) === img 
-                      ? 'border-brand-green-700 shadow-sm' 
+                      ? 'border-brand-green-700 shadow-xs' 
                       : 'border-brand-green-600/5 hover:border-brand-green-600/20'
                   }`}
                 >
@@ -155,7 +158,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
         </div>
 
         {/* Right Column: Key Details */}
-        <div className="space-y-6">
+        <div className="lg:col-span-7 space-y-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-xs uppercase tracking-widest text-brand-gold-700 font-bold bg-brand-gold-500/10 px-2.5 py-1 rounded-md">
@@ -231,35 +234,55 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           </div>
 
           {/* Buy actions */}
-          <div className="pt-2 space-y-4">
+          <div className="pt-2">
             {product.stock > 0 ? (
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* Quantity input */}
-                <div className="flex items-center border border-brand-green-200 rounded-xl bg-white overflow-hidden max-w-[130px] mx-auto sm:mx-0">
-                  <button 
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="px-4 py-3 text-brand-green-800 font-bold hover:bg-brand-green-50"
+              <div className="flex flex-col gap-3.5 max-w-md">
+                {/* Row 1: Quantity Selector + Add to Cart */}
+                <div className="flex flex-row items-center gap-3 w-full">
+                  {/* Quantity input */}
+                  <div className="flex items-center justify-between border-2 border-brand-green-700/20 rounded-2xl bg-white overflow-hidden w-28 sm:w-32 h-13 shrink-0 shadow-xs focus-within:border-brand-green-700 transition-all">
+                    <button 
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-10 h-full flex items-center justify-center text-brand-green-800 font-bold hover:bg-brand-green-50 transition-colors cursor-pointer select-none text-base font-sans"
+                    >
+                      -
+                    </button>
+                    <span className="font-bold text-sm text-brand-green-950 tabular-nums">{quantity}</span>
+                    <button 
+                      onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                      className="w-10 h-full flex items-center justify-center text-brand-green-800 font-bold hover:bg-brand-green-50 transition-colors cursor-pointer select-none text-base font-sans"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {/* Add to Cart button */}
+                  <button
+                    onClick={() => onAddToCart(product, quantity)}
+                    className="flex-1 h-13 border-2 border-brand-green-700 hover:bg-brand-green-50 text-brand-green-800 font-extrabold rounded-2xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] text-sm tracking-wider"
                   >
-                    -
-                  </button>
-                  <span className="px-4 font-semibold text-sm text-brand-green-900">{quantity}</span>
-                  <button 
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                    className="px-4 py-3 text-brand-green-800 font-bold hover:bg-brand-green-50"
-                  >
-                    +
+                    <ShoppingCart className="w-4 h-4 text-brand-green-700 shrink-0" />
+                    <span>{t('btn_add_to_cart', language)}</span>
                   </button>
                 </div>
 
+                {/* Row 2: Express Direct Buy Now Button */}
                 <button
-                  onClick={() => onAddToCart(product, quantity)}
-                  className="flex-1 bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 font-bold py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                  onClick={() => {
+                    if (onBuyNow) {
+                      onBuyNow(product, quantity);
+                    } else {
+                      onAddToCart(product, quantity);
+                      onNavigate('checkout');
+                    }
+                  }}
+                  className="w-full h-13 bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 font-bold rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] text-sm uppercase tracking-wider"
                 >
-                  {t('btn_add_to_cart', language)}
+                  <span>{language === 'hi' ? 'अभी खरीदें' : 'Buy Now'}</span>
                 </button>
               </div>
             ) : (
-              <div className="bg-red-50 border border-red-200 text-red-600 font-bold text-center py-3.5 rounded-xl">
+              <div className="bg-red-50 border border-red-200 text-red-600 font-bold text-center py-3.5 rounded-2xl text-xs sm:text-sm">
                 {language === 'hi' 
                   ? 'वर्तमान में आउट ऑफ स्टॉक (छोटा बैच तैयार किया जा रहा है)' 
                   : 'Currently Out of Stock (Undergoing Small-Batch Preparation)'

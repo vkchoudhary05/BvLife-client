@@ -12,13 +12,15 @@ interface QuickViewModalProps {
   onClose: () => void;
   onAddToCart: (product: Product, qty: number) => void;
   onNavigate: (page: string, params?: any) => void;
+  onBuyNow?: (product: Product, qty: number) => void;
 }
 
 export const QuickViewModal: React.FC<QuickViewModalProps> = ({
   product,
   onClose,
   onAddToCart,
-  onNavigate
+  onNavigate,
+  onBuyNow
 }) => {
   const [qty, setQty] = useState(1);
 
@@ -107,30 +109,47 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
             </div>
 
             {product.stock > 0 ? (
-              <div className="flex gap-3">
-                {/* Quantity adjustments */}
-                <div className="flex items-center border border-brand-green-200 rounded-xl bg-white overflow-hidden">
-                  <button 
-                    onClick={() => setQty(Math.max(1, qty - 1))}
-                    className="px-3 py-2 text-brand-green-800 font-semibold hover:bg-brand-green-50"
+              <div className="flex flex-col gap-2.5">
+                <div className="flex gap-2.5">
+                  {/* Quantity adjustments */}
+                  <div className="flex items-center border border-brand-green-200 rounded-xl bg-white overflow-hidden shrink-0 h-11">
+                    <button 
+                      onClick={() => setQty(Math.max(1, qty - 1))}
+                      className="w-9 h-full flex items-center justify-center text-brand-green-800 font-semibold hover:bg-brand-green-50 cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <span className="px-1 font-semibold text-sm text-brand-green-900 w-6 text-center">{qty}</span>
+                    <button 
+                      onClick={() => setQty(Math.min(product.stock, qty + 1))}
+                      className="w-9 h-full flex items-center justify-center text-brand-green-800 font-semibold hover:bg-brand-green-50 cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => { onAddToCart(product, qty); onClose(); }}
+                    className="flex-1 h-11 border border-brand-green-700 hover:bg-brand-green-50 text-brand-green-800 font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5 active:scale-[0.98]"
                   >
-                    -
-                  </button>
-                  <span className="px-3 font-semibold text-sm text-brand-green-900">{qty}</span>
-                  <button 
-                    onClick={() => setQty(Math.min(product.stock, qty + 1))}
-                    className="px-3 py-2 text-brand-green-800 font-semibold hover:bg-brand-green-50"
-                  >
-                    +
+                    <ShoppingCart className="w-4 h-4 text-brand-green-700" />
+                    <span>Add To Cart</span>
                   </button>
                 </div>
 
                 <button
-                  onClick={() => { onAddToCart(product, qty); onClose(); }}
-                  className="flex-1 bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 font-bold py-2.5 rounded-xl transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1.5"
+                  onClick={() => { 
+                    onClose(); 
+                    if (onBuyNow) {
+                      onBuyNow(product, qty);
+                    } else {
+                      onAddToCart(product, qty); 
+                      onNavigate('checkout'); 
+                    }
+                  }}
+                  className="w-full h-11 bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 font-bold rounded-xl transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5 active:scale-[0.98]"
                 >
-                  <ShoppingCart className="w-4 h-4" />
-                  <span>Add To Cart</span>
+                  <span>Buy Now</span>
                 </button>
               </div>
             ) : (

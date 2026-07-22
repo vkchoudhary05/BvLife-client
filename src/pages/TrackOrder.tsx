@@ -33,21 +33,43 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
   // If user is logged in, fetch their recent orders to allow easy tracking clicks
   useEffect(() => {
     const fetchUserOrders = async () => {
-      if (!authToken || !currentUser) return;
+      if (!authToken || !currentUser) {
+        setRecentOrders([]);
+        return;
+      }
       try {
-        const res = await fetch('/api/orders', {
+        const res = await fetch(`/api/orders/user/${encodeURIComponent(currentUser.email)}`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
         if (res.ok) {
           const data = await res.json();
-          // Sort by date descending
-          const sorted = data.sort((a: any, b: any) => 
-            new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
-          );
-          setRecentOrders(sorted);
+          if (Array.isArray(data)) {
+            const userEmailLower = currentUser.email.toLowerCase();
+            const userPhoneClean = currentUser.phone ? currentUser.phone.replace(/\D/g, '') : '';
+
+            // Strictly filter by current user's email or phone to guarantee privacy
+            const filtered = data.filter((o: Order) => {
+              const oEmail = o.userEmail ? o.userEmail.toLowerCase() : '';
+              const oPhone = o.shippingAddress?.phone ? o.shippingAddress.phone.replace(/\D/g, '') : '';
+              const emailMatch = !!(userEmailLower && oEmail === userEmailLower);
+              const phoneMatch = !!(userPhoneClean && userPhoneClean.length >= 10 && oPhone.endsWith(userPhoneClean.slice(-10)));
+              return emailMatch || phoneMatch;
+            });
+
+            // Sort by date descending
+            const sorted = filtered.sort((a: any, b: any) => 
+              new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
+            );
+            setRecentOrders(sorted);
+          } else {
+            setRecentOrders([]);
+          }
+        } else {
+          setRecentOrders([]);
         }
       } catch (err) {
         console.error("Error fetching orders for quick track: ", err);
+        setRecentOrders([]);
       }
     };
 
@@ -113,10 +135,10 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
   const currentIdx = order ? getStatusIndex(order.status) : -1;
 
   return (
-    <div id="track-order-page" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div id="track-order-page" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       
       {/* Header and Back Link */}
-      <div className="mb-8 flex justify-between items-center">
+      <div className="mb-5 flex justify-between items-center">
         <button 
           onClick={() => onNavigate('home')}
           className="flex items-center gap-2 text-xs font-bold text-brand-green-800 hover:text-brand-gold-600 transition-colors cursor-pointer"
@@ -225,7 +247,7 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
                 </span>
                 {order.trackingNumber && (
                   <span className="text-[10px] font-extrabold uppercase tracking-widest bg-brand-gold-500/10 text-brand-gold-700 px-2.5 py-0.5 rounded-full border border-brand-gold-500/20">
-                    Carrier: Bv Express
+                    Carrier: Grams Express
                   </span>
                 )}
               </div>

@@ -7,9 +7,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   History, MapPin, User, LayoutDashboard, Leaf, ShoppingBag, 
   Tag, Plus, Trash2, Edit2, ShieldAlert, Sparkles, Check, CheckCircle2, Shield, Activity,
-  Printer, FileText, X, Download, Settings
+  Printer, FileText, X, Download, Settings, Lock, Mail, Phone, ArrowRight, Eye, EyeOff, RotateCw
 } from 'lucide-react';
 import { User as UserType, Order, Address, Product, Coupon, WebsiteSettings } from '../types';
+import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 
 interface DashboardProps {
   user: UserType | null;
@@ -27,6 +28,7 @@ interface DashboardProps {
   onLogout?: () => void;
   isAdminPanel?: boolean;
   onUpdateSettings?: (settings: WebsiteSettings) => void;
+  onLoginSuccess?: (token: string) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -44,7 +46,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onNavigate,
   onLogout,
   isAdminPanel = false,
-  onUpdateSettings
+  onUpdateSettings,
+  onLoginSuccess
 }) => {
   const isAdmin = (user?.role === 'admin' && isAdminPanel) || false;
   const [activeTab, setActiveTab] = useState<string>(isAdmin ? 'admin-stats' : 'orders');
@@ -57,6 +60,89 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [editTxnRef, setEditTxnRef] = useState('');
   const [editPayStatus, setEditPayStatus] = useState<'Paid' | 'Pending' | 'Failed'>('Pending');
+
+  // Interactive Client-Side Auth States
+  const [authTab, setAuthTab] = useState<'signin' | 'register'>('signin');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authPhone, setAuthPhone] = useState('');
+  const [showAuthPassword, setShowAuthPassword] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authAccountExists, setAuthAccountExists] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authSuccessMsg, setAuthSuccessMsg] = useState('');
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthSuccessMsg('');
+    setAuthLoading(true);
+
+    try {
+      if (authTab === 'signin') {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: authEmail.trim(), password: authPassword || 'password123' })
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          setAuthSuccessMsg('Welcome back! Loading your wellbeing panel...');
+          setTimeout(() => {
+            if (onLoginSuccess) {
+              onLoginSuccess(data.token);
+            } else {
+              localStorage.setItem('grams_auth_token', data.token);
+              window.location.reload();
+            }
+          }, 1000);
+        } else {
+          setAuthError(data.error || 'Invalid credentials or incorrect password.');
+        }
+      } else {
+        if (!authName || !authEmail || !authPhone) {
+          setAuthError('Please fill in all requested fields.');
+          setAuthLoading(false);
+          return;
+        }
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            fullName: authName, 
+            email: authEmail.trim(), 
+            phone: authPhone, 
+            role: 'user', 
+            password: authPassword || 'password123' 
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          setAuthSuccessMsg('Account created! Preparing your dashboard...');
+          setTimeout(() => {
+            if (onLoginSuccess) {
+              onLoginSuccess(data.token);
+            } else {
+              localStorage.setItem('grams_auth_token', data.token);
+              window.location.reload();
+            }
+          }, 1000);
+        } else {
+          setAuthError(data.error || 'Registration failed. This email or number may already be registered.');
+          if (data.accountExists) {
+            setAuthAccountExists(true);
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setAuthError('Temple servers are currently silent. Please check your network connection.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   const fetchPayments = () => {
     if (isAdmin) {
@@ -153,7 +239,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [prodImg4, setProdImg4] = useState('');
   const [prodBenefits, setProdBenefits] = useState('');
   const [prodDosage, setProdDosage] = useState('');
-  const [prodBrand, setProdBrand] = useState('Bv Life');
+  const [prodBrand, setProdBrand] = useState('Grams Life');
   const [prodSubcategory, setProdSubcategory] = useState('');
   const [prodUsageInstructions, setProdUsageInstructions] = useState('As directed');
   const [prodFeatured, setProdFeatured] = useState(false);
@@ -199,7 +285,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Filter orders for non-admin
   const userOrders = useMemo(() => {
     if (isAdmin) return orders;
-    return orders.filter(o => o.userEmail === user?.email);
+    if (!user) return [];
+    const uEmail = user.email ? user.email.toLowerCase().trim() : '';
+    const uPhone = user.phone ? user.phone.replace(/\D/g, '') : '';
+    const uName = user.fullName ? user.fullName.toLowerCase().trim() : '';
+
+    let recentOrderIds: string[] = [];
+    try {
+      const stored = localStorage.getItem('grams_recent_orders');
+      if (stored) recentOrderIds = JSON.parse(stored);
+    } catch (e) {}
+
+    return orders.filter(o => {
+      if (!o || typeof o !== 'object' || !('id' in o)) return false;
+      const oEmail = o.userEmail ? o.userEmail.toLowerCase().trim() : '';
+      const oPhone = o.shippingAddress?.phone ? o.shippingAddress.phone.replace(/\D/g, '') : '';
+      const oName = o.userName ? o.userName.toLowerCase().trim() : (o.shippingAddress?.fullName ? o.shippingAddress.fullName.toLowerCase().trim() : '');
+
+      const matchEmail = !!(uEmail && oEmail === uEmail);
+      const matchPhone = !!(uPhone && uPhone.length >= 10 && oPhone.endsWith(uPhone.slice(-10)));
+      const matchNameAndPhone = !!(uName && uName === oName && uPhone && oPhone.endsWith(uPhone.slice(-10)));
+      const matchRecent = recentOrderIds.includes(o.id) && (
+        !oEmail || 
+        oEmail === 'guest@gramslife.com' || 
+        oEmail === uEmail || 
+        (uPhone && oPhone && oPhone.endsWith(uPhone.slice(-10)))
+      );
+
+      return matchEmail || matchPhone || matchNameAndPhone || matchRecent;
+    });
   }, [orders, user, isAdmin]);
 
   // Calculations for admin stats dashboard (MySQL-Backed)
@@ -273,7 +387,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg4(prod.images?.[2] || '');
     setProdBenefits(prod.benefits.join(', '));
     setProdDosage(prod.dosage);
-    setProdBrand(prod.brand || 'Bv Life');
+    setProdBrand(prod.brand || 'Grams Life');
     setProdSubcategory(prod.subcategory || '');
     setProdUsageInstructions(prod.usageInstructions || 'As directed');
     setProdFeatured(prod.featured || false);
@@ -300,7 +414,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg4('');
     setProdBenefits('');
     setProdDosage('');
-    setProdBrand('Bv Life');
+    setProdBrand('Grams Life');
     setProdSubcategory('');
     setProdUsageInstructions('As directed');
     setProdFeatured(false);
@@ -368,13 +482,217 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   if (!user) {
     return (
-      <div className="max-w-md mx-auto text-center py-20 space-y-4">
-        <ShieldAlert className="w-12 h-12 text-brand-gold-500 mx-auto" />
-        <h3 className="font-serif text-xl font-bold text-brand-green-800">Sacred Access Required</h3>
-        <p className="text-xs text-brand-green-600/70">Please authenticate with Bv Life to review your order chronicles.</p>
-        <button onClick={() => onNavigate('home')} className="bg-brand-green-700 text-brand-cream-100 font-bold px-6 py-2.5 rounded-xl text-xs">
-          Return to home
-        </button>
+      <div className="min-h-[70vh] flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-brand-green-950/5">
+        <div className="max-w-md w-full space-y-6 bg-white text-brand-green-950 p-8 sm:p-10 rounded-[2.5rem] border border-brand-green-100 shadow-2xl relative overflow-hidden text-left">
+          {/* Top Security Accent Header */}
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-gold-500 via-brand-gold-300 to-brand-gold-600" />
+          
+          <div className="text-center space-y-2">
+            <div className="mx-auto h-12 w-12 rounded-full bg-brand-green-50 flex items-center justify-center border border-brand-green-100 shadow-inner">
+              <User className="h-5.5 w-5.5 text-brand-green-850" />
+            </div>
+            <div>
+              <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 text-center">
+                Wellness Portal
+              </h2>
+              <p className="text-[11px] text-brand-green-600/80 max-w-xs mx-auto text-center leading-relaxed">
+                Connect to review your order chronicles, manage custom dispatch addresses, and trace your healing packages.
+              </p>
+            </div>
+          </div>
+
+          {/* Toggle Tabs */}
+          <div className="p-1 bg-brand-green-50 border border-brand-green-100 rounded-full flex gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthTab('signin');
+                setAuthError('');
+                setAuthSuccessMsg('');
+              }}
+              className={`flex-1 py-2 rounded-full text-xs font-bold transition-all uppercase tracking-wider cursor-pointer text-center ${
+                authTab === 'signin'
+                  ? 'bg-brand-green-800 text-brand-cream-50 shadow-md'
+                  : 'text-brand-green-800 hover:text-brand-green-900 bg-transparent'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthTab('register');
+                setAuthError('');
+                setAuthSuccessMsg('');
+              }}
+              className={`flex-1 py-2 rounded-full text-xs font-bold transition-all uppercase tracking-wider cursor-pointer text-center ${
+                authTab === 'register'
+                  ? 'bg-brand-green-800 text-brand-cream-50 shadow-md'
+                  : 'text-brand-green-800 hover:text-brand-green-900 bg-transparent'
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
+
+          {authError && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-[11px] rounded-xl flex flex-col gap-2 animate-shake font-semibold text-left">
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <p className="leading-relaxed flex-1">{authError}</p>
+              </div>
+              {authAccountExists && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthTab('signin');
+                    setAuthError('');
+                    setAuthAccountExists(false);
+                  }}
+                  className="self-start text-[10px] uppercase tracking-wider font-extrabold bg-brand-green-800 text-brand-cream-50 px-3 py-1 rounded-lg hover:bg-brand-green-900 transition-all cursor-pointer shadow-sm flex items-center gap-1"
+                >
+                  <span>Log In to Existing Account</span>
+                  <ArrowRight className="w-3 h-3 text-brand-gold-400" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {authSuccessMsg && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] rounded-xl flex items-start gap-2.5 animate-pulse font-semibold text-left">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">{authSuccessMsg}</p>
+            </div>
+          )}
+
+          {/* Main Form */}
+          <form onSubmit={handleAuthSubmit} className="space-y-4">
+            {authTab === 'register' && (
+              <div className="space-y-4 animate-in slide-in-from-bottom duration-300">
+                <div className="space-y-1.5 text-left">
+                  <label className="text-[10px] uppercase font-bold text-brand-green-800 tracking-wider">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g., Vipin Choudhary"
+                    value={authName}
+                    onChange={(e) => setAuthName(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-brand-green-200 focus:outline-none focus:border-brand-green-700 font-medium text-xs bg-white text-brand-green-950 text-left"
+                  />
+                </div>
+
+                <div className="space-y-1.5 text-left">
+                  <label className="text-[10px] uppercase font-bold text-brand-green-800 tracking-wider">Mobile Number</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="e.g., 9425011088"
+                    value={authPhone}
+                    onChange={(e) => setAuthPhone(e.target.value.replace(/\D/g, ''))}
+                    className="w-full px-4 py-2.5 rounded-xl border border-brand-green-200 focus:outline-none focus:border-brand-green-700 font-medium text-xs bg-white text-brand-green-950 text-left"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1.5 text-left">
+              <label className="text-[10px] uppercase font-bold text-brand-green-800 tracking-wider">Email Address</label>
+              <input
+                type="email"
+                required
+                placeholder="e.g., vkchoudhary050607@gmail.com"
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-brand-green-200 focus:outline-none focus:border-brand-green-700 font-medium text-xs bg-white text-brand-green-950 text-left"
+              />
+            </div>
+
+            <div className="space-y-1.5 text-left">
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] uppercase font-bold text-brand-green-800 tracking-wider">Password</label>
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPasswordOpen(true)}
+                  className="text-[10px] font-bold text-brand-gold-700 hover:text-brand-gold-800 underline cursor-pointer"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showAuthPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Enter secure password"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-brand-green-200 focus:outline-none focus:border-brand-green-700 font-medium text-xs bg-white text-brand-green-950 text-left"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAuthPassword(!showAuthPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-green-700 hover:text-brand-green-900 transition-colors p-0.5 cursor-pointer"
+                >
+                  {showAuthPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full py-3 bg-brand-green-800 hover:bg-brand-green-900 disabled:opacity-50 text-brand-cream-50 font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>{authLoading ? 'Verifying...' : authTab === 'signin' ? 'Sign In' : 'Create Account'}</span>
+              <ArrowRight className="w-3.5 h-3.5 text-brand-gold-400 shrink-0" />
+            </button>
+          </form>
+
+          {/* Sandbox Quick Access Panel */}
+          <div className="p-4 bg-brand-green-50/50 rounded-2xl border border-brand-green-100 space-y-2.5 text-left">
+            <div className="flex items-center gap-1.5 justify-between">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-brand-green-800 bg-brand-gold-500/10 border border-brand-gold-500/20 px-2 py-0.5 rounded-full font-mono">Sandbox Demo Profiles</span>
+              <span className="text-[8px] font-bold text-brand-green-600/60 font-mono uppercase">1-Click Auto Fill</span>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthTab('signin');
+                  setAuthEmail('vkchoudhary050607@gmail.com');
+                  setAuthPassword('password123');
+                  setAuthError('');
+                  setAuthSuccessMsg('');
+                }}
+                className="p-2.5 bg-white hover:bg-brand-green-50 border border-brand-green-100 hover:border-brand-green-200 rounded-xl text-left transition-all cursor-pointer shadow-sm group flex items-center justify-between"
+              >
+                <div>
+                  <p className="text-[10px] font-bold text-brand-green-950 group-hover:text-brand-green-800">Vipul Choudhary</p>
+                  <p className="text-[8px] font-mono text-brand-green-600/70">vkchoudhary050607@gmail.com | password123</p>
+                </div>
+                <span className="text-[9px] font-bold text-brand-gold-700 uppercase bg-brand-gold-500/10 px-1.5 py-0.5 rounded border border-brand-gold-500/10 shrink-0 group-hover:bg-brand-gold-500/20">User Profile</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthTab('signin');
+                  setAuthEmail('admin@gramslife.com');
+                  setAuthPassword('password123');
+                  setAuthError('');
+                  setAuthSuccessMsg('');
+                }}
+                className="p-2.5 bg-white hover:bg-brand-green-50 border border-brand-green-100 hover:border-brand-green-200 rounded-xl text-left transition-all cursor-pointer shadow-sm group flex items-center justify-between"
+              >
+                <div>
+                  <p className="text-[10px] font-bold text-brand-green-950 group-hover:text-brand-green-800">Apothecary Director</p>
+                  <p className="text-[8px] font-mono text-brand-green-600/70">admin@gramslife.com | password123</p>
+                </div>
+                <span className="text-[9px] font-bold text-rose-700 uppercase bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 shrink-0 group-hover:bg-rose-100">Admin Panel</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -396,7 +714,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand-gold-400 bg-brand-gold-500/10 border border-brand-gold-500/20 px-2 py-0.5 rounded-full">Administrative Node</span>
               </div>
-              <h1 className="font-serif text-2xl font-bold tracking-tight mt-1 text-brand-cream-50">Bv Life Admin Panel</h1>
+              <h1 className="font-serif text-2xl font-bold tracking-tight mt-1 text-brand-cream-50">Grams Life Admin Panel</h1>
               <p className="text-xs text-brand-cream-300/80 mt-0.5">Apothecary Director: <span className="font-semibold text-brand-cream-50">{user.fullName}</span> ({user.email})</p>
             </div>
           </div>
@@ -1215,73 +1533,173 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           )}
 
-          {/* TAB: ALL ORDERS DISPATCH REGISTRY (ADMIN) */}
+          {/* TAB: ALL ORDERS DISPATCH REGISTRY (ADMIN/OWNER) */}
           {activeTab === 'admin-orders' && (
             <div className="space-y-6 animate-in fade-in duration-300">
-              <h3 className="font-serif text-lg font-bold text-brand-green-900 border-b border-brand-green-600/5 pb-2">
-                Order Delivery Registries
-              </h3>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-brand-green-600/10 pb-4">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-gold-600 bg-brand-gold-500/10 px-2 py-0.5 rounded-full border border-brand-gold-500/20">
+                    👑 Platform Owner Command
+                  </span>
+                  <h3 className="font-serif text-xl font-bold text-brand-green-900 mt-1">
+                    Live Platform Customer Orders ({orders.length})
+                  </h3>
+                  <p className="text-xs text-brand-green-600/70">
+                    Monitor real-time incoming orders, customer delivery addresses, payment gateway status, and update dispatch tracking.
+                  </p>
+                </div>
 
-              <div className="space-y-4">
-                {orders.map(ord => (
-                  <div key={ord.id} className="border border-brand-green-600/10 p-4 rounded-xl space-y-4 text-xs bg-brand-cream-100/5">
-                    
-                    {/* header */}
-                    <div className="flex justify-between font-bold border-b pb-2">
-                      <span className="font-mono">ID: {ord.id}</span>
-                      <span className="text-brand-green-900">₹{ord.finalTotal}</span>
-                    </div>
-
-                    {/* interactive controls */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      
-                      {/* order delivery status selection */}
-                      <div className="space-y-1">
-                        <label className="font-bold text-brand-green-800">Dispatch Status</label>
-                        <select
-                          value={ord.status}
-                          onChange={(e) => onUpdateStatus(ord.id, e.target.value as any, ord.paymentStatus)}
-                          className="w-full bg-white border p-1.5 rounded text-xs"
-                        >
-                          <option value="Ordered">Ordered</option>
-                          <option value="Prepared">Prepared / Brewed</option>
-                          <option value="Dispatched">Dispatched / Transport</option>
-                          <option value="Delivered">Delivered Successfully</option>
-                        </select>
-                      </div>
-
-                      {/* payment status selection */}
-                      <div className="space-y-1">
-                        <label className="font-bold text-brand-green-800">Payment Audit</label>
-                        <select
-                          value={ord.paymentStatus}
-                          onChange={(e) => onUpdateStatus(ord.id, ord.status, e.target.value as any)}
-                          className="w-full bg-white border p-1.5 rounded text-xs"
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Completed">Paid Successfully</option>
-                          <option value="Failed">Failed / Declined</option>
-                        </select>
-                      </div>
-
-                    </div>
-
-                    <div className="flex justify-between items-center pt-2 border-t border-brand-green-600/5">
-                      <span className="text-[10px] text-brand-green-600/70">
-                        Customer: <span className="font-semibold text-brand-green-800">{ord.userName} ({ord.userEmail})</span>
-                      </span>
-                      <button
-                        onClick={() => setInvoiceOrder(ord)}
-                        className="px-3 py-1 rounded-lg border border-brand-gold-500/30 hover:border-brand-gold-500 text-brand-gold-700 bg-brand-gold-50/20 text-[10px] font-bold tracking-wide flex items-center gap-1 transition-all cursor-pointer hover:bg-brand-gold-50"
-                      >
-                        <Printer className="w-3 h-3" />
-                        <span>Print Dispatch Invoice</span>
-                      </button>
-                    </div>
-
-                  </div>
-                ))}
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-3.5 py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer shrink-0"
+                >
+                  <RotateCw className="w-3.5 h-3.5 text-brand-gold-400 animate-spin" style={{ animationDuration: '3s' }} />
+                  <span>Refresh Live Orders</span>
+                </button>
               </div>
+
+              {/* Top Quick Overview Stats */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 bg-brand-green-900 text-brand-cream-50 rounded-2xl border border-brand-gold-500/20 shadow-md">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-brand-gold-400">Total Orders Received</p>
+                  <p className="font-serif text-2xl font-bold mt-1">{orders.length}</p>
+                </div>
+                <div className="p-4 bg-amber-900/10 border border-amber-500/20 rounded-2xl">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-amber-800">Pending Dispatches</p>
+                  <p className="font-serif text-2xl font-bold text-amber-900 mt-1">
+                    {orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length}
+                  </p>
+                </div>
+                <div className="p-4 bg-emerald-900/10 border border-emerald-500/20 rounded-2xl">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-800">Total Gross Sales</p>
+                  <p className="font-serif text-2xl font-bold text-emerald-900 mt-1">
+                    ₹{orders.reduce((sum, o) => sum + (o.finalTotal || 0), 0).toLocaleString('en-IN')}
+                  </p>
+                </div>
+              </div>
+
+              {orders.length === 0 ? (
+                <div className="p-8 bg-white border border-brand-green-600/10 rounded-2xl text-center space-y-2">
+                  <ShoppingBag className="w-8 h-8 text-brand-green-600/40 mx-auto" />
+                  <p className="text-sm font-bold text-brand-green-900">No customer orders recorded yet.</p>
+                  <p className="text-xs text-brand-green-600/70">When customers complete purchases, their orders will appear here in real-time.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {orders.map(ord => (
+                    <div key={ord.id} className="border border-brand-green-600/15 p-5 rounded-2xl space-y-4 text-xs bg-white shadow-sm hover:border-brand-green-600/30 transition-all">
+                      
+                      {/* Header bar */}
+                      <div className="flex flex-wrap justify-between items-center gap-2 border-b border-brand-green-600/10 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-brand-green-900 bg-brand-green-50 px-2.5 py-1 rounded-lg border border-brand-green-200">
+                            ID: {ord.id}
+                          </span>
+                          <span className="text-brand-green-600 text-[11px] font-semibold">{ord.orderDate}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-semibold text-brand-green-800 bg-brand-gold-500/10 px-2.5 py-1 rounded-lg border border-brand-gold-500/20 font-mono">
+                            Method: {ord.paymentMethod || 'UPI'}
+                          </span>
+                          <span className="font-serif text-base font-bold text-brand-green-900">
+                            Total: ₹{ord.finalTotal}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Customer Details & Shipping Address Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-brand-green-50/20 p-3.5 rounded-xl border border-brand-green-600/5">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800">👤 Customer Identity</p>
+                          <p className="font-bold text-brand-green-900">{ord.userName}</p>
+                          <p className="text-brand-green-700">{ord.userEmail}</p>
+                          {ord.shippingAddress?.phone && (
+                            <p className="font-mono font-semibold text-brand-green-800 mt-1">📞 Mob: {ord.shippingAddress.phone}</p>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800">📍 Delivery Destination Address</p>
+                          {ord.shippingAddress ? (
+                            <div className="text-brand-green-900 space-y-0.5">
+                              <p className="font-semibold">{ord.shippingAddress.fullName}</p>
+                              <p>{ord.shippingAddress.addressLine1} {ord.shippingAddress.addressLine2 ? `, ${ord.shippingAddress.addressLine2}` : ''}</p>
+                              <p>{ord.shippingAddress.city}, {ord.shippingAddress.state} - <span className="font-mono font-bold">{ord.shippingAddress.zipCode}</span></p>
+                            </div>
+                          ) : (
+                            <p className="text-brand-green-600 italic">Address details included in profile</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Items Ordered List */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800">📦 Items Purchased ({ord.items?.length || 0})</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {ord.items?.map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-3 p-2 border border-brand-green-100 rounded-xl bg-white">
+                              {item.mainImage && (
+                                <img src={item.mainImage} alt={item.productName} className="w-10 h-10 object-cover rounded-lg shrink-0" />
+                              )}
+                              <div className="min-w-0 text-xs">
+                                <p className="font-bold text-brand-green-900 truncate">{item.productName}</p>
+                                <p className="text-brand-green-700 font-mono text-[11px]">Qty: {item.quantity} × ₹{item.price}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Interactive Controls & Statuses */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-brand-green-600/10">
+                        {/* Order delivery status selection */}
+                        <div className="space-y-1">
+                          <label className="font-bold text-brand-green-800 text-[11px]">Dispatch Tracking Status</label>
+                          <select
+                            value={ord.status}
+                            onChange={(e) => onUpdateStatus(ord.id, e.target.value as any, ord.paymentStatus)}
+                            className="w-full bg-brand-green-50/50 border border-brand-green-200 p-2 rounded-xl text-xs font-bold text-brand-green-900"
+                          >
+                            <option value="Pending">Pending Processing</option>
+                            <option value="Processing">Processing / Handcrafted</option>
+                            <option value="Shipped">Shipped / Dispatched</option>
+                            <option value="Delivered">Delivered Successfully</option>
+                            <option value="Cancelled">Cancelled</option>
+                          </select>
+                        </div>
+
+                        {/* Payment status selection */}
+                        <div className="space-y-1">
+                          <label className="font-bold text-brand-green-800 text-[11px]">Payment Audit Status</label>
+                          <select
+                            value={ord.paymentStatus}
+                            onChange={(e) => onUpdateStatus(ord.id, ord.status, e.target.value as any)}
+                            className="w-full bg-brand-green-50/50 border border-brand-green-200 p-2 rounded-xl text-xs font-bold text-brand-green-900"
+                          >
+                            <option value="Pending">Pending Payment</option>
+                            <option value="Completed">Paid Successfully (Audit Verified)</option>
+                            <option value="Failed">Failed / Payment Declined</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center pt-2 border-t border-brand-green-600/5">
+                        <span className="text-[10px] text-brand-green-600/80 font-medium">
+                          Platform Status: <span className="font-bold text-brand-green-900">{ord.status}</span>
+                        </span>
+                        <button
+                          onClick={() => setInvoiceOrder(ord)}
+                          className="px-3.5 py-1.5 rounded-xl border border-brand-gold-500/30 hover:border-brand-gold-500 text-brand-gold-800 bg-brand-gold-500/10 hover:bg-brand-gold-500/20 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-brand-gold-600" />
+                          <span>Print Dispatch Invoice</span>
+                        </button>
+                      </div>
+
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1410,7 +1828,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
                 const updatedSettings: WebsiteSettings = {
-                  logoName: fd.get('logoName') as string || 'Bv Life',
+                  logoName: fd.get('logoName') as string || 'Grams Life',
                   logoUrl: fd.get('logoUrl') as string || '',
                   contactEmail: fd.get('contactEmail') as string || '',
                   contactPhone: fd.get('contactPhone') as string || '',
@@ -1628,7 +2046,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     G
                   </div>
                   <div>
-                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Bv Life</h2>
+                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Grams Life</h2>
                     <span className="text-[10px] uppercase tracking-widest text-brand-gold-700 font-extrabold mt-1 block">Ayurvedic Sanctuary</span>
                   </div>
                 </div>
@@ -1729,7 +2147,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </p>
                 <div className="space-y-0.5">
                   <p className="text-[10px] font-bold text-brand-gold-700 uppercase tracking-widest">Aacharya Dhanvantari</p>
-                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Bv Life Sanctuary</p>
+                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Grams Life Sanctuary</p>
                 </div>
               </div>
 
@@ -1738,6 +2156,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* Forgot Password Recovery Modal */}
+      <ForgotPasswordModal
+        isOpen={isForgotPasswordOpen}
+        onClose={() => setIsForgotPasswordOpen(false)}
+        onSuccessLogin={(token) => {
+          if (onLoginSuccess) {
+            onLoginSuccess(token);
+          } else {
+            localStorage.setItem('grams_auth_token', token);
+            window.location.reload();
+          }
+        }}
+      />
 
     </div>
   );

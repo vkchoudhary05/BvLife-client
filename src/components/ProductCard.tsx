@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Heart, ShoppingCart, Star, Eye, Layers } from 'lucide-react';
+import { Heart, ShoppingCart, Star, Eye } from 'lucide-react';
 import { Product } from '../types';
 import { Language, translateProductAttr } from '../lib/translations';
 
@@ -15,9 +15,8 @@ interface ProductCardProps {
   onQuickView: (product: Product) => void;
   isWishlisted: boolean;
   onToggleWishlist: (product: Product) => void;
-  onAddToCompare: (product: Product) => void;
-  isCompared: boolean;
   language?: Language;
+  onBuyNow?: (product: Product, qty: number) => void;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -27,9 +26,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onQuickView,
   isWishlisted,
   onToggleWishlist,
-  onAddToCompare,
-  isCompared,
-  language = 'en'
+  language = 'en',
+  onBuyNow
 }) => {
   const discountPercent = Math.round(
     ((product.originalPrice - product.price) / product.originalPrice) * 100
@@ -92,19 +90,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
 
-          <button
-            onClick={() => onAddToCompare(product)}
-            className={`p-2 rounded-full shadow-md transition-all transform translate-y-3 group-hover:translate-y-0 duration-300 cursor-pointer ${
-              isCompared 
-                ? 'bg-brand-gold-600 text-brand-cream-100 hover:bg-brand-gold-700' 
-                : 'bg-brand-cream-50 text-brand-green-800 hover:bg-brand-gold-500 hover:text-brand-green-900'
-            }`}
-            style={{ transitionDelay: '75ms' }}
-            title="Add to Compare"
-          >
-            <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </button>
-
         </div>
       </div>
 
@@ -155,14 +140,33 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           {product.stock > 0 ? (
-            <button
-              onClick={() => onAddToCart(product, 1)}
-              className="w-full sm:w-auto flex items-center justify-center gap-1 bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 py-1.5 px-2.5 sm:px-3 rounded-xl text-[10px] sm:text-xs font-semibold transition-all shadow-sm cursor-pointer active:scale-95"
-              title="Add to Shopping Cart"
-            >
-              <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-              <span>{language === 'hi' ? 'जोड़ें' : 'Add'}</span>
-            </button>
+            <div className="flex items-center gap-1.5 w-full sm:w-auto shrink-0">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddToCart(product, 1);
+                }}
+                className="h-9 w-9 flex items-center justify-center rounded-xl border border-brand-green-700/30 text-brand-green-800 hover:bg-brand-green-50 hover:border-brand-green-700 transition-all cursor-pointer active:scale-90 shrink-0"
+                title={language === 'hi' ? 'कार्ट में जोड़ें' : 'Add to Cart'}
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onBuyNow) {
+                    onBuyNow(product, 1);
+                  } else {
+                    onAddToCart(product, 1);
+                    onNavigate('checkout');
+                  }
+                }}
+                className="h-9 px-3.5 flex-1 sm:flex-none flex items-center justify-center gap-1 bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 rounded-xl text-[10px] sm:text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                title={language === 'hi' ? 'अभी खरीदें' : 'Buy Now'}
+              >
+                <span className="whitespace-nowrap font-sans font-bold uppercase tracking-wider">{language === 'hi' ? 'खरीदें' : 'Buy Now'}</span>
+              </button>
+            </div>
           ) : (
             <span className="text-[9px] sm:text-[10px] bg-red-50 border border-red-200 text-red-600 font-bold px-1.5 py-1 rounded-md uppercase text-center w-full sm:w-auto">
               {language === 'hi' ? 'स्टॉक समाप्त' : 'Out of Stock'}

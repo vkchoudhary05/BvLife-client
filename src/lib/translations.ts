@@ -19,6 +19,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "navCart": "Cart",
     "navProfile": "Profile",
     "navLogout": "Log Out",
+    "btnAskAcharya": "Ask AI Acharya ✦ Free Consult",
     "navLogin": "Sign In",
     "navRegister": "Register",
     "organicWellbeing": "Organic Wellbeing",
@@ -88,7 +89,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "test_2_comment": "\"As an software engineer, constant coding burnt out my energy. Ashwagandha root capsules KSM-66 changed my sleep entirely. I wake up completely rested. My daily anxiety has vanished. Truly the gold-standard adaptogen.\"",
     "test_2_author": "Kartik Sharma",
     "test_2_role": "Verified Tech Lead",
-    "test_3_comment": "\"I suffered chronic bloating and constipation for 5 years. Tried countless digestion syrups. Bv Life Triphala powder cured my digestive agni in exactly 12 days. I take a teaspoon in warm water before bedtime. Felt lighter immediately!\"",
+    "test_3_comment": "\"I suffered chronic bloating and constipation for 5 years. Tried countless digestion syrups. Grams Life Triphala powder cured my digestive agni in exactly 12 days. I take a teaspoon in warm water before bedtime. Felt lighter immediately!\"",
     "test_3_author": "Samyuktha Reddy",
     "test_3_role": "Verified Yoga Acharya",
 
