@@ -82,9 +82,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header id="site-header" className="sticky top-0 z-40 w-full bg-brand-cream-50/90 backdrop-blur-md border-b border-brand-green-600/10">
       {/* Top Banner Alert - Running Marquee Line */}
-      <div id="top-promo-banner" className="bg-brand-green-800 text-brand-gold-300 text-xs sm:text-sm md:text-[15px] py-2.5 px-0 overflow-hidden whitespace-nowrap border-b border-brand-gold-500/20 font-black uppercase tracking-wider">
+      <div id="top-promo-banner" className="bg-brand-green-800 text-brand-gold-300 text-[11px] sm:text-xs py-1.5 sm:py-2 px-0 overflow-hidden whitespace-nowrap border-b border-brand-gold-500/20 font-bold uppercase tracking-widest">
         <div className="flex animate-marquee select-none">
-          <div className="flex shrink-0 items-center gap-8 px-4">
+          <div className="flex shrink-0 items-center gap-10 sm:gap-16 px-4">
             <span className="text-brand-gold-400">✨ FREE SHIPPING ON ALL ORDERS OVER ₹999</span>
             <span className="text-brand-gold-500/40">|</span>
             <span className="text-brand-gold-400">USE CODE: AYUR15 FOR 15% OFF</span>
@@ -101,7 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="text-brand-gold-500/40">|</span>
             <span>Daily Holistic Health Support</span>
           </div>
-          <div className="flex shrink-0 items-center gap-8 px-4" aria-hidden="true">
+          <div className="flex shrink-0 items-center gap-10 sm:gap-16 px-4" aria-hidden="true">
             <span className="text-brand-gold-400">✨ FREE SHIPPING ON ALL ORDERS OVER ₹999</span>
             <span className="text-brand-gold-500/40">|</span>
             <span className="text-brand-gold-400">USE CODE: AYUR15 FOR 15% OFF</span>
@@ -121,11 +121,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+      <div className="max-w-[1440px] mx-auto px-2 sm:px-4 lg:px-6">
         
         {/* Mobile Search Overlay Bar */}
         {isMobileSearchActive && (
-          <div className="flex md:hidden items-center h-20 gap-3">
+          <div className="flex md:hidden items-center h-14 gap-3">
             <button 
               onClick={() => {
                 setIsMobileSearchActive(false);
@@ -147,7 +147,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 placeholder={t('navSearchPlaceholder', language)}
                 value={searchVal}
                 onChange={(e) => setSearchVal(e.target.value)}
-                className="w-full pl-4 pr-10 py-2 rounded-full bg-brand-green-50 border border-brand-green-200 focus:outline-none focus:border-brand-green-700 text-xs sm:text-sm placeholder-brand-green-600/50"
+                className="w-full pl-4 pr-10 py-1.5 rounded-full bg-brand-green-50 border border-brand-green-200 focus:outline-none focus:border-brand-green-700 text-xs sm:text-sm placeholder-brand-green-600/50"
               />
               {searchVal && (
                 <button 
@@ -165,7 +165,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         )}
 
-        <div className={`items-center justify-between h-20 gap-1.5 sm:gap-4 ${isMobileSearchActive ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`items-center justify-between h-14 sm:h-18 gap-1.5 sm:gap-4 ${isMobileSearchActive ? 'hidden md:flex' : 'flex'}`}>
           
           {/* Brand Logo - Aligned to left */}
           <div 
@@ -183,14 +183,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               placeholder={t('navSearchPlaceholder', language)}
               value={searchVal}
               onChange={(e) => setSearchVal(e.target.value)}
-              className="w-full pl-3 pr-8 py-1.5 rounded-full bg-brand-green-50 border border-brand-green-200 focus:outline-none focus:border-brand-green-700 text-xs placeholder-brand-green-600/50"
+              className="w-full pl-4 pr-10 py-2 rounded-full bg-brand-green-50 border border-brand-green-200 focus:outline-none focus:border-brand-green-700 text-xs sm:text-sm placeholder-brand-green-600/50"
             />
-            <button type="submit" className="absolute right-2.5 text-brand-green-700 hover:text-brand-gold-600 transition-colors cursor-pointer">
-              <Search className="w-3.5 h-3.5" />
+            <button type="submit" className="absolute right-3 text-brand-green-700 hover:text-brand-gold-600 transition-colors cursor-pointer">
+              <Search className="w-4 h-4" />
             </button>
           </form>
 
-          {/* Primary Navigation Links */}
+        {/* Primary Navigation Links */}
           <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-base font-medium text-black">
             <button onClick={() => onNavigate('home')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navHome', language)}</button>
             <button onClick={() => onNavigate('shop')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navShop', language)}</button>
@@ -204,12 +204,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-1 sm:gap-2.5 md:gap-4 ml-auto md:ml-0">
             
 
+            
+
             {/* AI consultant button removed from nav as requested */}
 
-            {/* Wishlist - Hidden on mobile screens */}
+            {/* Wishlist - Visible on all screens */}
             <button 
-              onClick={() => onNavigate('dashboard', { tab: 'wishlist' })}
-              className="relative p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 hidden sm:flex"
+              onClick={() => onNavigate('wishlist')}
+              className="relative p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 flex"
               aria-label="Wishlist"
             >
               <Heart className="w-6 h-6" strokeWidth={2} />
@@ -243,15 +245,26 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* User Profile / Admin Switch - Hidden on mobile screens */}
-            <div ref={profileMenuRef} className="relative shrink-0 hidden sm:block">
+            {/* User Profile */}
+            <div ref={profileMenuRef} className="relative shrink-0">
               <button 
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer flex items-center gap-1"
+                onClick={() => {
+                  if (currentUser) {
+                    onNavigate('dashboard');
+                    setShowProfileMenu(false);
+                  } else {
+                    onNavigate('login');
+                  }
+                }}
+                className="p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer flex items-center gap-1.5"
                 aria-label="User Profile"
               >
-                <User className="w-6 h-6" strokeWidth={2} />
-                {currentUser && <span className="hidden md:inline text-sm font-medium text-black">{currentUser.fullName.split(' ')[0]}</span>}
+                <User className="w-6 h-6 text-brand-green-900" strokeWidth={2} />
+                {currentUser && (
+                  <span className="hidden md:inline text-sm font-bold text-brand-green-900">
+                    {currentUser.fullName.split(' ')[0]}
+                  </span>
+                )}
               </button>
 
               {showProfileMenu && (
@@ -351,6 +364,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Track Order
               </button>
               <button 
+                onClick={() => { onNavigate('wishlist'); setIsMobileMenuOpen(false); }} 
+                className="text-left px-4 py-2.5 text-base font-medium text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer flex items-center justify-between"
+              >
+                <span>{language === 'hi' ? 'इच्छा सूची' : 'Wishlist'}</span>
+                {wishlist.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-brand-gold-500/20 text-brand-gold-800 text-[10px] font-bold">
+                    {wishlist.length}
+                  </span>
+                )}
+              </button>
+              <button 
                 onClick={() => { onNavigate('static', { page: 'blog' }); setIsMobileMenuOpen(false); }} 
                 className="text-left px-4 py-2.5 text-base font-medium text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
               >
@@ -360,7 +384,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => { onNavigate('static', { page: 'about' }); setIsMobileMenuOpen(false); }} 
                 className="text-left px-4 py-2.5 text-base font-medium text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
               >
-                {t('About', language)}
+                {t('navAbout', language)}
               </button>
               <button 
                 onClick={() => { onNavigate('static', { page: 'contact' }); setIsMobileMenuOpen(false); }} 

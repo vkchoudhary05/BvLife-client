@@ -50,7 +50,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onLoginSuccess
 }) => {
   const isAdmin = (user?.role === 'admin' && isAdminPanel) || false;
-  const [activeTab, setActiveTab] = useState<string>(isAdmin ? 'admin-stats' : 'orders');
+  const [activeTab, setActiveTab] = useState<string>(isAdmin ? 'admin-stats' : 'account');
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
@@ -285,16 +285,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Filter orders for non-admin
   const userOrders = useMemo(() => {
     if (isAdmin) return orders;
-    if (!user) return [];
-    const uEmail = user.email ? user.email.toLowerCase().trim() : '';
-    const uPhone = user.phone ? user.phone.replace(/\D/g, '') : '';
-    const uName = user.fullName ? user.fullName.toLowerCase().trim() : '';
-
+    
     let recentOrderIds: string[] = [];
     try {
       const stored = localStorage.getItem('grams_recent_orders');
       if (stored) recentOrderIds = JSON.parse(stored);
     } catch (e) {}
+
+    let lastOrder: Order | null = null;
+    try {
+      const lastStored = localStorage.getItem('grams_last_placed_order');
+      if (lastStored) lastOrder = JSON.parse(lastStored);
+    } catch (e) {}
+
+    const uEmail = user?.email ? user.email.toLowerCase().trim() : (localStorage.getItem('grams_auth_token') || '').toLowerCase().trim();
+    const uPhone = user?.phone ? user.phone.replace(/\D/g, '') : '';
+    const uName = user?.fullName ? user.fullName.toLowerCase().trim() : '';
 
     return orders.filter(o => {
       if (!o || typeof o !== 'object' || !('id' in o)) return false;
@@ -302,15 +308,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
       const oPhone = o.shippingAddress?.phone ? o.shippingAddress.phone.replace(/\D/g, '') : '';
       const oName = o.userName ? o.userName.toLowerCase().trim() : (o.shippingAddress?.fullName ? o.shippingAddress.fullName.toLowerCase().trim() : '');
 
-      const matchEmail = !!(uEmail && oEmail === uEmail);
-      const matchPhone = !!(uPhone && uPhone.length >= 10 && oPhone.endsWith(uPhone.slice(-10)));
+      const matchEmail = !!(uEmail && uEmail !== 'guest@gramslife.com' && oEmail === uEmail);
+      const matchPhone = !!(uPhone && uPhone.length >= 7 && oPhone.endsWith(uPhone.slice(-10)));
       const matchNameAndPhone = !!(uName && uName === oName && uPhone && oPhone.endsWith(uPhone.slice(-10)));
-      const matchRecent = recentOrderIds.includes(o.id) && (
-        !oEmail || 
-        oEmail === 'guest@gramslife.com' || 
-        oEmail === uEmail || 
-        (uPhone && oPhone && oPhone.endsWith(uPhone.slice(-10)))
-      );
+      const matchRecent = recentOrderIds.includes(o.id) || (lastOrder && lastOrder.id === o.id);
 
       return matchEmail || matchPhone || matchNameAndPhone || matchRecent;
     });
@@ -822,6 +823,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {!isAdmin ? (
               <>
                 <button
+                  onClick={() => setActiveTab('account')}
+                  className={`shrink-0 snap-start lg:w-full text-left px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer ${
+                    activeTab === 'account' ? 'bg-brand-green-700 text-brand-cream-50' : 'text-brand-green-700 hover:bg-brand-green-50'
+                  }`}
+                >
+                  <User className="w-4 h-4 shrink-0" />
+                  <span>My Profile & Account</span>
+                </button>
+                <button
                   onClick={() => setActiveTab('orders')}
                   className={`shrink-0 snap-start lg:w-full text-left px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer ${
                     activeTab === 'orders' ? 'bg-brand-green-700 text-brand-cream-50' : 'text-brand-green-700 hover:bg-brand-green-50'
@@ -845,7 +855,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     activeTab === 'profile' ? 'bg-brand-green-700 text-brand-cream-50' : 'text-brand-green-700 hover:bg-brand-green-50'
                   }`}
                 >
-                  <User className="w-4 h-4 shrink-0" />
+                  <Sparkles className="w-4 h-4 shrink-0" />
                   <span>Dosha Biological Profile</span>
                 </button>
               </>
@@ -925,6 +935,195 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Content Panel Area */}
         <div className="lg:col-span-3 bg-white border border-brand-green-600/5 p-6 rounded-2xl min-h-[450px]">
           
+          {/* TAB: MY PROFILE & ACCOUNT (CUSTOMER) */}
+          {activeTab === 'account' && user && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              
+              {/* Profile Card Banner Header */}
+              <div className="relative overflow-hidden bg-gradient-to-r from-brand-green-900 via-brand-green-800 to-brand-green-950 text-brand-cream-50 p-6 sm:p-8 rounded-2xl border border-brand-gold-500/20 shadow-lg">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-gold-500/10 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
+                  {/* Large Avatar */}
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-brand-gold-400 to-brand-gold-600 p-1 shrink-0 shadow-md">
+                    <div className="w-full h-full rounded-full bg-brand-green-900 flex items-center justify-center font-serif text-2xl sm:text-3xl font-bold text-brand-gold-300">
+                      {user.fullName ? user.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'US'}
+                    </div>
+                  </div>
+
+                  {/* Identity Details */}
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                      <h3 className="font-serif text-2xl font-bold text-brand-cream-50">{user.fullName}</h3>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-brand-gold-500/20 text-brand-gold-300 border border-brand-gold-500/30 px-2.5 py-0.5 rounded-full">
+                        <CheckCircle2 className="w-3 h-3 text-brand-gold-400" />
+                        <span>Verified Account</span>
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs text-brand-cream-200/80 font-medium pt-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-brand-gold-400" />
+                        <span>{user.email}</span>
+                      </div>
+                      {user.addresses && user.addresses[0]?.phone && (
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-brand-gold-400" />
+                          <span className="font-mono">{user.addresses[0].phone}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-brand-cream-300/70 pt-1">
+                      Role: <span className="font-bold text-brand-gold-300 capitalize">{user.role === 'admin' ? 'Apothecary Director / Admin' : 'Vedic Wellness Member'}</span>
+                    </p>
+                  </div>
+
+                  {/* Sign out button */}
+                  {onLogout && (
+                    <button
+                      onClick={onLogout}
+                      className="px-4 py-2 bg-brand-gold-500 hover:bg-brand-gold-400 text-brand-green-950 font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer shrink-0"
+                    >
+                      Sign Out
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Summary Metrics Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                <div className="p-4 bg-brand-green-50/40 border border-brand-green-600/10 rounded-xl text-center space-y-1">
+                  <p className="text-[10px] uppercase font-bold text-brand-green-700 tracking-wider">Total Orders</p>
+                  <p className="font-serif text-2xl font-bold text-brand-green-900">{userOrders.length}</p>
+                </div>
+                <div className="p-4 bg-amber-50/40 border border-amber-500/20 rounded-xl text-center space-y-1">
+                  <p className="text-[10px] uppercase font-bold text-amber-800 tracking-wider">Active Shipments</p>
+                  <p className="font-serif text-2xl font-bold text-amber-900">
+                    {userOrders.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled').length}
+                  </p>
+                </div>
+                <div className="p-4 bg-brand-cream-100/50 border border-brand-gold-500/20 rounded-xl text-center space-y-1">
+                  <p className="text-[10px] uppercase font-bold text-brand-gold-800 tracking-wider">Saved Addresses</p>
+                  <p className="font-serif text-2xl font-bold text-brand-green-900">{user.addresses?.length || 0}</p>
+                </div>
+                <div className="p-4 bg-emerald-50/40 border border-emerald-500/20 rounded-xl text-center space-y-1">
+                  <p className="text-[10px] uppercase font-bold text-emerald-800 tracking-wider">Dosha Harmony</p>
+                  <p className="font-serif text-sm font-bold text-emerald-950 mt-1">Vata-Pitta</p>
+                </div>
+              </div>
+
+              {/* Detailed Personal Information Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Personal Information */}
+                <div className="p-5 border border-brand-green-600/10 rounded-2xl bg-white space-y-4 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-brand-green-600/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-brand-gold-600" />
+                      <h4 className="font-serif text-base font-bold text-brand-green-900">Personal Account Details</h4>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 text-xs">
+                    <div className="flex justify-between py-1.5 border-b border-brand-green-600/5">
+                      <span className="text-brand-green-600/70 font-medium">Full Name</span>
+                      <span className="font-bold text-brand-green-900">{user.fullName}</span>
+                    </div>
+
+                    <div className="flex justify-between py-1.5 border-b border-brand-green-600/5">
+                      <span className="text-brand-green-600/70 font-medium">Email Address</span>
+                      <span className="font-bold text-brand-green-900 font-mono">{user.email}</span>
+                    </div>
+
+                    <div className="flex justify-between py-1.5 border-b border-brand-green-600/5">
+                      <span className="text-brand-green-600/70 font-medium">Primary Contact</span>
+                      <span className="font-bold text-brand-green-900 font-mono">
+                        {user.addresses && user.addresses[0]?.phone ? user.addresses[0].phone : 'Not set'}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between py-1.5 border-b border-brand-green-600/5">
+                      <span className="text-brand-green-600/70 font-medium">Account Protection</span>
+                      <span className="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        <Lock className="w-3 h-3" /> Password Protected
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between py-1.5">
+                      <span className="text-brand-green-600/70 font-medium">Account Status</span>
+                      <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        Active & Verified
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Default Delivery Address Card */}
+                <div className="p-5 border border-brand-green-600/10 rounded-2xl bg-white space-y-4 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-brand-green-600/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-brand-gold-600" />
+                      <h4 className="font-serif text-base font-bold text-brand-green-900">Primary Delivery Destination</h4>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('addresses')}
+                      className="text-[11px] text-brand-gold-700 hover:text-brand-gold-800 font-bold underline cursor-pointer"
+                    >
+                      Manage
+                    </button>
+                  </div>
+
+                  {user.addresses && user.addresses.length > 0 ? (
+                    <div className="space-y-2 text-xs bg-brand-green-50/30 p-3.5 rounded-xl border border-brand-green-600/5">
+                      <p className="font-bold text-brand-green-900">{user.addresses[0].fullName}</p>
+                      <p className="text-brand-green-800">{user.addresses[0].addressLine1} {user.addresses[0].addressLine2 ? `, ${user.addresses[0].addressLine2}` : ''}</p>
+                      <p className="text-brand-green-800">{user.addresses[0].city}, {user.addresses[0].state} - <span className="font-mono font-bold">{user.addresses[0].zipCode}</span></p>
+                      <p className="text-brand-gold-800 font-mono font-bold pt-1">📞 {user.addresses[0].phone}</p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 space-y-2">
+                      <MapPin className="w-8 h-8 text-brand-green-600/30 mx-auto" />
+                      <p className="text-xs text-brand-green-700">No primary delivery address saved yet.</p>
+                      <button
+                        onClick={() => setActiveTab('addresses')}
+                        className="px-3.5 py-1.5 bg-brand-green-700 text-brand-cream-50 rounded-xl text-xs font-bold cursor-pointer"
+                      >
+                        Add Address
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Quick Shortcuts Bar */}
+              <div className="p-5 bg-brand-cream-100/50 border border-brand-gold-500/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <h4 className="font-serif text-sm font-bold text-brand-green-950">Quick Account Shortcuts</h4>
+                  <p className="text-xs text-brand-green-700/80">Manage your past orders, delivery addresses, and health preferences easily.</p>
+                </div>
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <button
+                    onClick={() => setActiveTab('orders')}
+                    className="px-3.5 py-2 bg-white border border-brand-green-600/20 hover:border-brand-green-600 text-brand-green-900 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  >
+                    <History className="w-3.5 h-3.5 text-brand-gold-600" />
+                    <span>View Orders ({userOrders.length})</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('addresses')}
+                    className="px-3.5 py-2 bg-white border border-brand-green-600/20 hover:border-brand-green-600 text-brand-green-900 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-brand-gold-600" />
+                    <span>Manage Addresses</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          )}
+
           {/* TAB: ORDERS HISTORY (CUSTOMER) */}
           {activeTab === 'orders' && (
             <div className="space-y-6">

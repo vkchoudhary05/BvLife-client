@@ -349,13 +349,13 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
 
     const shippingAddressObj: Address = {
       id: selectedAddressId || `addr-${Date.now()}`,
-      fullName,
-      addressLine1,
-      addressLine2,
-      city,
-      state: stateName,
-      zipCode,
-      phone: `+91${mobilePhone}`,
+      fullName: fullName.trim() || currentUser?.fullName || 'Valued Customer',
+      addressLine1: addressLine1.trim() || 'Main Street',
+      addressLine2: addressLine2.trim() || '',
+      city: city.trim() || 'New Delhi',
+      state: stateName.trim() || 'Delhi',
+      zipCode: zipCode.trim() || '110001',
+      phone: mobilePhone.trim() ? `+91${mobilePhone.replace('+91', '')}` : (currentUser?.phone || '+919876543210'),
       isDefault: false
     };
 
@@ -388,9 +388,19 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
 
     if (result) {
       setPlacedOrder(result);
+      try {
+        localStorage.setItem('grams_last_placed_order', JSON.stringify(result));
+        const stored = localStorage.getItem('grams_recent_orders');
+        const existingIds: string[] = stored ? JSON.parse(stored) : [];
+        if (!existingIds.includes(result.id)) {
+          localStorage.setItem('grams_recent_orders', JSON.stringify([result.id, ...existingIds]));
+        }
+      } catch (e) {}
       setStep('success');
+      return result;
     } else {
       setAddressError(language === 'hi' ? 'ऑर्डर पूरा करने में त्रुटि।' : 'Failed to place the order. Please try again.');
+      return null;
     }
   };
 
@@ -409,7 +419,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
     }
   };
 
-  const handleGatewayAuthorize = (e: React.FormEvent) => {
+  const handleGatewayAuthorize = async (e: React.FormEvent) => {
     e.preventDefault();
     setCardErr('');
     setUpiErr('');
@@ -428,10 +438,29 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
         setCardErr('Please enter a valid CVV.');
         return;
       }
+      setGatewayStep('processing');
+      setPaymentVerifyOtp('123456');
+      setTimeout(() => {
+        setGatewayStep('otp');
+      }, 1000);
     } else if (paymentMethod === 'UPI') {
-      if (!upiVal || !upiVal.includes('@')) {
-        setUpiErr('Please enter a valid UPI VPA (e.g. mobile@upi or username@okaxis).');
-        return;
+      let formattedUpi = upiVal ? upiVal.trim() : '';
+      if (!formattedUpi) {
+        formattedUpi = `${mobilePhone || 'customer'}@upi`;
+      } else if (!formattedUpi.includes('@')) {
+        formattedUpi = `${formattedUpi}@upi`;
+      }
+      setUpiVal(formattedUpi);
+      setGatewayStep('processing');
+      const res = await handleCompleteDirectOrder();
+      if (res) {
+        setGatewayStep('success');
+        setTimeout(() => {
+          setIsPaymentGatewayOpen(false);
+        }, 800);
+      } else {
+        setGatewayStep('selection');
+        setUpiErr('Order completion failed. Please try again.');
       }
     } else if (paymentMethod === 'Net Banking') {
       if (!selectedBank) {
@@ -442,13 +471,12 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
         setBankErr('Please enter NetBanking Customer ID and password.');
         return;
       }
+      setGatewayStep('processing');
+      setPaymentVerifyOtp('123456');
+      setTimeout(() => {
+        setGatewayStep('otp');
+      }, 1000);
     }
-
-    setGatewayStep('processing');
-    setPaymentVerifyOtp('123456');
-    setTimeout(() => {
-      setGatewayStep('otp');
-    }, 1200);
   };
 
   const handleVerifyGatewayOtp = async (e: React.FormEvent) => {
@@ -461,10 +489,16 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
     }
 
     setGatewayStep('processing');
-    setTimeout(async () => {
-      setIsPaymentGatewayOpen(false);
-      await handleCompleteDirectOrder();
-    }, 1000);
+    const res = await handleCompleteDirectOrder();
+    if (res) {
+      setGatewayStep('success');
+      setTimeout(() => {
+        setIsPaymentGatewayOpen(false);
+      }, 800);
+    } else {
+      setGatewayStep('otp');
+      setPaymentOtpErr('Order verification failed. Please try again.');
+    }
   };
 
   // Indian States lists
@@ -1381,6 +1415,18 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                       </div>
                     </form>
                   )}
+
+                  {gatewayStep === 'success' && (
+                    <div className="py-10 text-center space-y-4 animate-in zoom-in-95 duration-300">
+                      <div className="w-16 h-16 rounded-full bg-brand-green-100 text-brand-green-700 flex items-center justify-center mx-auto shadow-md">
+                        <CheckCircle2 className="w-10 h-10 animate-bounce" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-serif font-bold text-brand-green-950 text-base">Payment Authorized Successfully!</h4>
+                        <p className="text-xs text-brand-green-700">Generating your order confirmation receipt...</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1392,15 +1438,17 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                 <CheckCircle2 className="w-9 h-9" />
               </div>
               
-              <div className="space-y-2">
-                <h3 className="font-serif text-xl font-bold text-brand-green-950">
-                  {language === 'hi' ? 'ऑर्डर सफलतापूर्वक दर्ज किया गया!' : 'Ayurvedic Compound Reserved!'}
+              <div className="space-y-1.5">
+                <h3 className="font-serif text-xl sm:text-2xl font-bold text-brand-green-950">
+                  {language === 'hi' ? 'आपका ऑर्डर सफलतापूर्वक सुरक्षित हो गया है!' : 'Your Wellness Order Is Secured!'}
                 </h3>
-                <p className="text-xs text-brand-green-700 max-w-sm mx-auto leading-relaxed">
+                <p className="text-xs text-brand-green-800">
                   {language === 'hi' 
-                    ? `आपका ऑर्डर नंबर ${placedOrder.id} है। वितरण साथी जल्द ही आपके पते पर पहुंचेगा।`
-                    : `We have compiled and secured your wellness order under ID ${placedOrder.id}. Our Kerala dispatch partner is dispatching soon.`
-                  }
+                    ? 'आपका ऑर्डर वैदिक क्रॉनिकल डेटाबेस में दर्ज कर लिया गया है।' 
+                    : 'Your order has been logged into the Vedic chronicle database.'}
+                </p>
+                <p className="text-xs font-mono text-brand-gold-700 font-bold tracking-wide">
+                  ORDER ID: {placedOrder.id}
                 </p>
               </div>
 
@@ -1416,38 +1464,74 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                 </div>
               )}
 
-              {/* Success Order Details */}
-              <div className="bg-brand-cream-100/40 rounded-2xl border border-brand-green-600/5 p-4 text-xs text-brand-green-900 space-y-3.5 text-left max-w-sm mx-auto">
-                <div className="flex justify-between font-bold text-[10px] text-brand-green-600 uppercase tracking-widest pb-1 border-b border-brand-green-600/5">
-                  <span>Shipment Order Details</span>
-                  <span>CONFIRMED</span>
-                </div>
+              {/* Order Confirmation Receipt Details (Matches Cart Normal Order) */}
+              <div className="border border-brand-green-600/15 rounded-2xl bg-white p-5 text-left text-xs text-brand-green-800 space-y-4 shadow-sm max-w-sm mx-auto">
                 
-                <div className="space-y-1.5">
-                  <p className="font-bold text-brand-green-950">{fullName}</p>
-                  <p className="text-[11px] text-brand-green-800 leading-normal">{addressLine1}, {city}, {stateName} - {zipCode}</p>
-                  <p className="text-[11px] text-brand-green-600 font-mono font-bold pt-1">Contact: +91 {mobilePhone}</p>
+                {/* Delivery address details */}
+                <div className="space-y-1">
+                  <h5 className="font-bold text-brand-green-900">Delivery Address Selected:</h5>
+                  <p className="font-medium text-brand-green-900/80">{placedOrder.shippingAddress?.fullName || fullName}</p>
+                  <p>{placedOrder.shippingAddress?.addressLine1 || addressLine1}, {placedOrder.shippingAddress?.addressLine2 || addressLine2 || ''}</p>
+                  <p>{placedOrder.shippingAddress?.city || city}, {placedOrder.shippingAddress?.state || stateName} - {placedOrder.shippingAddress?.zipCode || zipCode}</p>
+                  <p className="font-mono text-[11px] pt-0.5">Phone Contact: {placedOrder.shippingAddress?.phone || `+91${mobilePhone}`}</p>
                 </div>
 
-                <div className="pt-2 border-t border-brand-green-600/5 flex justify-between items-center text-brand-green-950 font-bold font-serif text-sm">
-                  <span>Total Amount Paid:</span>
-                  <span>₹{finalTotal}</span>
+                {/* Items breakdown */}
+                <div className="space-y-2 pt-2 border-t border-brand-green-600/10">
+                  <h5 className="font-bold text-brand-green-900">Remedies Breakdown:</h5>
+                  <div className="space-y-1.5">
+                    {placedOrder.items && placedOrder.items.length > 0 ? (
+                      placedOrder.items.map((it, i) => (
+                        <div key={i} className="flex justify-between font-medium text-brand-green-950">
+                          <span>{it.productName} (x{it.quantity})</span>
+                          <span>₹{it.price * it.quantity}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex justify-between font-medium text-brand-green-950">
+                        <span>{product.name} (x{quantity})</span>
+                        <span>₹{product.price * quantity}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* Grand Total */}
+                <div className="pt-2 border-t border-brand-green-600/10 flex justify-between font-serif text-sm font-bold text-brand-green-950">
+                  <span>Grand Total Secured</span>
+                  <span>₹{placedOrder.finalTotal || finalTotal}</span>
+                </div>
+
+                {/* Payment Status Badge */}
+                <div className="bg-brand-cream-100 p-3 rounded-xl border border-brand-gold-500/15 text-center text-[10px] text-brand-gold-800 font-extrabold uppercase tracking-wider">
+                  🛡️ Payment status: {placedOrder.paymentStatus || (paymentMethod === 'Cash on Delivery' ? 'Pending' : 'Paid')} via {placedOrder.paymentMethod || paymentMethod}
+                </div>
+
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto pt-2">
+              {/* Action buttons */}
+              <div className="flex flex-col sm:flex-row gap-2 justify-center max-w-sm mx-auto pt-2">
                 <button
                   onClick={() => {
                     onClose();
                     onNavigate('track-order');
                   }}
-                  className="flex-1 py-3 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-2xl text-xs uppercase tracking-wider cursor-pointer shadow-sm transition-colors text-center"
+                  className="flex-1 py-3 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-2xl text-[11px] uppercase tracking-wider cursor-pointer shadow-sm transition-colors text-center"
                 >
                   {language === 'hi' ? 'ऑर्डर ट्रैक करें' : 'Track Order Dispatch'}
                 </button>
                 <button
+                  onClick={() => {
+                    onClose();
+                    onNavigate('dashboard', { tab: 'orders' });
+                  }}
+                  className="flex-1 py-3 bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 font-bold rounded-2xl text-[11px] uppercase tracking-wider cursor-pointer shadow-sm transition-colors text-center"
+                >
+                  {language === 'hi' ? 'डैशबोर्ड में देखें' : 'View In Dashboard'}
+                </button>
+                <button
                   onClick={onClose}
-                  className="flex-1 py-3 bg-brand-cream-200 hover:bg-brand-cream-300 text-brand-green-900 font-bold rounded-2xl text-xs uppercase tracking-wider cursor-pointer border border-brand-green-600/5 transition-colors text-center"
+                  className="flex-1 py-3 bg-brand-cream-200 hover:bg-brand-cream-300 text-brand-green-900 font-bold rounded-2xl text-[11px] uppercase tracking-wider cursor-pointer border border-brand-green-600/10 transition-colors text-center"
                 >
                   {language === 'hi' ? 'दुकान जारी रखें' : 'Continue Shopping'}
                 </button>

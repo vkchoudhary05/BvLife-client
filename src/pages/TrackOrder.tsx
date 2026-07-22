@@ -27,7 +27,15 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [order, setOrder] = useState<Order | null>(null);
+  const [order, setOrder] = useState<Order | null>(() => {
+    try {
+      const lastCompleted = localStorage.getItem('grams_last_completed_order');
+      if (lastCompleted) return JSON.parse(lastCompleted);
+      const lastPlaced = localStorage.getItem('grams_last_placed_order');
+      if (lastPlaced) return JSON.parse(lastPlaced);
+    } catch (e) {}
+    return null;
+  });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
 
   // If user is logged in, fetch their recent orders to allow easy tracking clicks
