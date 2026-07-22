@@ -182,7 +182,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
   // Helper to render markdown-like text nicely
   const renderMessageContent = (content: string) => {
     return (
-      <div className="space-y-2 text-xs leading-relaxed text-brand-green-950">
+      <div className="space-y-2 text-xs leading-relaxed text-brand-green-900">
         {content.split('\n').map((line, idx) => {
           if (line.startsWith('###')) {
             return (
@@ -400,7 +400,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                   onClose();
                   onNavigate('login');
                 }}
-                className="w-full py-3.5 bg-brand-green-800 hover:bg-brand-green-950 text-brand-cream-50 font-serif font-bold rounded-xl text-xs uppercase tracking-wider transition-all duration-200 shadow-md flex items-center justify-center gap-1.5 cursor-pointer border border-brand-gold-500/25 animate-bounce"
+                className="w-full py-3.5 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-serif font-bold rounded-xl text-xs uppercase tracking-wider transition-all duration-200 shadow-md flex items-center justify-center gap-1.5 cursor-pointer border border-brand-gold-500/25 animate-bounce"
               >
                 <span>{language === 'hi' ? 'लॉगिन / पंजीकरण करें' : 'Login / Register'}</span>
                 <ArrowRight className="w-4 h-4 text-brand-gold-400" />
@@ -446,7 +446,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                       <div className={`p-3.5 rounded-2xl space-y-1 ${
                         msg.role === 'user'
                           ? 'bg-brand-green-800 text-brand-cream-50 rounded-tr-none'
-                          : 'bg-brand-cream-100/70 border border-brand-green-200 text-brand-green-950 rounded-tl-none'
+                          : 'bg-brand-cream-100/70 border border-brand-green-200 text-brand-green-900 rounded-tl-none'
                       }`}>
                         {/* Render content */}
                         {msg.role === 'user' ? (

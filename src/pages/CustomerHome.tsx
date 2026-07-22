@@ -502,7 +502,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
 
           <button
             onClick={onOpenConsultant}
-            className="relative flex items-center gap-1.5 sm:gap-2.5 px-3.5 py-2.5 sm:px-4.5 sm:py-3.5 rounded-full bg-gradient-to-r from-brand-green-950 via-brand-green-900 to-brand-green-950 text-brand-cream-50 hover:text-brand-gold-100 font-bold transition-all duration-300 shadow-[0_8px_25px_rgba(0,0,0,0.45)] hover:scale-105 active:scale-95 cursor-pointer border border-brand-gold-400/40 shrink-0 overflow-hidden"
+            className="relative flex items-center gap-1.5 sm:gap-2.5 px-3.5 py-2.5 sm:px-4.5 sm:py-3.5 rounded-full bg-gradient-to-r from-brand-green-900 via-brand-green-900 to-brand-green-900 text-brand-cream-50 hover:text-brand-gold-100 font-bold transition-all duration-300 shadow-[0_8px_25px_rgba(0,0,0,0.45)] hover:scale-105 active:scale-95 cursor-pointer border border-brand-gold-400/40 shrink-0 overflow-hidden"
             title={t('btnAskAcharya', language)}
           >
             {/* Shimmer line effect across the button */}
