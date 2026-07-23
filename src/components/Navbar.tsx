@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Search, Heart, ShoppingCart, User, Sparkles, LogOut, LayoutDashboard, Shield, Menu, X, ArrowLeft } from 'lucide-react';
+import { Search, Heart, ShoppingCart, User, Sparkles, LogOut, LayoutDashboard, Shield, Menu, X } from 'lucide-react';
 import { User as UserType, CartItem, WebsiteSettings } from '../types';
 import { Language, t } from '../lib/translations';
 import { Logo } from './Logo';
@@ -39,7 +39,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [searchVal, setSearchVal] = useState(searchQuery);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isMobileSearchActive, setIsMobileSearchActive] = useState(false);
   const profileMenuRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -122,50 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       <div className="max-w-[1440px] mx-auto px-2 sm:px-4 lg:px-6">
-        
-        {/* Mobile Search Overlay Bar */}
-        {isMobileSearchActive && (
-          <div className="flex md:hidden items-center h-14 gap-3">
-            <button 
-              onClick={() => {
-                setIsMobileSearchActive(false);
-                setSearchVal('');
-                onSearch('');
-              }}
-              className="p-1.5 text-brand-green-800 hover:text-brand-gold-600 transition-colors focus:outline-none cursor-pointer flex items-center justify-center rounded-lg hover:bg-brand-green-50/50"
-              aria-label="Back"
-            >
-              <ArrowLeft className="w-5.5 h-5.5" />
-            </button>
-            <form onSubmit={(e) => {
-              handleSearchSubmit(e);
-              setIsMobileSearchActive(false);
-            }} className="flex-1 relative">
-              <input
-                type="text"
-                autoFocus
-                placeholder={t('navSearchPlaceholder', language)}
-                value={searchVal}
-                onChange={(e) => setSearchVal(e.target.value)}
-                className="w-full pl-4 pr-10 py-1.5 rounded-full bg-brand-green-50 border border-brand-green-200 focus:outline-none focus:border-brand-green-700 text-xs sm:text-sm placeholder-brand-green-600/50"
-              />
-              {searchVal && (
-                <button 
-                  type="button" 
-                  onClick={() => setSearchVal('')}
-                  className="absolute right-9 top-1/2 -translate-y-1/2 text-brand-green-600/40 hover:text-brand-green-800 p-0.5 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-green-700 hover:text-brand-gold-600 transition-colors cursor-pointer">
-                <Search className="w-4 h-4" />
-              </button>
-            </form>
-          </div>
-        )}
-
-        <div className={`items-center justify-between h-14 sm:h-18 gap-1.5 sm:gap-4 ${isMobileSearchActive ? 'hidden md:flex' : 'flex'}`}>
+        <div className="flex items-center justify-between h-14 sm:h-18 gap-1.5 sm:gap-4">
           
           {/* Brand Logo - Aligned to left */}
           <div 
@@ -190,8 +146,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </form>
 
-        {/* Primary Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-base font-medium text-black">
+          {/* Primary Navigation Links */}
+            <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-base font-medium text-black">
             <button onClick={() => onNavigate('home')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navHome', language)}</button>
             <button onClick={() => onNavigate('shop')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navShop', language)}</button>
             <button onClick={() => onNavigate('track-order')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">Track Order</button>
@@ -201,9 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* User, Checkout & Mobile Menu Quick Icons - Aligned to right */}
-          <div className="flex items-center gap-1 sm:gap-2.5 md:gap-4 ml-auto md:ml-0">
-            
-
+             <div className="flex items-center gap-1 sm:gap-2.5 md:gap-4">
             
 
             {/* AI consultant button removed from nav as requested */}
@@ -222,16 +176,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Mobile Search Button */}
-            <button 
-              onClick={() => setIsMobileSearchActive(true)}
-              className="p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 md:hidden"
-              aria-label="Search"
-            >
-              <Search className="w-6 h-6" strokeWidth={2} />
-            </button>
-
-            {/* Cart */}
+            {/* Cart - Visible on all screens */}
             <button 
               onClick={() => onNavigate('cart')}
               className="relative p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0"
@@ -245,8 +190,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* User Profile */}
-            <div ref={profileMenuRef} className="relative shrink-0">
+            {/* User Profile - Hidden on mobile, visible on desktop */}
+            <div ref={profileMenuRef} className="relative shrink-0 hidden md:block">
               <button 
                 onClick={() => {
                   if (currentUser) {
@@ -344,6 +289,23 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Mobile Navigation Links */}
         {isMobileMenuOpen && (
           <div className="lg:hidden py-4 px-4 border-t border-brand-green-600/10 flex flex-col gap-4 bg-brand-cream-50 animate-in fade-in slide-in-from-top-2 duration-200">
+            {/* Mobile Search input */}
+            <form onSubmit={(e) => {
+              handleSearchSubmit(e);
+              setIsMobileMenuOpen(false);
+            }} className="relative">
+              <input
+                type="text"
+                placeholder={t('navSearchPlaceholder', language)}
+                value={searchVal}
+                onChange={(e) => setSearchVal(e.target.value)}
+                className="w-full pl-4 pr-10 py-2 rounded-full bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 text-sm placeholder-brand-green-600/50"
+              />
+              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-green-700 hover:text-brand-gold-600 transition-colors cursor-pointer">
+                <Search className="w-4 h-4" />
+              </button>
+            </form>
+
             <div className="flex flex-col gap-1">
               <button 
                 onClick={() => { onNavigate('home'); setIsMobileMenuOpen(false); }} 
@@ -384,7 +346,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => { onNavigate('static', { page: 'about' }); setIsMobileMenuOpen(false); }} 
                 className="text-left px-4 py-2.5 text-base font-medium text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer"
               >
-                {t('navAbout', language)}
+                {t('About', language)}
               </button>
               <button 
                 onClick={() => { onNavigate('static', { page: 'contact' }); setIsMobileMenuOpen(false); }} 
