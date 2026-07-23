@@ -384,29 +384,39 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
     };
 
     const result = await onPlaceOrder(orderData);
-    setProcessingOrder(false);
 
     if (result) {
       setPlacedOrder(result);
+      setStep('success');
+      setProcessingOrder(false);
       try {
         localStorage.setItem('grams_last_placed_order', JSON.stringify(result));
+        localStorage.setItem('grams_last_completed_order', JSON.stringify(result));
         const stored = localStorage.getItem('grams_recent_orders');
         const existingIds: string[] = stored ? JSON.parse(stored) : [];
         if (!existingIds.includes(result.id)) {
           localStorage.setItem('grams_recent_orders', JSON.stringify([result.id, ...existingIds]));
         }
       } catch (e) {}
-      setStep('success');
+      if (onNavigate) {
+        onNavigate('order-confirmation', { id: result.id });
+      } else {
+        window.history.pushState({ page: 'order-confirmation', params: { id: result.id } }, '', `/order-confirmation?id=${result.id}`);
+      }
       return result;
     } else {
+      setProcessingOrder(false);
       setAddressError(language === 'hi' ? 'ऑर्डर पूरा करने में त्रुटि।' : 'Failed to place the order. Please try again.');
       return null;
     }
   };
 
-  const handleStartPaymentForBuyNow = () => {
+  const handleStartPaymentForBuyNow = async () => {
     if (paymentMethod === 'Cash on Delivery') {
-      handleCompleteDirectOrder();
+      const res = await handleCompleteDirectOrder();
+      if (res) {
+        onClose();
+      }
     } else {
       setSimulatedGatewayOtp('123456');
       setPaymentVerifyOtp('123456');
@@ -457,6 +467,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
         setGatewayStep('success');
         setTimeout(() => {
           setIsPaymentGatewayOpen(false);
+          onClose();
         }, 800);
       } else {
         setGatewayStep('selection');
@@ -494,6 +505,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
       setGatewayStep('success');
       setTimeout(() => {
         setIsPaymentGatewayOpen(false);
+        onClose();
       }, 800);
     } else {
       setGatewayStep('otp');
@@ -1114,6 +1126,78 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                     <span className="text-[9px] text-brand-green-600 leading-tight">Pay cash directly upon home delivery.</span>
                   </button>
                 </div>
+
+                {/* Inline method details */}
+                {paymentMethod === 'UPI' && (
+                  <div className="p-3.5 bg-brand-green-50/60 rounded-2xl border border-brand-green-200/50 space-y-2 mt-2">
+                    <div className="flex items-center justify-between text-[10px] font-bold text-brand-green-800 uppercase tracking-wider">
+                      <span>Enter Mobile UPI ID / VPA</span>
+                      <span className="text-brand-green-600 font-normal">e.g., vkchoudhary050607@okaxis</span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder={`${mobilePhone || '9425011088'}@upi`}
+                      value={upiVal}
+                      onChange={(e) => setUpiVal(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-green-200 text-xs font-mono font-bold text-brand-green-950 focus:outline-none focus:border-brand-green-700 bg-white"
+                    />
+                  </div>
+                )}
+
+                {paymentMethod === 'Cards' && (
+                  <div className="p-3.5 bg-brand-green-50/60 rounded-2xl border border-brand-green-200/50 space-y-2.5 mt-2 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-brand-green-800 uppercase tracking-wider">Card Number</label>
+                      <input
+                        type="text"
+                        maxLength={19}
+                        placeholder="4111 2222 3333 4444"
+                        value={cardNo}
+                        onChange={(e) => setCardNo(e.target.value.replace(/\D/g, '').slice(0, 16))}
+                        className="w-full px-3.5 py-2 rounded-xl border border-brand-green-200 font-mono font-bold text-brand-green-950 bg-white"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        maxLength={5}
+                        placeholder="MM/YY"
+                        value={cardExp}
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val.length >= 2) val = val.slice(0, 2) + '/' + val.slice(2, 4);
+                          setCardExp(val);
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-brand-green-200 font-mono text-center font-bold text-brand-green-950 bg-white"
+                      />
+                      <input
+                        type="password"
+                        maxLength={4}
+                        placeholder="CVV"
+                        value={cardCvvInput}
+                        onChange={(e) => setCardCvvInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        className="w-full px-3 py-2 rounded-xl border border-brand-green-200 font-mono text-center font-bold text-brand-green-950 bg-white"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {paymentMethod === 'Net Banking' && (
+                  <div className="p-3.5 bg-brand-green-50/60 rounded-2xl border border-brand-green-200/50 space-y-2 mt-2">
+                    <label className="text-[10px] font-bold text-brand-green-800 uppercase tracking-wider block">Choose Bank</label>
+                    <select
+                      value={selectedBank}
+                      onChange={(e) => setSelectedBank(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-green-200 text-xs font-bold text-brand-green-950 bg-white"
+                    >
+                      <option value="">Select Bank (HDFC, SBI, ICICI, etc.)</option>
+                      <option value="HDFC Bank">HDFC Bank</option>
+                      <option value="State Bank of India">State Bank of India (SBI)</option>
+                      <option value="ICICI Bank">ICICI Bank</option>
+                      <option value="Axis Bank">Axis Bank</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* Confirm Actions */}
@@ -1129,17 +1213,24 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                   type="button"
                   onClick={handleStartPaymentForBuyNow}
                   disabled={processingOrder}
-                  className="w-2/3 py-3.5 bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 font-extrabold rounded-2xl uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-2 active:scale-[0.98] text-xs font-serif"
+                  className="w-2/3 py-3.5 bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 font-extrabold rounded-2xl uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-2 active:scale-[0.98] text-xs font-serif disabled:opacity-50"
                 >
-                  <span>
-                    {processingOrder 
-                      ? (language === 'hi' ? 'संसाधित किया जा रहा है...' : 'Processing...') 
-                      : paymentMethod === 'Cash on Delivery' 
-                      ? (language === 'hi' ? 'ऑर्डर पूरा करें' : 'Confirm Cash Order') 
-                      : 'Proceed to Payment Portal'
-                    }
-                  </span>
-                  <CheckCircle2 className="w-4 h-4 text-brand-green-900 shrink-0" />
+                  {processingOrder ? (
+                    <>
+                      <div className="w-4 h-4 rounded-full border-2 border-brand-green-950 border-t-transparent animate-spin" />
+                      <span>{language === 'hi' ? 'संसाधित किया जा रहा है...' : 'Processing...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        {paymentMethod === 'Cash on Delivery' 
+                          ? (language === 'hi' ? 'ऑर्डर पूरा करें (COD)' : 'Confirm Cash Order') 
+                          : (language === 'hi' ? `भुगतान करें ₹${finalTotal}` : `Pay & Place Order ₹${finalTotal}`)
+                        }
+                      </span>
+                      <CheckCircle2 className="w-4 h-4 text-brand-green-900 shrink-0" />
+                    </>
+                  )}
                 </button>
               </div>
             </div>

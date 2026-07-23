@@ -11,15 +11,16 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
-build: {
-  outDir: 'dist',
-  emptyOutDir: true,
-},
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
       proxy: {
         '/api': {
+          target: process.env.BACKEND_URL || 'http://localhost:5000',
+          changeOrigin: true,
+          secure: false,
+        },
+        '/auth': {
           target: process.env.BACKEND_URL || 'http://localhost:5000',
           changeOrigin: true,
           secure: false,

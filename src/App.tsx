@@ -60,6 +60,11 @@ const getPageFromUrl = () => {
     return { page: 'admin', params: null };
   }
   
+  if (cleanPath === 'order-confirmation' || cleanPath === 'order-success') {
+    const id = searchParams.get('id') || searchParams.get('orderId') || '';
+    return { page: 'order-confirmation', params: { id } };
+  }
+
   // Check if it is a static page or blogs / faqs
   const staticPages = ['blogs', 'faqs', 'about', 'contact', 'terms', 'privacy', 'expert-panel', 'impact', 'shipping-policy'];
   if (staticPages.includes(cleanPath)) {
@@ -67,7 +72,7 @@ const getPageFromUrl = () => {
   }
   
   // Default match for other paths (cart, checkout, dashboard, login, etc.)
-  const knownPages = ['cart', 'checkout', 'dashboard', 'login', 'track-order'];
+  const knownPages = ['cart', 'checkout', 'dashboard', 'login', 'track-order', 'wishlist', 'order-confirmation', 'order-success'];
   if (knownPages.includes(cleanPath)) {
     return { page: cleanPath, params: null };
   }
@@ -148,6 +153,26 @@ export default function App() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
   const [isGoogleOAuthOpen, setIsGoogleOAuthOpen] = useState(false);
+
+  // Listen for OAuth authentication success from popup windows (Google / Facebook)
+  useEffect(() => {
+    const handleAuthMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'OAUTH_AUTH_SUCCESS') {
+        const { token, user } = event.data;
+        if (token) {
+          localStorage.setItem('grams_auth_token', token);
+          setAuthToken(token);
+          if (user) {
+            setCurrentUser(user);
+          }
+          setIsGoogleOAuthOpen(false);
+          handleNavigate('home');
+        }
+      }
+    };
+    window.addEventListener('message', handleAuthMessage);
+    return () => window.removeEventListener('message', handleAuthMessage);
+  }, []);
 
   // Sync state modifications to localStorage
   useEffect(() => {
@@ -247,6 +272,8 @@ export default function App() {
         path = `/${params?.page || 'faq'}`;
       } else if (page === 'admin') {
         path = '/admin';
+      } else if (page === 'order-confirmation' || page === 'order-success') {
+        path = params?.id ? `/order-confirmation?id=${params.id}` : '/order-confirmation';
       } else if (page !== 'home') {
         path = `/${page}`;
       }
@@ -429,30 +456,57 @@ export default function App() {
     setLoginError('');
     setSocialLoading(provider);
     try {
-      // Simulate authentic social provider handshaking
-      await new Promise(resolve => setTimeout(resolve, 600));
+      if (emailOverride) {
+        // Direct profile account login from account chooser modal
+        const targetEmail = emailOverride;
+        const targetName = nameOverride || targetEmail.split('@')[0];
 
-      const targetEmail = emailOverride || (provider === 'google' ? 'vkchoudhary050607@gmail.com' : 'facebook.user@example.com');
-      const targetName = nameOverride || (targetEmail === 'vkchoudhary050607@gmail.com' ? 'Vipin Choudhary' : 'Social User');
+        let success = await handleLogin({ email: targetEmail, password: 'password123' });
+        if (!success) {
+          success = await handleRegister({
+            name: targetName,
+            email: targetEmail,
+            phone: '9425011088',
+            role: 'customer',
+            password: 'password123'
+          });
+        }
 
-      // 1. Try logging in directly with social email credentials
-      let success = await handleLogin({ email: targetEmail, password: 'password123' });
-      
-      // 2. If user account doesn't exist yet, automatically register and log in via social OAuth profile
-      if (!success) {
-        success = await handleRegister({
-          name: targetName,
-          email: targetEmail,
-          phone: '9425011088',
-          role: 'customer',
-          password: 'password123'
-        });
+        if (success) {
+          handleNavigate('home');
+        } else {
+          setLoginError(`Failed to authenticate with ${provider}. Please try standard email sign-in.`);
+        }
+        return;
       }
 
-      if (success) {
-        handleNavigate('home');
+      // 1. Fetch official OAuth auth endpoint URL from backend
+      const res = await fetch(`/api/auth/${provider}/url`);
+      const data = await res.json();
+
+      if (data && data.url) {
+        // 2. Open center popup window for real OAuth handshaking
+        const width = 550;
+        const height = 650;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+
+        const popup = window.open(
+          data.url,
+          `${provider}_oauth_window`,
+          `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
+        );
+
+        if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+          // If popup blocked by browser, redirect current tab or fallback to chooser
+          if (provider === 'google') {
+            setIsGoogleOAuthOpen(true);
+          } else {
+            window.location.href = data.url;
+          }
+        }
       } else {
-        setLoginError(`Failed to authenticate with ${provider}. Please try standard email sign-in.`);
+        throw new Error(`Could not generate OAuth authentication link for ${provider}`);
       }
     } catch (err) {
       console.error(err);
@@ -955,8 +1009,8 @@ export default function App() {
           />
         )}
 
-        {/* Secure Checkout */}
-        {currentPage === 'checkout' && (
+        {/* Secure Checkout & Order Confirmation */}
+        {(currentPage === 'checkout' || currentPage === 'order-confirmation' || currentPage === 'order-success') && (
           <Checkout
             cart={cart}
             userAddresses={currentUser?.addresses || []}
@@ -969,6 +1023,7 @@ export default function App() {
             currentUser={currentUser}
             onLoginSuccess={handleLoginSuccess}
             authToken={authToken}
+            initialCompletedOrderId={pageParams?.id}
           />
         )}
 

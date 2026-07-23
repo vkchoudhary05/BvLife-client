@@ -21,6 +21,7 @@ interface CheckoutProps {
   currentUser: any;
   onLoginSuccess?: (token: string) => void;
   authToken?: string | null;
+  initialCompletedOrderId?: string;
 }
 
 export const Checkout: React.FC<CheckoutProps> = ({
@@ -34,7 +35,8 @@ export const Checkout: React.FC<CheckoutProps> = ({
   language,
   currentUser,
   onLoginSuccess,
-  authToken
+  authToken,
+  initialCompletedOrderId
 }) => {
   const [selectedAddressId, setSelectedAddressId] = useState<string>(
     userAddresses.find(a => a.isDefault)?.id || userAddresses[0]?.id || ''
@@ -227,12 +229,48 @@ export const Checkout: React.FC<CheckoutProps> = ({
   const [processingOrder, setProcessingOrder] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState<Order | null>(() => {
     try {
-      const saved = localStorage.getItem('grams_last_completed_order');
+      if (initialCompletedOrderId) {
+        const savedPlaced = localStorage.getItem('grams_last_placed_order');
+        if (savedPlaced) {
+          const parsed = JSON.parse(savedPlaced);
+          if (parsed.id === initialCompletedOrderId) return parsed;
+        }
+        const savedComp = localStorage.getItem('grams_last_completed_order');
+        if (savedComp) {
+          const parsed = JSON.parse(savedComp);
+          if (parsed.id === initialCompletedOrderId) return parsed;
+        }
+      }
+      const saved = localStorage.getItem('grams_last_completed_order') || localStorage.getItem('grams_last_placed_order');
       return saved ? JSON.parse(saved) : null;
     } catch (e) {
       return null;
     }
   });
+
+  // Effect to load order when initialCompletedOrderId changes
+  React.useEffect(() => {
+    if (initialCompletedOrderId) {
+      try {
+        const savedPlaced = localStorage.getItem('grams_last_placed_order');
+        if (savedPlaced) {
+          const parsed = JSON.parse(savedPlaced);
+          if (parsed.id === initialCompletedOrderId) {
+            setOrderCompleted(parsed);
+            return;
+          }
+        }
+        const savedComp = localStorage.getItem('grams_last_completed_order');
+        if (savedComp) {
+          const parsed = JSON.parse(savedComp);
+          if (parsed.id === initialCompletedOrderId) {
+            setOrderCompleted(parsed);
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+  }, [initialCompletedOrderId]);
 
   // Calculations
   const subtotal = useMemo(() => {
@@ -435,10 +473,9 @@ export const Checkout: React.FC<CheckoutProps> = ({
       paymentStatus: paymentMethod === 'Cash on Delivery' ? 'Pending' : 'Paid'
     });
 
-    setProcessingOrder(false);
-
     if (result) {
       setOrderCompleted(result);
+      setProcessingOrder(false);
       try {
         localStorage.setItem('grams_last_completed_order', JSON.stringify(result));
         localStorage.setItem('grams_last_placed_order', JSON.stringify(result));
@@ -450,19 +487,40 @@ export const Checkout: React.FC<CheckoutProps> = ({
       } catch (e) {}
       return result;
     } else {
+      setProcessingOrder(false);
       alert(language === 'hi' ? "ऑर्डर प्लेस करने में विफल। कृपया पुन: प्रयास करें।" : "Order failed. Please check your network and try again.");
       return null;
     }
   };
 
+  // Reset completed order state if user adds new items to cart to start a new purchase (only when not explicitly viewing an order confirmation by ID)
   React.useEffect(() => {
-    if (cart.length === 0 && !orderCompleted && !processingOrder) {
-      onNavigate('cart');
+    if (cart.length > 0 && orderCompleted && !initialCompletedOrderId) {
+      setOrderCompleted(null);
+      localStorage.removeItem('grams_last_completed_order');
     }
-  }, [cart.length, orderCompleted, processingOrder, onNavigate]);
+  }, [cart.length, initialCompletedOrderId]);
+
+  React.useEffect(() => {
+    if (cart.length === 0 && !orderCompleted && !processingOrder && !initialCompletedOrderId) {
+      const storedOrder = localStorage.getItem('grams_last_completed_order') || localStorage.getItem('grams_last_placed_order');
+      if (storedOrder) {
+        try {
+          setOrderCompleted(JSON.parse(storedOrder));
+        } catch (e) {
+          onNavigate('cart');
+        }
+      } else {
+        onNavigate('cart');
+      }
+    }
+  }, [cart.length, orderCompleted, processingOrder, onNavigate, initialCompletedOrderId]);
 
   if (cart.length === 0 && !orderCompleted && !processingOrder) {
-    return null;
+    const storedOrder = localStorage.getItem('grams_last_completed_order');
+    if (!storedOrder) {
+      return null;
+    }
   }
 
   return (
@@ -1051,26 +1109,94 @@ export const Checkout: React.FC<CheckoutProps> = ({
                   { id: 'Net Banking', title: 'Secure Net Banking', subtitle: 'All Indian major banks integrated directly' },
                   { id: 'Cash on Delivery', title: 'Cash on Delivery (COD)', subtitle: 'Pay when herbs arrive at your destination (₹50 cod fee applies)' }
                 ].map(pay => (
-                  <label 
-                    key={pay.id}
-                    className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all ${
-                      paymentMethod === pay.id 
-                        ? 'border-brand-green-700 bg-brand-green-50/10' 
-                        : 'border-brand-green-200 hover:border-brand-green-600/15 bg-white'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked={paymentMethod === pay.id}
-                      onChange={() => setPaymentMethod(pay.id as any)}
-                      className="mt-1 accent-brand-green-700 cursor-pointer"
-                    />
-                    <div className="text-xs space-y-0.5">
-                      <p className="font-bold text-brand-green-900">{pay.title}</p>
-                      <p className="text-brand-green-600/70">{pay.subtitle}</p>
-                    </div>
-                  </label>
+                  <div key={pay.id} className="space-y-2">
+                    <label 
+                      className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all ${
+                        paymentMethod === pay.id 
+                          ? 'border-brand-green-700 bg-brand-green-50/10' 
+                          : 'border-brand-green-200 hover:border-brand-green-600/15 bg-white'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        checked={paymentMethod === pay.id}
+                        onChange={() => setPaymentMethod(pay.id as any)}
+                        className="mt-1 accent-brand-green-700 cursor-pointer"
+                      />
+                      <div className="text-xs space-y-0.5">
+                        <p className="font-bold text-brand-green-900">{pay.title}</p>
+                        <p className="text-brand-green-600/70">{pay.subtitle}</p>
+                      </div>
+                    </label>
+
+                    {/* Inline Payment Inputs */}
+                    {paymentMethod === 'UPI' && pay.id === 'UPI' && (
+                      <div className="ml-7 p-3 bg-brand-green-50/60 rounded-xl border border-brand-green-200 space-y-2">
+                        <label className="text-[10px] font-bold text-brand-green-800 uppercase tracking-wider block">
+                          UPI VPA / Phone Number (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder={`${phone || '9425011088'}@upi`}
+                          value={upiVal}
+                          onChange={(e) => setUpiVal(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg border border-brand-green-200 text-xs font-mono font-bold text-brand-green-950 bg-white"
+                        />
+                      </div>
+                    )}
+
+                    {paymentMethod === 'Cards' && pay.id === 'Cards' && (
+                      <div className="ml-7 p-3 bg-brand-green-50/60 rounded-xl border border-brand-green-200 space-y-2 text-xs">
+                        <input
+                          type="text"
+                          maxLength={19}
+                          placeholder="Card Number (4111 2222 3333 4444)"
+                          value={cardNo}
+                          onChange={(e) => setCardNo(e.target.value.replace(/\D/g, '').slice(0, 16))}
+                          className="w-full px-3 py-2 rounded-lg border border-brand-green-200 font-mono font-bold text-brand-green-950 bg-white"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            maxLength={5}
+                            placeholder="MM/YY"
+                            value={cardExp}
+                            onChange={(e) => {
+                              let val = e.target.value.replace(/\D/g, '');
+                              if (val.length >= 2) val = val.slice(0, 2) + '/' + val.slice(2, 4);
+                              setCardExp(val);
+                            }}
+                            className="w-full px-3 py-2 rounded-lg border border-brand-green-200 font-mono text-center font-bold text-brand-green-950 bg-white"
+                          />
+                          <input
+                            type="password"
+                            maxLength={4}
+                            placeholder="CVV"
+                            value={cardCvvInput}
+                            onChange={(e) => setCardCvvInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                            className="w-full px-3 py-2 rounded-lg border border-brand-green-200 font-mono text-center font-bold text-brand-green-950 bg-white"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {paymentMethod === 'Net Banking' && pay.id === 'Net Banking' && (
+                      <div className="ml-7 p-3 bg-brand-green-50/60 rounded-xl border border-brand-green-200 space-y-2">
+                        <select
+                          value={selectedBank}
+                          onChange={(e) => setSelectedBank(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg border border-brand-green-200 text-xs font-bold text-brand-green-950 bg-white"
+                        >
+                          <option value="">Select Bank (HDFC, SBI, ICICI, etc.)</option>
+                          <option value="HDFC Bank">HDFC Bank</option>
+                          <option value="State Bank of India">State Bank of India (SBI)</option>
+                          <option value="ICICI Bank">ICICI Bank</option>
+                          <option value="Axis Bank">Axis Bank</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>

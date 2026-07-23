@@ -167,8 +167,51 @@ export const GoogleOAuthModal: React.FC<GoogleOAuthModalProps> = ({
                     <Plus className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-medium text-gray-700 group-hover:text-gray-900">
-                    Use another Google Account
+                    Enter another Google Email
                   </span>
+                </button>
+
+                {/* Launch Official Google OAuth popup */}
+                <button
+                  onClick={async () => {
+                    try {
+                      setIsAuthenticating(true);
+                      const res = await fetch('/api/auth/google/url');
+                      const data = await res.json();
+                      if (data.url) {
+                        const width = 550;
+                        const height = 650;
+                        const left = window.screenX + (window.outerWidth - width) / 2;
+                        const top = window.screenY + (window.outerHeight - height) / 2;
+                        window.open(
+                          data.url,
+                          'google_oauth_popup',
+                          `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
+                        );
+                        onClose();
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      setErrorMsg('Failed to open Google OAuth window.');
+                    } finally {
+                      setIsAuthenticating(false);
+                    }
+                  }}
+                  className="w-full p-3.5 flex items-center gap-3 bg-blue-50/60 hover:bg-blue-100/80 transition-colors text-left cursor-pointer group rounded-b-xl border-t border-blue-100"
+                >
+                  <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <svg className="w-4 h-4 fill-current text-white" viewBox="0 0 24 24">
+                      <path d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-blue-900 group-hover:text-blue-950">
+                      Launch Official Google OAuth Popup
+                    </p>
+                    <p className="text-[10px] text-blue-700/80">
+                      Sign in directly via Google Cloud OAuth Consent
+                    </p>
+                  </div>
                 </button>
               </div>
 
