@@ -79,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header id="site-header" className="sticky top-0 z-40 w-full bg-brand-cream-50/90 backdrop-blur-md border-b border-brand-green-600/10">
+    <header id="site-header" className="sticky top-0 z-40 w-full bg-white backdrop-blur-md border-b border-brand-green-600/10">
       {/* Top Banner Alert - Running Marquee Line */}
       <div id="top-promo-banner" className="bg-brand-green-800 text-brand-gold-300 text-[11px] sm:text-xs py-1.5 sm:py-2 px-0 overflow-hidden whitespace-nowrap border-b border-brand-gold-500/20 font-bold uppercase tracking-widest">
         <div className="flex animate-marquee select-none">
@@ -105,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="text-brand-gold-500/40">|</span>
             <span className="text-brand-gold-400">USE CODE: AYUR15 FOR 15% OFF</span>
             <span className="text-brand-gold-500/40">|</span>
-            {/* <span>100% Pure Natural Herbs</span> */}
+            <span>100% Pure Natural Herbs</span>
             <span className="text-brand-gold-500/40">|</span>
             <span>Authentic Ayurvedic Wellness</span>
             <span className="text-brand-gold-500/40">|</span>
@@ -115,7 +115,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="text-brand-gold-500/40">|</span>
             <span>Traditionally Crafted</span>
             <span className="text-brand-gold-500/40">|</span>
-            {/* <span>Daily Holistic Health Support</span> */}
+            <span>Daily Holistic Health Support</span>
           </div>
         </div>
       </div>
