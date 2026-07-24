@@ -105,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="text-brand-gold-500/40">|</span>
             <span className="text-brand-gold-400">USE CODE: AYUR15 FOR 15% OFF</span>
             <span className="text-brand-gold-500/40">|</span>
-            <span>100% Pure Natural Herbs</span>
+            {/* <span>100% Pure Natural Herbs</span> */}
             <span className="text-brand-gold-500/40">|</span>
             <span>Authentic Ayurvedic Wellness</span>
             <span className="text-brand-gold-500/40">|</span>
@@ -115,7 +115,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="text-brand-gold-500/40">|</span>
             <span>Traditionally Crafted</span>
             <span className="text-brand-gold-500/40">|</span>
-            <span>Daily Holistic Health Support</span>
+            {/* <span>Daily Holistic Health Support</span> */}
           </div>
         </div>
       </div>
