@@ -113,7 +113,12 @@ export default function App() {
 
   // Authenticated User
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [authToken, setAuthToken] = useState<string | null>(localStorage.getItem('grams_auth_token'));
+  const [authToken, setAuthToken] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('grams_auth_token') || localStorage.getItem('grams_auth_token');
+    }
+    return null;
+  });
 
   // User Interactive states (Cart, Wishlist)
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -160,7 +165,11 @@ export default function App() {
       if (event.data && event.data.type === 'OAUTH_AUTH_SUCCESS') {
         const { token, user } = event.data;
         if (token) {
-          localStorage.setItem('grams_auth_token', token);
+          const isUserAdmin = user?.role === 'admin' || ['vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes((user?.email || '').toLowerCase());
+          sessionStorage.setItem('grams_auth_token', token);
+          if (!isUserAdmin) {
+            localStorage.setItem('grams_auth_token', token);
+          }
           setAuthToken(token);
           if (user) {
             setCurrentUser(user);
@@ -296,6 +305,7 @@ export default function App() {
           }
         } else {
           // Token expired or invalid
+          sessionStorage.removeItem('grams_auth_token');
           localStorage.removeItem('grams_auth_token');
           setAuthToken(null);
           setCurrentUser(null);
@@ -307,6 +317,24 @@ export default function App() {
     };
 
     fetchUserAndOrders();
+
+    // Auto-refresh orders periodically so user and admin see status updates live
+    const interval = setInterval(() => {
+      if (authToken) {
+        fetch('/api/orders', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (Array.isArray(data)) {
+            setOrders(data);
+          }
+        })
+        .catch(() => {});
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, [authToken]);
 
   // Handlers
@@ -504,8 +532,11 @@ export default function App() {
     }
   };
 
-  const handleLoginSuccess = (token: string) => {
-    localStorage.setItem('grams_auth_token', token);
+  const handleLoginSuccess = (token: string, isUserAdmin = false) => {
+    sessionStorage.setItem('grams_auth_token', token);
+    if (!isUserAdmin) {
+      localStorage.setItem('grams_auth_token', token);
+    }
     setAuthToken(token);
   };
 
@@ -583,7 +614,13 @@ export default function App() {
 
       if (res.ok) {
         const data = await res.json();
-        localStorage.setItem('grams_auth_token', data.token);
+        const cleanEmail = (data.user?.email || credentials.email).toLowerCase();
+        const isUserAdmin = data.user?.role === 'admin' || ['vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes(cleanEmail);
+
+        sessionStorage.setItem('grams_auth_token', data.token);
+        if (!isUserAdmin) {
+          localStorage.setItem('grams_auth_token', data.token);
+        }
         setAuthToken(data.token);
         return true;
       } else {
@@ -613,7 +650,13 @@ export default function App() {
 
       if (res.ok) {
         const regData = await res.json();
-        localStorage.setItem('grams_auth_token', regData.token);
+        const cleanEmail = (regData.user?.email || data.email).toLowerCase();
+        const isUserAdmin = regData.user?.role === 'admin' || ['vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes(cleanEmail);
+
+        sessionStorage.setItem('grams_auth_token', regData.token);
+        if (!isUserAdmin) {
+          localStorage.setItem('grams_auth_token', regData.token);
+        }
         setAuthToken(regData.token);
         return true;
       }
@@ -624,6 +667,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    sessionStorage.removeItem('grams_auth_token');
     localStorage.removeItem('grams_auth_token');
     localStorage.removeItem('grams_recent_orders');
     setAuthToken(null);
@@ -839,7 +883,7 @@ export default function App() {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, paymentStatus: payStatus } : o));
 
     try {
-      await fetch(`/api/orders/${orderId}`, {
+      const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -847,6 +891,21 @@ export default function App() {
         },
         body: JSON.stringify({ status, paymentStatus: payStatus })
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.order) {
+          setOrders(prev => prev.map(o => o.id === orderId ? data.order : o));
+          try {
+            const lastPlaced = localStorage.getItem('grams_last_placed_order');
+            if (lastPlaced) {
+              const parsed = JSON.parse(lastPlaced);
+              if (parsed.id === orderId) {
+                localStorage.setItem('grams_last_placed_order', JSON.stringify(data.order));
+              }
+            }
+          } catch(e) {}
+        }
+      }
     } catch (err) {
       console.error(err);
     }

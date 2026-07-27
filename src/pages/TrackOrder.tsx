@@ -6,7 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, ArrowLeft, Check, Package, Truck, Calendar, 
-  MapPin, AlertCircle, Clock, ShoppingBag, ArrowRight
+  MapPin, AlertCircle, Clock, ShoppingBag, ArrowRight,
+  FileText, Tag, Printer, X
 } from 'lucide-react';
 import { Order, User as UserType } from '../types';
 import { Language, t } from '../lib/translations';
@@ -37,6 +38,8 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
     return null;
   });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
+  const [shippingLabelOrder, setShippingLabelOrder] = useState<Order | null>(null);
 
   // If user is logged in, fetch their recent orders to allow easy tracking clicks
   useEffect(() => {
@@ -83,6 +86,26 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
 
     fetchUserOrders();
   }, [currentUser, authToken]);
+
+  // Live auto-poll currently tracked order every 8 seconds so admin status changes auto-update
+  useEffect(() => {
+    if (!order || !order.id) return;
+    const interval = setInterval(() => {
+      fetch(`/api/orders/track/${encodeURIComponent(order.id)}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data && (data.order || data.id)) {
+            const activeOrder = data.order || data;
+            setOrder(activeOrder);
+            if (Array.isArray(data.userOrders) && data.userOrders.length > 0) {
+              setRecentOrders(data.userOrders);
+            }
+          }
+        })
+        .catch(() => {});
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [order?.id]);
 
   const handleTrack = async (identifierStr: string) => {
     const id = identifierStr.trim();
@@ -316,10 +339,29 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
               </p>
             </div>
 
-            <div className="space-y-1 text-xs md:text-right border-t md:border-t-0 pt-4 md:pt-0 border-brand-green-100">
-              <p className="text-brand-green-600/50">Tracking Number</p>
-              <p className="font-mono font-bold text-sm text-brand-gold-700 tracking-wide">{order.trackingNumber || 'GL-PENDING-ASSIGNMENT'}</p>
-              <p className="text-xs font-semibold text-brand-green-900">Total Secured: ₹{order.finalTotal}</p>
+            <div className="space-y-2 text-xs md:text-right border-t md:border-t-0 pt-4 md:pt-0 border-brand-green-100">
+              <div>
+                <p className="text-brand-green-600/50">Tracking Number</p>
+                <p className="font-mono font-bold text-sm text-brand-gold-700 tracking-wide">{order.trackingNumber || 'GL-PENDING-ASSIGNMENT'}</p>
+                <p className="text-xs font-semibold text-brand-green-900">Total Secured: ₹{order.finalTotal}</p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1 md:justify-end">
+                <button
+                  onClick={() => setInvoiceOrder(order)}
+                  className="px-3 py-1.5 rounded-xl border border-brand-gold-500/30 hover:border-brand-gold-500 text-brand-gold-700 bg-brand-gold-50/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Print Bill</span>
+                </button>
+                <button
+                  onClick={() => setShippingLabelOrder(order)}
+                  className="px-3 py-1.5 rounded-xl border border-brand-green-600/30 hover:border-brand-green-600 text-brand-green-800 bg-brand-green-50/50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Tag className="w-3.5 h-3.5" />
+                  <span>Print Label</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -458,6 +500,250 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
 
           </div>
 
+        </div>
+      )}
+
+      {/* Bill Invoice Modal */}
+      {invoiceOrder && (
+        <div className="fixed inset-0 bg-brand-green-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
+          <div className="max-w-2xl w-full bg-brand-cream-50 rounded-[2rem] shadow-2xl border border-brand-gold-500/20 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-brand-green-950 px-6 py-4 flex items-center justify-between text-brand-cream-100 border-b border-brand-gold-500/10 shrink-0 print:hidden">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-brand-gold-400" />
+                <span className="font-serif text-sm font-bold tracking-wide">Ayurvedic Sanctuary Invoice</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 font-bold rounded-xl text-xs uppercase tracking-wider transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print Invoice</span>
+                </button>
+                <button
+                  onClick={() => setInvoiceOrder(null)}
+                  className="p-2 rounded-xl hover:bg-brand-green-900 text-brand-cream-200 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div id="print-invoice-area" className="flex-grow overflow-y-auto p-8 sm:p-10 space-y-8 bg-[#fdfbf7] text-brand-green-950">
+              <style>{`
+                @media print {
+                  @page {
+                    size: A4 portrait;
+                    margin: 5mm;
+                  }
+                  html, body {
+                    height: 100% !important;
+                    max-height: 100vh !important;
+                    overflow: hidden !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background: #ffffff !important;
+                  }
+                  body * { visibility: hidden !important; }
+                  #print-invoice-area, #print-invoice-area * { visibility: visible !important; }
+                  #print-invoice-area {
+                    position: fixed !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    height: auto !important;
+                    max-height: 98vh !important;
+                    margin: 0 !important;
+                    padding: 15px !important;
+                    box-shadow: none !important;
+                    background: #ffffff !important;
+                    z-index: 999999 !important;
+                    overflow: hidden !important;
+                  }
+                  .print-hide, .print\:hidden { display: none !important; }
+                }
+              `}</style>
+              <div className="flex justify-between items-center border-b border-brand-green-700/10 pb-6">
+                <div>
+                  <h2 className="font-serif text-2xl font-bold text-brand-green-900">Grams Life</h2>
+                  <span className="text-[10px] uppercase tracking-widest text-brand-gold-700 font-extrabold block">Ayurvedic Sanctuary Invoice</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-xs font-bold text-brand-green-900">ORDER: {invoiceOrder.id}</span>
+                  <p className="text-xs text-brand-green-700">{invoiceOrder.orderDate}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-6 text-xs">
+                <div>
+                  <h4 className="font-bold text-brand-green-700 uppercase">Billed & Shipped To:</h4>
+                  <p className="font-bold text-brand-green-950">{invoiceOrder.shippingAddress?.fullName || invoiceOrder.userName}</p>
+                  <p>{invoiceOrder.shippingAddress?.addressLine1}</p>
+                  <p>{invoiceOrder.shippingAddress?.city}, {invoiceOrder.shippingAddress?.state} - {invoiceOrder.shippingAddress?.zipCode}</p>
+                  <p className="font-mono text-[10px] text-brand-gold-700 font-bold">Contact: {invoiceOrder.shippingAddress?.phone}</p>
+                </div>
+                <div className="text-right">
+                  <h4 className="font-bold text-brand-green-700 uppercase">Payment Details:</h4>
+                  <p>Method: <span className="font-bold">{invoiceOrder.paymentMethod}</span></p>
+                  <p>Status: <span className="font-bold uppercase text-brand-green-800">{invoiceOrder.paymentStatus}</span></p>
+                </div>
+              </div>
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b font-bold uppercase text-brand-green-800">
+                    <th className="py-2">Item</th>
+                    <th className="py-2 text-center">Qty</th>
+                    <th className="py-2 text-right">Price</th>
+                    <th className="py-2 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-brand-green-100">
+                  {invoiceOrder.items?.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="py-2 font-bold">{item.productName}</td>
+                      <td className="py-2 text-center">{item.quantity}</td>
+                      <td className="py-2 text-right">₹{item.price}</td>
+                      <td className="py-2 text-right font-bold">₹{item.price * item.quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="flex justify-end border-t pt-4 text-xs font-bold">
+                <div className="w-48 space-y-1">
+                  <div className="flex justify-between"><span>Subtotal:</span><span>₹{invoiceOrder.subtotal}</span></div>
+                  <div className="flex justify-between"><span>Tax:</span><span>₹{invoiceOrder.tax}</span></div>
+                  <div className="flex justify-between border-t pt-2 text-sm text-brand-green-950 font-extrabold"><span>Total Paid:</span><span>₹{invoiceOrder.finalTotal}</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Courier Shipping Label Modal */}
+      {shippingLabelOrder && (
+        <div className="fixed inset-0 bg-brand-green-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
+          <div className="max-w-xl w-full bg-white rounded-3xl shadow-2xl border border-gray-300 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-slate-900 px-6 py-4 flex items-center justify-between text-white shrink-0 print:hidden">
+              <div className="flex items-center gap-2">
+                <Truck className="w-5 h-5 text-amber-400" />
+                <span className="font-sans text-sm font-bold tracking-wide">Flipkart-Style Courier Shipping Label</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print Label</span>
+                </button>
+                <button
+                  onClick={() => setShippingLabelOrder(null)}
+                  className="p-2 rounded-xl hover:bg-slate-800 text-slate-300 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div id="print-shipping-label-area" className="flex-grow overflow-y-auto p-6 bg-white text-black font-sans">
+              <style>{`
+                @media print {
+                  @page {
+                    size: A4 portrait;
+                    margin: 5mm;
+                  }
+                  html, body {
+                    height: 100% !important;
+                    max-height: 100vh !important;
+                    overflow: hidden !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background: #ffffff !important;
+                  }
+                  body * { visibility: hidden !important; }
+                  #print-shipping-label-area, #print-shipping-label-area * { visibility: visible !important; }
+                  #print-shipping-label-area {
+                    position: fixed !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    height: auto !important;
+                    max-height: 98vh !important;
+                    margin: 0 !important;
+                    padding: 10px !important;
+                    box-shadow: none !important;
+                    background: #ffffff !important;
+                    z-index: 999999 !important;
+                    overflow: hidden !important;
+                  }
+                  .print-hide, .print\:hidden { display: none !important; }
+                }
+              `}</style>
+
+              <div className="border-4 border-black p-4 space-y-3 bg-white text-black">
+                <div className="flex justify-between items-center border-b-4 border-black pb-3">
+                  <div>
+                    <h1 className="text-xl font-black tracking-tighter uppercase italic">FLIPKART LOGISTICS</h1>
+                    <p className="text-[10px] font-mono font-bold text-gray-700">EXPRESS COURIER DISPATCH</p>
+                  </div>
+                  <span className="text-xs font-mono font-black border-2 border-black px-2 py-1 uppercase bg-black text-white">STANDARD</span>
+                </div>
+
+                <div className="border-b-4 border-black pb-3 text-center space-y-1">
+                  <p className="text-[10px] font-mono font-bold uppercase text-gray-600">AWB Tracking Number</p>
+                  <p className="text-lg font-mono font-black tracking-widest">AWB-883{shippingLabelOrder.id.replace(/\D/g, '').slice(-8) || '92100492'}</p>
+                  <div className="flex justify-center items-center h-10 my-1 gap-[2px]">
+                    {[3,1,2,1,4,1,2,3,1,3,2,1,4,1,2,1,3,2,4,1,2,3,1,2,4,1,3,1,2,4,2,1,3].map((w, idx) => (
+                      <div key={idx} className="bg-black h-full" style={{ width: `${w * 2}px` }} />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-b-4 border-black pb-3">
+                  {shippingLabelOrder.paymentMethod === 'Cash on Delivery' || shippingLabelOrder.paymentStatus === 'Pending' ? (
+                    <div className="border-4 border-black p-2 text-center bg-yellow-200 text-black">
+                      <p className="text-xs font-black uppercase">CASH ON DELIVERY (COD)</p>
+                      <p className="text-2xl font-black font-mono">COLLECT CASH: ₹{shippingLabelOrder.finalTotal}</p>
+                    </div>
+                  ) : (
+                    <div className="border-4 border-black p-2 text-center bg-black text-white">
+                      <p className="text-xs font-black uppercase">PREPAID ORDER</p>
+                      <p className="text-xl font-black font-mono">DO NOT COLLECT ANY CASH (PAID ₹{shippingLabelOrder.finalTotal})</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-b-4 border-black pb-3 space-y-1">
+                  <p className="text-[10px] font-mono font-black uppercase bg-black text-white px-2 py-0.5 inline-block">SHIP TO</p>
+                  <div className="text-sm font-bold pl-1">
+                    <p className="text-base font-black uppercase">{shippingLabelOrder.shippingAddress?.fullName || shippingLabelOrder.userName}</p>
+                    <p>{shippingLabelOrder.shippingAddress?.addressLine1}</p>
+                    <p>{shippingLabelOrder.shippingAddress?.city}, {shippingLabelOrder.shippingAddress?.state}</p>
+                    <div className="mt-2 flex items-center gap-3">
+                      <div className="border-2 border-black px-3 py-1 bg-gray-100">
+                        <span className="text-[10px] font-mono font-bold block">PIN CODE</span>
+                        <span className="text-xl font-black font-mono">{shippingLabelOrder.shippingAddress?.zipCode || '302001'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-mono font-bold text-gray-600 block">CONTACT</span>
+                        <span className="text-base font-black font-mono">📞 {shippingLabelOrder.shippingAddress?.phone || 'On File'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-[11px] font-bold border-b-4 border-black pb-3">
+                  <p className="font-black text-gray-800">RETURN TO: Grams Life Sanctuary, Plot 42, Veda Heritage, Jaipur, RJ - 302020</p>
+                </div>
+
+                <div className="text-[10px] font-mono border-t border-black pt-1 flex justify-between">
+                  <span>ORDER ID: {shippingLabelOrder.id}</span>
+                  <span>ITEMS: {shippingLabelOrder.items?.length || 0}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

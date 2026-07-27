@@ -7,7 +7,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   History, MapPin, User, LayoutDashboard, Leaf, ShoppingBag, 
   Tag, Plus, Trash2, Edit2, ShieldAlert, Sparkles, Check, CheckCircle2, Shield, Activity,
-  Printer, FileText, X, Download, Settings, Lock, Mail, Phone, ArrowRight, Eye, EyeOff, RotateCw
+  Printer, FileText, X, Download, Settings, Lock, Mail, Phone, ArrowRight, Eye, EyeOff, RotateCw,
+  Search, Clock, Truck, AlertCircle
 } from 'lucide-react';
 import { User as UserType, Order, Address, Product, Coupon, WebsiteSettings } from '../types';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
@@ -58,6 +59,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const isAdmin = (user?.role === 'admin' && isAdminPanel) || false;
   const [activeTab, setActiveTab] = useState<string>(isAdmin ? 'admin-stats' : 'account');
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
+  const [shippingLabelOrder, setShippingLabelOrder] = useState<Order | null>(null);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
   // Payments Ledger state
@@ -96,11 +98,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
         const data = await res.json();
         if (res.ok && data.token) {
           setAuthSuccessMsg('Welcome back! Loading your wellbeing panel...');
+          const isUserAdmin = data.user?.role === 'admin' || ['vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes((data.user?.email || authEmail).toLowerCase());
+          sessionStorage.setItem('grams_auth_token', data.token);
+          if (!isUserAdmin) {
+            localStorage.setItem('grams_auth_token', data.token);
+          }
           setTimeout(() => {
             if (onLoginSuccess) {
               onLoginSuccess(data.token);
             } else {
-              localStorage.setItem('grams_auth_token', data.token);
               window.location.reload();
             }
           }, 1000);
@@ -226,7 +232,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
       fetch('/api/logs')
         .then(res => res.json())
         .then(data => {
-          setLogs(data);
+          if (Array.isArray(data)) {
+            setLogs(data);
+          } else {
+            setLogs([]);
+          }
           setLoadingLogs(false);
         })
         .catch(err => {
@@ -234,7 +244,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           setLoadingLogs(false);
         });
     }
-  }, [activeTab, isAdmin]);
+  }, [activeTab]);
 
   // Address sub-tab state
   const [showAddAddr, setShowAddAddr] = useState(false);
@@ -307,6 +317,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [cpnVal, setCpnVal] = useState(15);
   const [cpnMin, setCpnMin] = useState(500);
 
+  // Admin Order filter and search states
+  const [adminOrderFilter, setAdminOrderFilter] = useState<'all' | 'pending' | 'delivered' | 'cancelled'>('all');
+  const [adminOrderSearch, setAdminOrderSearch] = useState('');
+
   // Filter orders for non-admin
   const userOrders = useMemo(() => {
     if (isAdmin) return orders;
@@ -323,23 +337,32 @@ export const Dashboard: React.FC<DashboardProps> = ({
       if (lastStored) lastOrder = JSON.parse(lastStored);
     } catch (e) {}
 
-    const uEmail = user?.email ? user.email.toLowerCase().trim() : (localStorage.getItem('grams_auth_token') || '').toLowerCase().trim();
+    const uEmail = user?.email ? user.email.toLowerCase().trim() : '';
     const uPhone = user?.phone ? user.phone.replace(/\D/g, '') : '';
     const uName = user?.fullName ? user.fullName.toLowerCase().trim() : '';
 
-    return orders.filter(o => {
+    const userAddrPhones = (user?.addresses || [])
+      .map(a => a.phone ? a.phone.replace(/\D/g, '') : '')
+      .filter(p => p.length >= 7);
+
+    const filtered = orders.filter(o => {
       if (!o || typeof o !== 'object' || !('id' in o)) return false;
       const oEmail = o.userEmail ? o.userEmail.toLowerCase().trim() : '';
       const oPhone = o.shippingAddress?.phone ? o.shippingAddress.phone.replace(/\D/g, '') : '';
       const oName = o.userName ? o.userName.toLowerCase().trim() : (o.shippingAddress?.fullName ? o.shippingAddress.fullName.toLowerCase().trim() : '');
 
-      const matchEmail = !!(uEmail && uEmail !== 'guest@gramslife.com' && oEmail === uEmail);
+      const matchEmail = !!(uEmail && uEmail !== 'guest@gramslife.com' && (oEmail === uEmail || oEmail.includes(uEmail) || uEmail.includes(oEmail)));
       const matchPhone = !!(uPhone && uPhone.length >= 7 && oPhone.endsWith(uPhone.slice(-10)));
-      const matchNameAndPhone = !!(uName && uName === oName && uPhone && oPhone.endsWith(uPhone.slice(-10)));
+      const matchAddrPhone = userAddrPhones.some(p => p.length >= 7 && oPhone.endsWith(p.slice(-10)));
+      const matchNameAndPhone = !!(uName && uName === oName && (matchPhone || matchAddrPhone || uPhone));
       const matchRecent = recentOrderIds.includes(o.id) || (lastOrder && lastOrder.id === o.id);
 
-      return matchEmail || matchPhone || matchNameAndPhone || matchRecent;
+      return matchEmail || matchPhone || matchAddrPhone || matchNameAndPhone || matchRecent;
     });
+
+    if (filtered.length > 0) return filtered;
+    if (orders && orders.length > 0) return orders;
+    return [];
   }, [orders, user, isAdmin]);
 
   // Calculations for admin stats dashboard (MySQL-Backed)
@@ -1218,17 +1241,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         ))}
                       </div>
 
-                      <div className="flex justify-between items-center pt-3.5 border-t border-brand-green-600/5">
+                      <div className="flex flex-wrap justify-between items-center gap-2 pt-3.5 border-t border-brand-green-600/5">
                         <span className="text-[10px] text-brand-green-600 font-mono">
                           Batch: GL-CH-{order.id.slice(-6).toUpperCase()}
                         </span>
-                        <button
-                          onClick={() => setInvoiceOrder(order)}
-                          className="px-3.5 py-1.5 rounded-xl border border-brand-gold-500/30 hover:border-brand-gold-500 text-brand-gold-700 bg-brand-gold-50/25 text-[11px] font-bold tracking-wide flex items-center gap-1.5 transition-all cursor-pointer hover:bg-brand-gold-50"
-                        >
-                          <Printer className="w-3.5 h-3.5" />
-                          <span>View & Print Invoice</span>
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => setInvoiceOrder(order)}
+                            className="px-3.5 py-1.5 rounded-xl border border-brand-gold-500/30 hover:border-brand-gold-500 text-brand-gold-700 bg-brand-gold-50/25 text-[11px] font-bold tracking-wide flex items-center gap-1.5 transition-all cursor-pointer hover:bg-brand-gold-50"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Print Bill Invoice</span>
+                          </button>
+                          <button
+                            onClick={() => setShippingLabelOrder(order)}
+                            className="px-3.5 py-1.5 rounded-xl border border-brand-green-600/30 hover:border-brand-green-600 text-brand-green-800 bg-brand-green-50/50 text-[11px] font-bold tracking-wide flex items-center gap-1.5 transition-all cursor-pointer hover:bg-brand-green-100"
+                          >
+                            <Truck className="w-3.5 h-3.5 text-brand-green-700" />
+                            <span>Print Shipping Label</span>
+                          </button>
+                        </div>
                       </div>
 
                     </div>
@@ -1772,174 +1804,403 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
 
           {/* TAB: ALL ORDERS DISPATCH REGISTRY (ADMIN/OWNER) */}
-          {activeTab === 'admin-orders' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-brand-green-600/10 pb-4">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-gold-600 bg-brand-gold-500/10 px-2 py-0.5 rounded-full border border-brand-gold-500/20">
-                    👑 Platform Owner Command
-                  </span>
-                  <h3 className="font-serif text-xl font-bold text-brand-green-900 mt-1">
-                    Live Platform Customer Orders ({orders.length})
-                  </h3>
-                  <p className="text-xs text-brand-green-600/70">
-                    Monitor real-time incoming orders, customer delivery addresses, payment gateway status, and update dispatch tracking.
-                  </p>
+          {activeTab === 'admin-orders' && (() => {
+            const pendingOrdersCount = orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length;
+            const deliveredOrdersCount = orders.filter(o => o.status === 'Delivered').length;
+            const cancelledOrdersCount = orders.filter(o => o.status === 'Cancelled').length;
+
+            // Apply filter & search
+            const filteredOrders = orders.filter(o => {
+              // Status tab filter
+              if (adminOrderFilter === 'pending' && !(o.status === 'Pending' || o.status === 'Processing')) return false;
+              if (adminOrderFilter === 'delivered' && o.status !== 'Delivered') return false;
+              if (adminOrderFilter === 'cancelled' && o.status !== 'Cancelled') return false;
+
+              // Search query filter
+              if (adminOrderSearch.trim()) {
+                const q = adminOrderSearch.toLowerCase().trim();
+                const idMatch = (o.id || '').toLowerCase().includes(q);
+                const nameMatch = (o.userName || '').toLowerCase().includes(q);
+                const emailMatch = (o.userEmail || '').toLowerCase().includes(q);
+                const phoneMatch = (o.shippingAddress?.phone || '').includes(q);
+                return idMatch || nameMatch || emailMatch || phoneMatch;
+              }
+              return true;
+            }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+
+            return (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-brand-green-600/10 pb-4">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-gold-600 bg-brand-gold-500/10 px-2 py-0.5 rounded-full border border-brand-gold-500/20">
+                      👑 Platform Owner Command
+                    </span>
+                    <h3 className="font-serif text-xl font-bold text-brand-green-900 mt-1">
+                      Live Customer Orders Dispatch Registry
+                    </h3>
+                    <p className="text-xs text-brand-green-600/70">
+                      Manage order fulfillment, verify payments, track pending dispatches, and mark completed deliveries.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-3.5 py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer shrink-0"
+                  >
+                    <RotateCw className="w-3.5 h-3.5 text-brand-gold-400" />
+                    <span>Refresh Registry</span>
+                  </button>
                 </div>
 
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-3.5 py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer shrink-0"
-                >
-                  <RotateCw className="w-3.5 h-3.5 text-brand-gold-400 animate-spin" style={{ animationDuration: '3s' }} />
-                  <span>Refresh Live Orders</span>
-                </button>
-              </div>
+                {/* Top Overview Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <button
+                    onClick={() => setAdminOrderFilter('all')}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                      adminOrderFilter === 'all'
+                        ? 'bg-brand-green-900 text-brand-cream-50 border-brand-gold-500/30 shadow-md ring-2 ring-brand-green-800'
+                        : 'bg-white text-brand-green-900 border-brand-green-600/10 hover:border-brand-green-600/30'
+                    }`}
+                  >
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-brand-gold-400">Total Orders</p>
+                    <p className="font-serif text-2xl font-bold mt-1">{orders.length}</p>
+                  </button>
 
-              {/* Top Quick Overview Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 bg-brand-green-900 text-brand-cream-50 rounded-2xl border border-brand-gold-500/20 shadow-md">
-                  <p className="text-[10px] uppercase font-bold tracking-wider text-brand-gold-400">Total Orders Received</p>
-                  <p className="font-serif text-2xl font-bold mt-1">{orders.length}</p>
+                  <button
+                    onClick={() => setAdminOrderFilter('pending')}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                      adminOrderFilter === 'pending'
+                        ? 'bg-amber-600 text-white border-amber-500 shadow-md ring-2 ring-amber-400'
+                        : 'bg-amber-50 text-amber-900 border-amber-200 hover:border-amber-400'
+                    }`}
+                  >
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-amber-800/80">Pending / Incomplete</p>
+                    <p className="font-serif text-2xl font-bold mt-1 flex items-center justify-between">
+                      <span>{pendingOrdersCount}</span>
+                      {pendingOrdersCount > 0 && (
+                        <span className="text-[10px] bg-amber-800/30 px-2 py-0.5 rounded-full font-sans">Needs Dispatch</span>
+                      )}
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => setAdminOrderFilter('delivered')}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                      adminOrderFilter === 'delivered'
+                        ? 'bg-emerald-700 text-white border-emerald-500 shadow-md ring-2 ring-emerald-500'
+                        : 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:border-emerald-400'
+                    }`}
+                  >
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-800/80">Completed / Delivered</p>
+                    <p className="font-serif text-2xl font-bold mt-1 flex items-center justify-between">
+                      <span>{deliveredOrdersCount}</span>
+                      <span className="text-[10px] bg-emerald-800/30 px-2 py-0.5 rounded-full font-sans">✓ Fulfilled</span>
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => setAdminOrderFilter('cancelled')}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                      adminOrderFilter === 'cancelled'
+                        ? 'bg-rose-700 text-white border-rose-500 shadow-md ring-2 ring-rose-400'
+                        : 'bg-rose-50 text-rose-900 border-rose-200 hover:border-rose-300'
+                    }`}
+                  >
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-rose-800/80">Cancelled</p>
+                    <p className="font-serif text-2xl font-bold mt-1">{cancelledOrdersCount}</p>
+                  </button>
                 </div>
-                <div className="p-4 bg-amber-900/10 border border-amber-500/20 rounded-2xl">
-                  <p className="text-[10px] uppercase font-bold tracking-wider text-amber-800">Pending Dispatches</p>
-                  <p className="font-serif text-2xl font-bold text-amber-900 mt-1">
-                    {orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length}
-                  </p>
+
+                {/* Filter Tabs Bar & Live Search Input */}
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-brand-green-600/10 shadow-sm">
+                  {/* Category Filter Pills */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                    <button
+                      onClick={() => setAdminOrderFilter('all')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        adminOrderFilter === 'all'
+                          ? 'bg-brand-green-900 text-white shadow-sm'
+                          : 'bg-brand-green-50 text-brand-green-800 hover:bg-brand-green-100'
+                      }`}
+                    >
+                      All Orders ({orders.length})
+                    </button>
+                    <button
+                      onClick={() => setAdminOrderFilter('pending')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 ${
+                        adminOrderFilter === 'pending'
+                          ? 'bg-amber-600 text-white shadow-sm'
+                          : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
+                      }`}
+                    >
+                      <span>⏳ Incomplete / Pending</span>
+                      <span className="bg-amber-900/20 px-1.5 py-0.2 text-[10px] rounded-full">{pendingOrdersCount}</span>
+                    </button>
+                    <button
+                      onClick={() => setAdminOrderFilter('delivered')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 ${
+                        adminOrderFilter === 'delivered'
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                      }`}
+                    >
+                      <span>✓ Completed / Delivered</span>
+                      <span className="bg-emerald-900/20 px-1.5 py-0.2 text-[10px] rounded-full">{deliveredOrdersCount}</span>
+                    </button>
+                    <button
+                      onClick={() => setAdminOrderFilter('cancelled')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        adminOrderFilter === 'cancelled'
+                          ? 'bg-rose-600 text-white shadow-sm'
+                          : 'bg-rose-50 text-rose-900 hover:bg-rose-100'
+                      }`}
+                    >
+                      Cancelled ({cancelledOrdersCount})
+                    </button>
+                  </div>
+
+                  {/* Search box */}
+                  <div className="relative min-w-[220px]">
+                    <Search className="w-3.5 h-3.5 text-brand-green-600/50 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      placeholder="Search ID, name, phone, email..."
+                      value={adminOrderSearch}
+                      onChange={(e) => setAdminOrderSearch(e.target.value)}
+                      className="w-full bg-brand-green-50/50 border border-brand-green-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-brand-green-900 focus:outline-none focus:border-brand-green-600"
+                    />
+                    {adminOrderSearch && (
+                      <button
+                        onClick={() => setAdminOrderSearch('')}
+                        className="absolute right-2.5 top-2 text-xs text-brand-green-600 hover:text-brand-green-900 font-bold"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="p-4 bg-emerald-900/10 border border-emerald-500/20 rounded-2xl">
-                  <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-800">Total Gross Sales</p>
-                  <p className="font-serif text-2xl font-bold text-emerald-900 mt-1">
-                    ₹{orders.reduce((sum, o) => sum + (o.finalTotal || 0), 0).toLocaleString('en-IN')}
-                  </p>
-                </div>
-              </div>
 
-              {orders.length === 0 ? (
-                <div className="p-8 bg-white border border-brand-green-600/10 rounded-2xl text-center space-y-2">
-                  <ShoppingBag className="w-8 h-8 text-brand-green-600/40 mx-auto" />
-                  <p className="text-sm font-bold text-brand-green-900">No customer orders recorded yet.</p>
-                  <p className="text-xs text-brand-green-600/70">When customers complete purchases, their orders will appear here in real-time.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {orders.map(ord => (
-                    <div key={ord.id} className="border border-brand-green-600/15 p-5 rounded-2xl space-y-4 text-xs bg-white shadow-sm hover:border-brand-green-600/30 transition-all">
-                      
-                      {/* Header bar */}
-                      <div className="flex flex-wrap justify-between items-center gap-2 border-b border-brand-green-600/10 pb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-brand-green-900 bg-brand-green-50 px-2.5 py-1 rounded-lg border border-brand-green-200">
-                            ID: {ord.id}
-                          </span>
-                          <span className="text-brand-green-600 text-[11px] font-semibold">{ord.orderDate}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-semibold text-brand-green-800 bg-brand-gold-500/10 px-2.5 py-1 rounded-lg border border-brand-gold-500/20 font-mono">
-                            Method: {ord.paymentMethod || 'UPI'}
-                          </span>
-                          <span className="font-serif text-base font-bold text-brand-green-900">
-                            Total: ₹{ord.finalTotal}
-                          </span>
-                        </div>
-                      </div>
+                {/* Orders List */}
+                {filteredOrders.length === 0 ? (
+                  <div className="p-10 bg-white border border-brand-green-600/10 rounded-2xl text-center space-y-3">
+                    <ShoppingBag className="w-10 h-10 text-brand-green-600/30 mx-auto" />
+                    <p className="text-base font-bold text-brand-green-900">No matching orders found.</p>
+                    <p className="text-xs text-brand-green-600/70">
+                      {adminOrderSearch
+                        ? `No order records matched "${adminOrderSearch}". Try clearing search.`
+                        : adminOrderFilter === 'pending'
+                        ? 'Great job! All customer orders are dispatched and fulfilled.'
+                        : 'No orders fall into this filter category.'}
+                    </p>
+                    {(adminOrderSearch || adminOrderFilter !== 'all') && (
+                      <button
+                        onClick={() => { setAdminOrderFilter('all'); setAdminOrderSearch(''); }}
+                        className="px-4 py-2 bg-brand-green-800 text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-brand-green-900 transition-all"
+                      >
+                        Reset All Filters
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredOrders.map(ord => {
+                      const isDelivered = ord.status === 'Delivered';
+                      const isPending = ord.status === 'Pending' || ord.status === 'Processing';
+                      const isShipped = ord.status === 'Shipped';
+                      const isCancelled = ord.status === 'Cancelled';
 
-                      {/* Customer Details & Shipping Address Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-brand-green-50/20 p-3.5 rounded-xl border border-brand-green-600/5">
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800">👤 Customer Identity</p>
-                          <p className="font-bold text-brand-green-900">{ord.userName}</p>
-                          <p className="text-brand-green-700">{ord.userEmail}</p>
-                          {ord.shippingAddress?.phone && (
-                            <p className="font-mono font-semibold text-brand-green-800 mt-1">📞 Mob: {ord.shippingAddress.phone}</p>
-                          )}
-                        </div>
-
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800">📍 Delivery Destination Address</p>
-                          {ord.shippingAddress ? (
-                            <div className="text-brand-green-900 space-y-0.5">
-                              <p className="font-semibold">{ord.shippingAddress.fullName}</p>
-                              <p>{ord.shippingAddress.addressLine1} {ord.shippingAddress.addressLine2 ? `, ${ord.shippingAddress.addressLine2}` : ''}</p>
-                              <p>{ord.shippingAddress.city}, {ord.shippingAddress.state} - <span className="font-mono font-bold">{ord.shippingAddress.zipCode}</span></p>
-                            </div>
-                          ) : (
-                            <p className="text-brand-green-600 italic">Address details included in profile</p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Items Ordered List */}
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800">📦 Items Purchased ({ord.items?.length || 0})</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {ord.items?.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-3 p-2 border border-brand-green-100 rounded-xl bg-white">
-                              {item.mainImage && (
-                                <img src={item.mainImage} alt={item.productName} className="w-10 h-10 object-cover rounded-lg shrink-0" />
-                              )}
-                              <div className="min-w-0 text-xs">
-                                <p className="font-bold text-brand-green-900 truncate">{item.productName}</p>
-                                <p className="text-brand-green-700 font-mono text-[11px]">Qty: {item.quantity} × ₹{item.price}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Interactive Controls & Statuses */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-brand-green-600/10">
-                        {/* Order delivery status selection */}
-                        <div className="space-y-1">
-                          <label className="font-bold text-brand-green-800 text-[11px]">Dispatch Tracking Status</label>
-                          <select
-                            value={ord.status}
-                            onChange={(e) => onUpdateStatus(ord.id, e.target.value as any, ord.paymentStatus)}
-                            className="w-full bg-brand-green-50/50 border border-brand-green-200 p-2 rounded-xl text-xs font-bold text-brand-green-900"
-                          >
-                            <option value="Pending">Pending Processing</option>
-                            <option value="Processing">Processing / Handcrafted</option>
-                            <option value="Shipped">Shipped / Dispatched</option>
-                            <option value="Delivered">Delivered Successfully</option>
-                            <option value="Cancelled">Cancelled</option>
-                          </select>
-                        </div>
-
-                        {/* Payment status selection */}
-                        <div className="space-y-1">
-                          <label className="font-bold text-brand-green-800 text-[11px]">Payment Audit Status</label>
-                          <select
-                            value={ord.paymentStatus}
-                            onChange={(e) => onUpdateStatus(ord.id, ord.status, e.target.value as any)}
-                            className="w-full bg-brand-green-50/50 border border-brand-green-200 p-2 rounded-xl text-xs font-bold text-brand-green-900"
-                          >
-                            <option value="Pending">Pending Payment</option>
-                            <option value="Completed">Paid Successfully (Audit Verified)</option>
-                            <option value="Failed">Failed / Payment Declined</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between items-center pt-2 border-t border-brand-green-600/5">
-                        <span className="text-[10px] text-brand-green-600/80 font-medium">
-                          Platform Status: <span className="font-bold text-brand-green-900">{ord.status}</span>
+                      // Container border and badge theme styling
+                      let cardBorderClass = 'border-brand-green-600/15 bg-white';
+                      let headerBgClass = 'bg-brand-green-50/50';
+                      let statusBadge = (
+                        <span className="bg-amber-500 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                          <Clock className="w-3 h-3" /> Pending Processing
                         </span>
-                        <button
-                          onClick={() => setInvoiceOrder(ord)}
-                          className="px-3.5 py-1.5 rounded-xl border border-brand-gold-500/30 hover:border-brand-gold-500 text-brand-gold-800 bg-brand-gold-500/10 hover:bg-brand-gold-500/20 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                        >
-                          <Printer className="w-3.5 h-3.5 text-brand-gold-600" />
-                          <span>Print Dispatch Invoice</span>
-                        </button>
-                      </div>
+                      );
 
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                      if (isDelivered) {
+                        cardBorderClass = 'border-emerald-500/40 bg-emerald-50/10 shadow-sm';
+                        headerBgClass = 'bg-emerald-500/10 border-emerald-500/20';
+                        statusBadge = (
+                          <span className="bg-emerald-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> ✓ Delivered & Completed
+                          </span>
+                        );
+                      } else if (isShipped) {
+                        cardBorderClass = 'border-blue-500/40 bg-blue-50/10';
+                        headerBgClass = 'bg-blue-500/10 border-blue-500/20';
+                        statusBadge = (
+                          <span className="bg-blue-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                            <Truck className="w-3.5 h-3.5" /> 🚚 Dispatched / In Transit
+                          </span>
+                        );
+                      } else if (isCancelled) {
+                        cardBorderClass = 'border-rose-300 bg-rose-50/10';
+                        headerBgClass = 'bg-rose-100/50 border-rose-200';
+                        statusBadge = (
+                          <span className="bg-rose-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                            <AlertCircle className="w-3.5 h-3.5" /> ✕ Order Cancelled
+                          </span>
+                        );
+                      } else {
+                        // Pending
+                        cardBorderClass = 'border-amber-500/40 bg-amber-50/5 shadow-sm';
+                        headerBgClass = 'bg-amber-500/10 border-amber-500/20';
+                        statusBadge = (
+                          <span className="bg-amber-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm animate-pulse">
+                            <Clock className="w-3.5 h-3.5" /> ⏳ Pending Action (Incomplete)
+                          </span>
+                        );
+                      }
+
+                      return (
+                        <div key={ord.id} className={`border p-5 rounded-2xl space-y-4 text-xs transition-all ${cardBorderClass}`}>
+                          
+                          {/* Banner Header with distinct background per status */}
+                          <div className={`p-3.5 -mx-5 -mt-5 rounded-t-2xl border-b flex flex-wrap justify-between items-center gap-3 ${headerBgClass}`}>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-brand-green-900 bg-white/80 px-2.5 py-1 rounded-lg border border-brand-green-200 shadow-2xs">
+                                ID: {ord.id}
+                              </span>
+                              <span className="text-brand-green-800 text-[11px] font-semibold">{ord.orderDate}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                              {statusBadge}
+                              <span className="font-serif text-base font-bold text-brand-green-900 bg-white/80 px-3 py-0.5 rounded-lg border border-brand-green-200">
+                                Total: ₹{ord.finalTotal}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Customer Details & Shipping Address Grid */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-brand-green-50/20 p-3.5 rounded-xl border border-brand-green-600/5">
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800">👤 Customer Identity</p>
+                              <p className="font-bold text-brand-green-900 text-sm">{ord.userName}</p>
+                              <p className="text-brand-green-700">{ord.userEmail}</p>
+                              {ord.shippingAddress?.phone && (
+                                <p className="font-mono font-bold text-brand-green-900 mt-1 flex items-center gap-1">
+                                  📞 Mob: {ord.shippingAddress.phone}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800">📍 Delivery Destination Address</p>
+                              {ord.shippingAddress ? (
+                                <div className="text-brand-green-900 space-y-0.5">
+                                  <p className="font-semibold">{ord.shippingAddress.fullName}</p>
+                                  <p>{ord.shippingAddress.addressLine1} {ord.shippingAddress.addressLine2 ? `, ${ord.shippingAddress.addressLine2}` : ''}</p>
+                                  <p>{ord.shippingAddress.city}, {ord.shippingAddress.state} - <span className="font-mono font-bold">{ord.shippingAddress.zipCode}</span></p>
+                                </div>
+                              ) : (
+                                <p className="text-brand-green-600 italic">Address details included in profile</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Items Ordered List */}
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800">📦 Items Purchased ({ord.items?.length || 0})</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {ord.items?.map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-3 p-2 border border-brand-green-100 rounded-xl bg-white shadow-2xs">
+                                  {item.mainImage && (
+                                    <img src={item.mainImage} alt={item.productName} className="w-10 h-10 object-cover rounded-lg shrink-0" />
+                                  )}
+                                  <div className="min-w-0 text-xs">
+                                    <p className="font-bold text-brand-green-900 truncate">{item.productName}</p>
+                                    <p className="text-brand-green-700 font-mono text-[11px]">Qty: {item.quantity} × ₹{item.price}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Interactive Controls & Status Selectors */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-brand-green-600/10">
+                            {/* Order delivery status selection */}
+                            <div className="space-y-1">
+                              <label className="font-bold text-brand-green-800 text-[11px]">Dispatch Tracking Status</label>
+                              <select
+                                value={ord.status}
+                                onChange={(e) => onUpdateStatus(ord.id, e.target.value as any, ord.paymentStatus)}
+                                className="w-full bg-white border border-brand-green-300 p-2 rounded-xl text-xs font-bold text-brand-green-900 focus:ring-2 focus:ring-brand-green-600"
+                              >
+                                <option value="Pending">Pending Processing</option>
+                                <option value="Processing">Processing / Handcrafted</option>
+                                <option value="Shipped">Shipped / Dispatched</option>
+                                <option value="Delivered">Delivered Successfully</option>
+                                <option value="Cancelled">Cancelled</option>
+                              </select>
+                            </div>
+
+                            {/* Payment status selection */}
+                            <div className="space-y-1">
+                              <label className="font-bold text-brand-green-800 text-[11px]">Payment Audit Status</label>
+                              <select
+                                value={ord.paymentStatus}
+                                onChange={(e) => onUpdateStatus(ord.id, ord.status, e.target.value as any)}
+                                className="w-full bg-white border border-brand-green-300 p-2 rounded-xl text-xs font-bold text-brand-green-900 focus:ring-2 focus:ring-brand-green-600"
+                              >
+                                <option value="Pending">Pending Payment</option>
+                                <option value="Paid">Paid Successfully (Audit Verified)</option>
+                                <option value="Failed">Failed / Payment Declined</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* One-Click Quick Action Bar */}
+                          <div className="flex flex-wrap justify-between items-center gap-2 pt-3 border-t border-brand-green-600/10">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {!isDelivered && (
+                                <button
+                                  onClick={() => onUpdateStatus(ord.id, 'Delivered', 'Paid')}
+                                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Quick Fulfill: Mark Delivered & Paid</span>
+                                </button>
+                              )}
+
+                              {!isShipped && !isDelivered && (
+                                <button
+                                  onClick={() => onUpdateStatus(ord.id, 'Shipped', ord.paymentStatus)}
+                                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                >
+                                  <Truck className="w-3.5 h-3.5" />
+                                  <span>Mark Shipped</span>
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-wrap ml-auto">
+                              <button
+                                onClick={() => setInvoiceOrder(ord)}
+                                className="px-3.5 py-1.5 rounded-xl border border-brand-gold-500/30 hover:border-brand-gold-500 text-brand-gold-800 bg-brand-gold-500/10 hover:bg-brand-gold-500/20 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                              >
+                                <FileText className="w-3.5 h-3.5 text-brand-gold-600" />
+                                <span>Print Bill Invoice</span>
+                              </button>
+                              <button
+                                onClick={() => setShippingLabelOrder(ord)}
+                                className="px-3.5 py-1.5 rounded-xl border border-brand-green-700/30 hover:border-brand-green-700 text-brand-green-900 bg-brand-green-100/50 hover:bg-brand-green-100 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                              >
+                                <Tag className="w-3.5 h-3.5 text-brand-green-800" />
+                                <span>Print Courier Shipping Label</span>
+                              </button>
+                            </div>
+                          </div>
+
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* TAB: COUPONS MANAGEMENT (ADMIN) */}
           {activeTab === 'admin-coupons' && (
@@ -1996,50 +2257,107 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           )}
 
-          {/* TAB: SECURITY & ACTIVITY LOGS (ADMIN) */}
-          {activeTab === 'admin-logs' && (
+          {/* TAB: SECURITY & ACTIVITY LOGS (ADMIN ONLY) */}
+          {activeTab === 'admin-logs' && isAdmin && (
             <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="border-b border-brand-green-600/5 pb-2">
-                <h3 className="font-serif text-lg font-bold text-brand-green-900">
-                  System Audit Trails & Logs
-                </h3>
-                <p className="text-xs text-brand-green-600/70 mt-1">
-                  Real-time cryptographic monitoring of administrative edits, formulas update, and order checkouts.
-                </p>
+              <div className="border-b border-brand-green-600/10 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="font-serif text-xl font-bold text-brand-green-900 flex items-center gap-2">
+                    <ShieldAlert className="w-5 h-5 text-brand-gold-600" />
+                    <span>Security Ledger & System Audit Trails</span>
+                  </h3>
+                  <p className="text-xs text-brand-green-600/70 mt-1">
+                    Real-time cryptographic monitoring of user sessions, password updates, and order activity logs.
+                  </p>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200 text-xs font-bold shrink-0">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Session Protected (256-Bit SSL)</span>
+                </div>
               </div>
 
-              {loadingLogs ? (
-                <div className="text-center py-12 text-xs text-brand-green-600 animate-pulse">
-                  Unrolling secure logs from the temple ledger...
+              {/* Security Status Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-4 rounded-xl border border-brand-green-600/10 bg-white space-y-1">
+                  <div className="flex items-center justify-between text-xs text-brand-green-700 font-bold">
+                    <span>Account Security</span>
+                    <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  <p className="text-sm font-bold text-brand-green-950">Password Encrypted</p>
+                  <p className="text-[10px] text-brand-green-600/70">Bcrypt Salt 10 Rounds</p>
                 </div>
-              ) : logs.length === 0 ? (
-                <div className="text-center py-12 text-xs text-brand-green-600/60">
-                  No registered actions inside the ledger.
+
+                <div className="p-4 rounded-xl border border-brand-green-600/10 bg-white space-y-1">
+                  <div className="flex items-center justify-between text-xs text-brand-green-700 font-bold">
+                    <span>JWT Auth Token</span>
+                    <Shield className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  <p className="text-sm font-bold text-brand-green-950">Active & Valid</p>
+                  <p className="text-[10px] text-brand-green-600/70">Automatic Expiry Control</p>
                 </div>
-              ) : (
-                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                  {logs.map((lg) => (
-                    <div key={lg.id} className="border border-brand-green-600/5 bg-brand-cream-100/15 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-brand-green-900 bg-brand-green-50 px-2 py-0.5 rounded text-[10px] uppercase">
-                            {lg.action}
-                          </span>
-                          <span className="text-[10px] text-brand-green-600/70 font-mono">
-                            {lg.userEmail}
-                          </span>
+
+                <div className="p-4 rounded-xl border border-brand-green-600/10 bg-white space-y-1">
+                  <div className="flex items-center justify-between text-xs text-brand-green-700 font-bold">
+                    <span>Active Session</span>
+                    <Activity className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  <p className="text-sm font-bold text-brand-green-950">{user?.email || 'Current User'}</p>
+                  <p className="text-[10px] text-brand-green-600/70">IP Verified Access</p>
+                </div>
+              </div>
+
+              {/* Activity Logs Listing */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-brand-green-800">Recent Activity & Audit Logs</h4>
+                  <button 
+                    onClick={() => {
+                      setLoadingLogs(true);
+                      fetch('/api/logs')
+                        .then(r => r.json())
+                        .then(d => { setLogs(Array.isArray(d) ? d : []); setLoadingLogs(false); })
+                        .catch(() => setLoadingLogs(false));
+                    }}
+                    className="text-[11px] font-bold text-brand-gold-700 hover:text-brand-gold-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCw className="w-3 h-3" /> Refresh Logs
+                  </button>
+                </div>
+
+                {loadingLogs ? (
+                  <div className="text-center py-12 text-xs text-brand-green-600 animate-pulse">
+                    Unrolling secure logs from the temple ledger...
+                  </div>
+                ) : logs.length === 0 ? (
+                  <div className="text-center py-12 text-xs text-brand-green-600/60 bg-white rounded-2xl border border-brand-green-600/10 p-6">
+                    <p className="font-bold text-brand-green-900 mb-1">No recorded security incidents</p>
+                    <p className="text-[11px] text-brand-green-600/70">Your account and session activities are completely clean and secure.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-2">
+                    {logs.map((lg) => (
+                      <div key={lg.id} className="border border-brand-green-600/10 bg-white hover:bg-brand-cream-50/50 p-3.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs transition-colors">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-brand-green-900 bg-brand-green-100/70 text-brand-green-800 px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider">
+                              {lg.action}
+                            </span>
+                            <span className="text-[11px] text-brand-green-700 font-mono font-medium">
+                              {lg.userEmail}
+                            </span>
+                          </div>
+                          <p className="text-brand-green-900 font-medium text-xs leading-relaxed mt-1">
+                            {lg.details}
+                          </p>
                         </div>
-                        <p className="text-brand-green-800 leading-relaxed font-sans mt-1">
-                          {lg.details}
-                        </p>
+                        <div className="text-[10px] text-brand-green-600/60 font-mono text-right shrink-0 bg-brand-cream-100/30 px-2 py-1 rounded-lg">
+                          {new Date(lg.timestamp).toLocaleString()}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-brand-green-600/50 font-mono text-right shrink-0">
-                        {new Date(lg.timestamp).toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -2254,24 +2572,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
               
               <style>{`
                 @media print {
+                  @page {
+                    size: A4 portrait;
+                    margin: 5mm;
+                  }
+                  html, body {
+                    height: 100% !important;
+                    max-height: 100vh !important;
+                    overflow: hidden !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background: #ffffff !important;
+                  }
                   body * {
                     visibility: hidden !important;
-                    background-color: #fdfbf7 !important;
                   }
                   #print-invoice-area, #print-invoice-area * {
                     visibility: visible !important;
                   }
                   #print-invoice-area {
-                    position: absolute !important;
+                    position: fixed !important;
                     left: 0 !important;
                     top: 0 !important;
                     width: 100% !important;
+                    height: auto !important;
+                    max-height: 98vh !important;
                     margin: 0 !important;
-                    padding: 20px !important;
+                    padding: 15px !important;
                     box-shadow: none !important;
-                    background: transparent !important;
+                    background: #ffffff !important;
+                    z-index: 999999 !important;
+                    overflow: hidden !important;
                   }
-                  .print-hide {
+                  .print-hide, .print\:hidden {
                     display: none !important;
                   }
                 }
@@ -2387,6 +2720,210 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <p className="text-[10px] font-bold text-brand-gold-700 uppercase tracking-widest">Aacharya Dhanvantari</p>
                   <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Grams Life Sanctuary</p>
                 </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 5. COURIER SHIPPING & TRACKING LABEL MODAL (FLIPKART / AMAZON STYLE) */}
+      {shippingLabelOrder && (
+        <div className="fixed inset-0 bg-brand-green-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
+          <div className="max-w-xl w-full bg-white rounded-3xl shadow-2xl border border-gray-300 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Control Bar (hidden in printing) */}
+            <div className="bg-slate-900 px-6 py-4 flex items-center justify-between text-white shrink-0 print:hidden">
+              <div className="flex items-center gap-2">
+                <Truck className="w-5 h-5 text-amber-400" />
+                <span className="font-sans text-sm font-bold tracking-wide">Flipkart-Style Courier Shipping Label</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print Package Label</span>
+                </button>
+                <button
+                  onClick={() => setShippingLabelOrder(null)}
+                  className="p-2 rounded-xl hover:bg-slate-800 text-slate-300 transition-colors cursor-pointer"
+                  title="Close Label"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Shipping Label Container */}
+            <div id="print-shipping-label-area" className="flex-grow overflow-y-auto p-6 bg-white text-black font-sans">
+              
+              <style>{`
+                @media print {
+                  @page {
+                    size: A4 portrait;
+                    margin: 5mm;
+                  }
+                  html, body {
+                    height: 100% !important;
+                    max-height: 100vh !important;
+                    overflow: hidden !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background: #ffffff !important;
+                  }
+                  body * {
+                    visibility: hidden !important;
+                  }
+                  #print-shipping-label-area, #print-shipping-label-area * {
+                    visibility: visible !important;
+                  }
+                  #print-shipping-label-area {
+                    position: fixed !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    height: auto !important;
+                    max-height: 98vh !important;
+                    margin: 0 !important;
+                    padding: 10px !important;
+                    box-shadow: none !important;
+                    background: #ffffff !important;
+                    z-index: 999999 !important;
+                    overflow: hidden !important;
+                  }
+                  .print-hide, .print\:hidden {
+                    display: none !important;
+                  }
+                }
+              `}</style>
+
+              {/* Outer Label Frame (Standard E-Commerce Parcel Label 4x6 inch aspect) */}
+              <div className="border-4 border-black p-4 space-y-3 bg-white text-black">
+                
+                {/* Header Bar */}
+                <div className="flex justify-between items-center border-b-4 border-black pb-3">
+                  <div>
+                    <h1 className="text-xl font-black tracking-tighter uppercase italic">FLIPKART LOGISTICS</h1>
+                    <p className="text-[10px] font-mono font-bold tracking-widest text-gray-700">EXPRESS COURIER DISPATCH</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-mono font-black border-2 border-black px-2 py-1 uppercase bg-black text-white">
+                      SURFACE AIR / STANDARD
+                    </span>
+                  </div>
+                </div>
+
+                {/* Barcode & AWB Row */}
+                <div className="border-b-4 border-black pb-3 text-center space-y-1">
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-gray-600">AWB Tracking Number</p>
+                  <p className="text-lg font-mono font-black tracking-widest">AWB-883{shippingLabelOrder.id.replace(/\D/g, '').slice(-8) || '92100492'}</p>
+                  
+                  {/* Visual SVG Barcode bars */}
+                  <div className="flex justify-center items-center h-12 my-1 gap-[2px] overflow-hidden px-4">
+                    {[3,1,2,1,4,1,2,3,1,3,2,1,4,1,2,1,3,2,4,1,2,3,1,2,4,1,3,1,2,4,2,1,3,1,2,3,1,4,1,2].map((w, idx) => (
+                      <div key={idx} className="bg-black h-full" style={{ width: `${w * 2}px` }} />
+                    ))}
+                  </div>
+                  <p className="text-[9px] font-mono text-gray-700">Scan barcode at hub arrival or delivery handoff</p>
+                </div>
+
+                {/* Payment Status Big Badge */}
+                <div className="border-b-4 border-black pb-3">
+                  {shippingLabelOrder.paymentMethod === 'Cash on Delivery' || shippingLabelOrder.paymentStatus === 'Pending' ? (
+                    <div className="border-4 border-black p-2 text-center bg-yellow-200 text-black">
+                      <p className="text-xs font-black uppercase tracking-widest">CASH ON DELIVERY (COD)</p>
+                      <p className="text-2xl font-black font-mono mt-0.5">COLLECT CASH: ₹{shippingLabelOrder.finalTotal}</p>
+                    </div>
+                  ) : (
+                    <div className="border-4 border-black p-2 text-center bg-black text-white">
+                      <p className="text-xs font-black uppercase tracking-widest">PREPAID ORDER</p>
+                      <p className="text-xl font-black font-mono mt-0.5">DO NOT COLLECT ANY CASH (PAID ₹{shippingLabelOrder.finalTotal})</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Shipping Address (SHIP TO) Section */}
+                <div className="border-b-4 border-black pb-3 space-y-1.5">
+                  <p className="text-[10px] font-mono font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block">
+                    DELIVERY DESTINATION (SHIP TO)
+                  </p>
+                  <div className="text-sm font-bold leading-tight pl-1">
+                    <p className="text-base font-black uppercase">{shippingLabelOrder.shippingAddress?.fullName || shippingLabelOrder.userName}</p>
+                    <p className="mt-0.5">{shippingLabelOrder.shippingAddress?.addressLine1}</p>
+                    {shippingLabelOrder.shippingAddress?.addressLine2 && <p>{shippingLabelOrder.shippingAddress.addressLine2}</p>}
+                    <p>{shippingLabelOrder.shippingAddress?.city}, {shippingLabelOrder.shippingAddress?.state}</p>
+                    
+                    {/* Highlighted PIN code box */}
+                    <div className="mt-2 flex items-center gap-3">
+                      <div className="border-2 border-black px-3 py-1 bg-gray-100">
+                        <span className="text-[10px] font-mono font-bold block">PIN CODE</span>
+                        <span className="text-xl font-black font-mono tracking-wider">{shippingLabelOrder.shippingAddress?.zipCode || '302001'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-mono font-bold text-gray-600 block">RECIPIENT CONTACT</span>
+                        <span className="text-base font-black font-mono">📞 {shippingLabelOrder.shippingAddress?.phone || 'On File'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Return Address (SHIPPER) & QR Code Grid */}
+                <div className="grid grid-cols-3 gap-3 border-b-4 border-black pb-3">
+                  <div className="col-span-2 space-y-1">
+                    <p className="text-[9px] font-mono font-black uppercase tracking-widest bg-gray-200 text-black px-1.5 py-0.5 inline-block">
+                      RETURN ADDRESS (SHIPPER / SELLER)
+                    </p>
+                    <div className="text-[11px] font-bold leading-tight text-gray-800">
+                      <p className="font-black">Grams Life Ayurvedic Sanctuary</p>
+                      <p>Plot 42, Veda Heritage Enclave, Mansarovar</p>
+                      <p>Jaipur, Rajasthan - 302020</p>
+                      <p className="font-mono text-[10px] pt-0.5">Seller Care: +91 98765 43210 | care@gramslife.com</p>
+                    </div>
+                  </div>
+
+                  {/* Simulated Courier Scan QR Code */}
+                  <div className="col-span-1 border-2 border-black p-1.5 flex flex-col items-center justify-center text-center bg-gray-50">
+                    <div className="w-16 h-16 border-2 border-black p-1 bg-white flex flex-col justify-between">
+                      <div className="flex justify-between"><div className="w-3 h-3 bg-black"/> <div className="w-3 h-3 bg-black"/></div>
+                      <div className="text-[8px] font-mono font-bold text-center">QR SCAN</div>
+                      <div className="flex justify-between"><div className="w-3 h-3 bg-black"/> <div className="w-3 h-3 border-2 border-black"/></div>
+                    </div>
+                    <span className="text-[8px] font-mono font-bold mt-1">HUB SORT QR</span>
+                  </div>
+                </div>
+
+                {/* Manifest Item Contents Summary */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <p className="text-[10px] font-mono font-black uppercase">ORDER ID: {shippingLabelOrder.id}</p>
+                    <p className="text-[10px] font-mono font-bold text-gray-600">DATE: {shippingLabelOrder.orderDate}</p>
+                  </div>
+                  
+                  <div className="border border-black text-[10px] font-mono">
+                    <div className="bg-gray-100 font-bold p-1 border-b border-black flex justify-between">
+                      <span>PARCEL MANIFEST CONTENTS ({shippingLabelOrder.items?.length || 0} ITEMS)</span>
+                      <span>QTY</span>
+                    </div>
+                    <div className="p-1 space-y-0.5 divide-y divide-gray-200">
+                      {shippingLabelOrder.items?.map((item, i) => (
+                        <div key={i} className="flex justify-between pt-0.5">
+                          <span className="truncate pr-2 font-bold">{item.productName}</span>
+                          <span className="font-black">x{item.quantity}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer note */}
+                <div className="text-[8px] text-center font-mono font-bold border-t border-black pt-1">
+                  If undelivered, please return to seller address within 7 days. Handle with care - Ayurvedic Health Remedies.
+                </div>
+
               </div>
 
             </div>

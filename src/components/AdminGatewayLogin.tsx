@@ -36,7 +36,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
     try {
       const success = await handleLogin({ email: email.trim(), password });
       if (success) {
-        const token = localStorage.getItem('grams_auth_token');
+        const token = sessionStorage.getItem('grams_auth_token') || localStorage.getItem('grams_auth_token');
         const res = await fetch('/api/auth/me', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -52,6 +52,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
             window.location.reload();
           } else {
             setError('ACCESS DENIED: Your account does not possess administrative clearance.');
+            sessionStorage.removeItem('grams_auth_token');
             localStorage.removeItem('grams_auth_token');
           }
         } else {
