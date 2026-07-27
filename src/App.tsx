@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Mail, User as UserIcon, Phone, Shield, Sparkles, CheckCircle2, Lock, ArrowRight, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -183,26 +183,17 @@ export default function App() {
     localStorage.setItem('grams_wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
-  // Load baseline app data on boot
+  // Load baseline essential app data on boot (products & settings only)
   useEffect(() => {
     const fetchBaseline = async () => {
       try {
-        const [pRes, bRes, fRes, cRes, sRes, rRes] = await Promise.all([
+        const [pRes, sRes] = await Promise.all([
           fetch('/api/products').then(r => r.json()),
-          fetch('/api/blogs').then(r => r.json()),
-          fetch('/api/faqs').then(r => r.json()),
-          fetch('/api/coupons').then(r => r.json()),
-          fetch('/api/settings').then(r => r.json()),
-          fetch('/api/reviews').then(r => r.json())
+          fetch('/api/settings').then(r => r.json())
         ]);
 
         if (Array.isArray(pRes)) setProducts(pRes);
-        if (Array.isArray(bRes)) setBlogs(bRes);
-        if (Array.isArray(fRes)) setFaqs(fRes);
-        if (Array.isArray(cRes)) setCoupons(cRes);
         if (sRes && sRes.defaultTaxPercentage !== undefined) setSettings(sRes);
-        if (Array.isArray(rRes)) setReviews(rRes);
-
       } catch (err) {
         console.error("Error loading Grams Life baseline data: ", err);
       }
@@ -210,6 +201,72 @@ export default function App() {
 
     fetchBaseline();
   }, []);
+
+  // Targeted Lazy-Loading API Fetchers (Only hit when needed)
+  const fetchBlogs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/blogs');
+      const data = await res.json();
+      if (Array.isArray(data)) setBlogs(data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchFaqs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/faqs');
+      const data = await res.json();
+      if (Array.isArray(data)) setFaqs(data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchCoupons = useCallback(async () => {
+    try {
+      const res = await fetch('/api/coupons');
+      const data = await res.json();
+      if (Array.isArray(data)) setCoupons(data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      const res = await fetch('/api/reviews');
+      const data = await res.json();
+      if (Array.isArray(data)) setReviews(data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/products');
+      const data = await res.json();
+      if (Array.isArray(data)) setProducts(data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchOrders = useCallback(async () => {
+    if (!authToken) return;
+    try {
+      const ordersRes = await fetch('/api/orders', {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (ordersRes.ok) {
+        const ordersData = await ordersRes.json();
+        setOrders(ordersData);
+      }
+    } catch (err) { console.error(err); }
+  }, [authToken]);
+
+  // Fetch contextual data lazily based on active page route
+  useEffect(() => {
+    if (currentPage === 'static') {
+      if (pageParams?.page === 'blog') fetchBlogs();
+      if (pageParams?.page === 'faq') fetchFaqs();
+    } else if (currentPage === 'cart' || currentPage === 'checkout') {
+      fetchCoupons();
+    } else if (currentPage === 'product') {
+      fetchReviews();
+    }
+  }, [currentPage, pageParams]);
 
   // Fetch current user details & orders if token present
   useEffect(() => {
@@ -796,13 +853,14 @@ export default function App() {
   };
 
   const handleAdminAddProduct = async (prod: Partial<Product>) => {
+    const userProvidedSku = prod.sku?.trim();
     const newP = {
       ...prod,
       id: `prod-${Date.now()}`,
-      rating: 5.0,
-      bestSeller: false,
-      featured: true,
-      sku: `GL-${Math.floor(1000 + Math.random() * 9000)}`
+      rating: prod.rating || 5.0,
+      bestSeller: prod.bestSeller || false,
+      featured: prod.featured !== undefined ? prod.featured : true,
+      sku: userProvidedSku || `GL-${Math.floor(1000 + Math.random() * 9000)}`
     } as Product;
 
     setProducts(prev => [newP, ...prev]);
@@ -1078,6 +1136,9 @@ export default function App() {
               onLogout={handleLogout}
               isAdminPanel={true}
               onUpdateSettings={handleUpdateSettings}
+              onFetchCoupons={fetchCoupons}
+              onRefreshOrders={fetchOrders}
+              onRefreshProducts={fetchProducts}
             />
           ) : (
             <AdminGatewayLogin 

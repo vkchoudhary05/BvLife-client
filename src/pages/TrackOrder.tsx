@@ -90,16 +90,25 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
 
     setLoading(true);
     setError('');
-    setOrder(null);
 
     try {
       const res = await fetch(`/api/orders/track/${encodeURIComponent(id)}`);
       if (res.ok) {
         const data = await res.json();
-        setOrder(data);
+        const activeOrder = data.order || data;
+        setOrder(activeOrder);
+
+        if (Array.isArray(data.userOrders) && data.userOrders.length > 0) {
+          setRecentOrders(data.userOrders);
+        } else if (activeOrder) {
+          setRecentOrders(prev => {
+            const exists = prev.some(o => o.id === activeOrder.id);
+            return exists ? prev : [activeOrder, ...prev];
+          });
+        }
       } else {
         const errData = await res.json();
-        setError(errData.error || 'No order found with that ID or tracking number.');
+        setError(errData.error || 'No order found matching that Order ID, tracking number, email, or phone number.');
       }
     } catch (err) {
       console.error(err);
@@ -169,19 +178,19 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
       </div>
 
       {/* Main Search Input Form */}
-      <div className="bg-brand-cream-50 border border-brand-gold-300 rounded-[2rem] p-6 sm:p-8 shadow-md space-y-6 relative overflow-hidden mb-10">
+      <div className="bg-brand-cream-50 border border-brand-gold-300 rounded-[2rem] p-6 sm:p-8 shadow-md space-y-6 relative overflow-hidden mb-8">
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-gold-500 via-brand-cream-300 to-brand-gold-600" />
         
         <form onSubmit={handleFormSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-[10px] uppercase tracking-wider font-extrabold text-brand-green-800/80 block font-serif">
-              Order ID or Tracking Reference
+              Search by Order ID, Tracking Ref, Email, or Mobile
             </label>
             <div className="relative">
               <input
                 type="text"
                 required
-                placeholder="e.g. GL-123456-78 or GLTRK123456"
+                placeholder="e.g. GL-123456-78, user@email.com, or 9876543210"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-4 pr-12 py-3.5 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-sm font-semibold text-brand-green-950 placeholder-brand-green-300 shadow-sm transition-all"
@@ -209,35 +218,74 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
         )}
       </div>
 
-      {/* Logged in users: Quick tracked list */}
-      {!order && recentOrders.length > 0 && (
-        <div className="space-y-4 animate-in fade-in duration-300">
-          <h3 className="font-serif text-sm font-extrabold text-brand-green-950 uppercase tracking-wider flex items-center gap-1.5">
-            <ShoppingBag className="w-4 h-4 text-brand-gold-600" />
-            <span>Your Active Shipments</span>
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {recentOrders.slice(0, 4).map((o) => (
-              <button
-                key={o.id}
-                onClick={() => {
-                  setSearchQuery(o.id);
-                  handleTrack(o.id);
-                }}
-                className="p-4 text-left border border-brand-green-200/50 hover:border-brand-green-800 bg-white hover:bg-brand-green-50/10 rounded-2xl transition-all duration-200 shadow-sm flex items-center justify-between group cursor-pointer"
-              >
-                <div>
-                  <span className="block text-xs font-bold font-mono text-brand-green-950">ID: {o.id}</span>
-                  <span className="block text-[10px] text-brand-green-600/70">{o.orderDate.split('T')[0]} • {o.items.length} items</span>
-                  <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-extrabold uppercase rounded bg-brand-gold-500/10 text-brand-gold-700">
-                    {o.status}
-                  </span>
-                </div>
-                <div className="p-2 rounded-lg bg-brand-green-50 text-brand-green-700 group-hover:bg-brand-gold-500/10 group-hover:text-brand-gold-700 transition-colors">
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </button>
-            ))}
+      {/* Quick Select Panel for Previous & Latest Orders */}
+      {recentOrders.length > 0 && (
+        <div className="space-y-3 mb-8 animate-in fade-in duration-300">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-sm font-extrabold text-brand-green-950 uppercase tracking-wider flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4 text-brand-gold-600" />
+              <span>Your Orders History ({recentOrders.length})</span>
+            </h3>
+            <span className="text-[10px] text-brand-green-600/70 font-sans">
+              Click any order to view detailed status
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {recentOrders.map((o, idx) => {
+              const isLatest = idx === 0;
+              const isSelected = order?.id === o.id;
+
+              return (
+                <button
+                  key={o.id}
+                  onClick={() => {
+                    setOrder(o);
+                    setSearchQuery(o.id);
+                  }}
+                  className={`p-3.5 text-left border rounded-2xl transition-all duration-200 shadow-sm flex flex-col justify-between group cursor-pointer relative ${
+                    isSelected 
+                      ? 'border-brand-green-800 bg-brand-green-50/60 ring-2 ring-brand-green-800/20' 
+                      : 'border-brand-green-200/60 hover:border-brand-green-700 bg-white hover:bg-brand-cream-50/40'
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                        isLatest 
+                          ? 'bg-brand-gold-500 text-brand-green-950 font-bold shadow-xs' 
+                          : 'bg-brand-green-100 text-brand-green-800'
+                      }`}>
+                        {isLatest ? '✨ Latest Order' : `Previous Order #${recentOrders.length - idx}`}
+                      </span>
+
+                      <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-brand-green-700/10 text-brand-green-900">
+                        {o.status}
+                      </span>
+                    </div>
+
+                    <div className="pt-1">
+                      <span className="block text-xs font-bold font-mono text-brand-green-950">
+                        {o.id}
+                      </span>
+                      <span className="block text-[10px] text-brand-green-600/70 font-medium">
+                        {o.orderDate ? o.orderDate.split('T')[0] : 'Recent'} • {o.items?.length || 0} item{(o.items?.length || 0) !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 pt-2 border-t border-brand-green-100/60 flex items-center justify-between text-xs">
+                    <span className="font-serif font-bold text-brand-green-900">
+                      ₹{o.finalTotal}
+                    </span>
+                    <span className="text-[10px] font-bold text-brand-green-800 group-hover:text-brand-gold-600 flex items-center gap-1 transition-colors">
+                      {isSelected ? 'Viewing Details' : 'View Tracking'}
+                      <ArrowRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -381,12 +429,12 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
               <div className="text-xs space-y-1.5 text-brand-green-800 font-medium">
                 <p className="font-bold text-brand-green-950 flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-brand-gold-600" />
-                  <span>{order.shippingAddress.fullName}</span>
+                  <span>{order.shippingAddress?.fullName || order.userName || 'Valued Customer'}</span>
                 </p>
-                <p>{order.shippingAddress.addressLine1}</p>
-                {order.shippingAddress.addressLine2 && <p>{order.shippingAddress.addressLine2}</p>}
-                <p>{order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.zipCode}</p>
-                <p className="font-mono text-[10px] text-brand-green-600/70 pt-1">Phone: {order.shippingAddress.phone}</p>
+                <p>{order.shippingAddress?.addressLine1 || 'Address registered on file'}</p>
+                {order.shippingAddress?.addressLine2 && <p>{order.shippingAddress.addressLine2}</p>}
+                <p>{order.shippingAddress?.city || ''}{order.shippingAddress?.state ? `, ${order.shippingAddress.state}` : ''}{order.shippingAddress?.zipCode ? ` - ${order.shippingAddress.zipCode}` : ''}</p>
+                <p className="font-mono text-[10px] text-brand-green-600/70 pt-1">Phone: {order.shippingAddress?.phone || 'On File'}</p>
               </div>
             </div>
 
@@ -395,7 +443,7 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
                 Apothecary Compounds Sourced
               </h4>
               <div className="text-xs space-y-2 text-brand-green-800 font-medium">
-                {order.items.map((item, i) => (
+                {(order.items || []).map((item, i) => (
                   <div key={i} className="flex justify-between items-center">
                     <span>{item.productName} <span className="text-brand-green-600/50 font-sans">x{item.quantity}</span></span>
                     <span className="font-serif text-brand-green-950">₹{item.price * item.quantity}</span>

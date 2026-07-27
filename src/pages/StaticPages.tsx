@@ -310,7 +310,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
 
           {/* Majestic Hero Cover Card with Side Quote */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-            <div className="lg:col-span-7 bg-brand-green-950 rounded-[2.5rem] p-8 sm:p-12 text-brand-cream-100 flex flex-col justify-between shadow-xl relative overflow-hidden min-h-[360px]">
+            <div className="lg:col-span-7 bg-brand-green-800 rounded-[2.5rem] p-8 sm:p-12 text-brand-cream-100 flex flex-col justify-between shadow-xl relative overflow-hidden min-h-[360px]">
               <div className="absolute top-0 right-0 w-64 h-64 bg-brand-green-800/20 rounded-full blur-3xl -mr-16 -mt-16" />
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-brand-gold-600/10 rounded-full blur-3xl -ml-16 -mb-16" />
               

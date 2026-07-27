@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   History, MapPin, User, LayoutDashboard, Leaf, ShoppingBag, 
   Tag, Plus, Trash2, Edit2, ShieldAlert, Sparkles, Check, CheckCircle2, Shield, Activity,
@@ -29,6 +29,9 @@ interface DashboardProps {
   isAdminPanel?: boolean;
   onUpdateSettings?: (settings: WebsiteSettings) => void;
   onLoginSuccess?: (token: string) => void;
+  onFetchCoupons?: () => void;
+  onRefreshOrders?: () => void;
+  onRefreshProducts?: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -47,7 +50,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onLogout,
   isAdminPanel = false,
   onUpdateSettings,
-  onLoginSuccess
+  onLoginSuccess,
+  onFetchCoupons,
+  onRefreshOrders,
+  onRefreshProducts
 }) => {
   const isAdmin = (user?.role === 'admin' && isAdminPanel) || false;
   const [activeTab, setActiveTab] = useState<string>(isAdmin ? 'admin-stats' : 'account');
@@ -162,9 +168,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
+  const onFetchCouponsRef = useRef(onFetchCoupons);
+  const onRefreshOrdersRef = useRef(onRefreshOrders);
+  const onRefreshProductsRef = useRef(onRefreshProducts);
+
   useEffect(() => {
-    if (isAdmin && (activeTab === 'admin-payments' || activeTab === 'admin-stats')) {
+    onFetchCouponsRef.current = onFetchCoupons;
+    onRefreshOrdersRef.current = onRefreshOrders;
+    onRefreshProductsRef.current = onRefreshProducts;
+  });
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    if (activeTab === 'admin-payments' || activeTab === 'admin-stats') {
       fetchPayments();
+    } else if (activeTab === 'admin-coupons') {
+      onFetchCouponsRef.current?.();
+    } else if (activeTab === 'admin-orders') {
+      onRefreshOrdersRef.current?.();
+    } else if (activeTab === 'admin-catalog') {
+      onRefreshProductsRef.current?.();
     }
   }, [activeTab, isAdmin]);
 
@@ -228,6 +252,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   
   // Product form states
   const [prodName, setProdName] = useState('');
+  const [prodSku, setProdSku] = useState('');
   const [prodPrice, setProdPrice] = useState(500);
   const [prodOrigPrice, setProdOrigPrice] = useState(600);
   const [prodStock, setProdStock] = useState(20);
@@ -377,6 +402,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const handleEditProductOpen = (prod: Product) => {
     setEditProdId(prod.id);
     setProdName(prod.name);
+    setProdSku(prod.sku || '');
     setProdPrice(prod.price);
     setProdOrigPrice(prod.originalPrice);
     setProdStock(prod.stock);
@@ -404,6 +430,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setShowAddProd(false);
     setEditProdId(null);
     setProdName('');
+    setProdSku('');
     setProdPrice(500);
     setProdOrigPrice(600);
     setProdStock(20);
@@ -434,6 +461,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     const payload: Partial<Product> = {
       name: prodName,
+      sku: prodSku.trim(),
       price: prodPrice,
       originalPrice: prodOrigPrice,
       stock: prodStock,
@@ -1472,12 +1500,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <form onSubmit={handleSaveProduct} className="bg-brand-cream-100/30 border border-brand-green-600/10 p-5 rounded-2xl space-y-4 text-xs">
                   <h4 className="font-serif font-bold text-brand-green-900">{editProdId ? 'Edit Product Details' : 'Add New Remedy Compound'}</h4>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1 sm:col-span-1">
                       <label className="font-bold text-brand-green-900">Product Name</label>
                       <input required type="text" value={prodName} onChange={e => setProdName(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 sm:col-span-1">
+                      <label className="font-bold text-brand-green-900">SKU / Item Code</label>
+                      <input type="text" placeholder="E.g. GL-1001" value={prodSku} onChange={e => setProdSku(e.target.value)} className="w-full bg-white border p-2 rounded-lg font-mono" />
+                    </div>
+                    <div className="space-y-1 sm:col-span-1">
                       <label className="font-bold text-brand-green-900">Category</label>
                       <select value={prodCategory} onChange={e => setProdCategory(e.target.value)} className="w-full bg-white border p-2 rounded-lg">
                         <option value="Immunity">Immunity</option>
@@ -1706,8 +1738,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <div className="flex items-center gap-3">
                       <img src={prod.mainImage} alt={prod.name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
                       <div>
-                        <h5 className="font-serif font-bold text-brand-green-900">{prod.name}</h5>
-                        <p className="text-brand-green-600/70 font-semibold">{prod.category} • ₹{prod.price} • Stock: {prod.stock}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h5 className="font-serif font-bold text-brand-green-900">{prod.name}</h5>
+                          {prod.sku && (
+                            <span className="text-[10px] font-mono bg-brand-gold-500/10 text-brand-gold-700 font-bold px-2 py-0.5 rounded border border-brand-gold-500/20">
+                              SKU: {prod.sku}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-brand-green-600/70 font-semibold mt-0.5">{prod.category} • ₹{prod.price} • Stock: {prod.stock}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
