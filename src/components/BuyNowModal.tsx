@@ -9,6 +9,7 @@ import { X, ShieldCheck, CheckCircle2, ShoppingBag, Landmark, Sparkles, MapPin, 
 import { Product, Order, Address } from '../types';
 import { Language, t } from '../lib/translations';
 import { validateAndFormatIndianPhone } from '../utils';
+import { loadRazorpayScript } from '../utils/razorpay';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
 
 interface BuyNowModalProps {
@@ -62,7 +63,8 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   const [addressError, setAddressError] = useState('');
 
   // Step 3: Payment states
-  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'Cards' | 'Net Banking' | 'Razorpay' | 'Cash on Delivery'>('UPI');
+  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'Cash on Delivery'>('UPI');
+  const [userRazorpayKey, setUserRazorpayKey] = useState<string>(() => localStorage.getItem('razorpay_key_id') || '');
   const [processingOrder, setProcessingOrder] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
 
@@ -121,7 +123,8 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   // Pricing calculations
   const itemTotal = product.price * quantity;
   const taxAmount = Math.round(itemTotal * 0.12); // 12% tax
-  const shippingCharge = itemTotal >= 999 ? 0 : 50; // free above 999
+  // const shippingCharge = itemTotal >= 999 ? 0 : 50; // free above 999
+  const shippingCharge = 0;
   const finalTotal = itemTotal + taxAmount + shippingCharge;
 
   // Handles requesting OTP
@@ -323,7 +326,10 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   };
 
   // Places order
-  const handleCompleteDirectOrder = async () => {
+  const handleCompleteDirectOrder = async (
+    overridePayMethod?: 'UPI' | 'Cash on Delivery',
+    overridePayStatus?: 'Pending' | 'Paid'
+  ) => {
     setProcessingOrder(true);
     
     const targetEmail = currentUser?.email || email.trim().toLowerCase() || 'guest@gramslife.com';
@@ -378,8 +384,8 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
       discount: 0,
       finalTotal: finalTotal,
       status: 'Pending',
-      paymentMethod: paymentMethod,
-      paymentStatus: paymentMethod === 'Cash on Delivery' ? 'Pending' : 'Paid',
+      paymentMethod: overridePayMethod || paymentMethod,
+      paymentStatus: overridePayStatus || ( (overridePayMethod || paymentMethod) === 'Cash on Delivery' ? 'Pending' : 'Paid' ),
       orderDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
     };
 
@@ -413,19 +419,95 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
 
   const handleStartPaymentForBuyNow = async () => {
     if (paymentMethod === 'Cash on Delivery') {
-      const res = await handleCompleteDirectOrder();
+      const res = await handleCompleteDirectOrder('Cash on Delivery', 'Pending');
       if (res) {
         onClose();
       }
     } else {
-      setSimulatedGatewayOtp('123456');
-      setPaymentVerifyOtp('123456');
-      setPaymentOtpErr('');
-      setCardErr('');
-      setUpiErr('');
-      setBankErr('');
-      setGatewayStep('selection');
-      setIsPaymentGatewayOpen(true);
+      setProcessingOrder(true);
+      try {
+        const activeKey = userRazorpayKey.trim() || localStorage.getItem('razorpay_key_id') || '';
+
+        const res = await fetch('/api/payment/razorpay-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: finalTotal,
+            currency: 'INR',
+            receipt: `rcpt_${Date.now()}`,
+            customKeyId: activeKey
+          })
+        });
+        const data = await res.json();
+        const finalKey = data.keyId || activeKey;
+
+        if (!finalKey) {
+          alert("Please enter your Razorpay Key ID in the input box below to proceed.");
+          setProcessingOrder(false);
+          return;
+        }
+
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          alert("Failed to load Razorpay payment SDK. Please check your internet connection.");
+          setProcessingOrder(false);
+          return;
+        }
+
+        if (typeof (window as any).Razorpay !== 'undefined') {
+          const options = {
+            key: finalKey,
+            amount: data.amount,
+            currency: data.currency || 'INR',
+            name: 'BV Life',
+            description: product.name,
+            image: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
+            order_id: data.orderId,
+            prefill: {
+              name: fullName || currentUser?.fullName || '',
+              email: currentUser?.email || email || '',
+              contact: mobilePhone || currentUser?.phone || ''
+            },
+            handler: async function (response: any) {
+              try {
+                await fetch('/api/payment/verify-razorpay', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(response)
+                });
+              } catch (e) {}
+              const orderRes = await handleCompleteDirectOrder('UPI', 'Paid');
+              if (orderRes) {
+                onClose();
+              }
+              setProcessingOrder(false);
+            },
+            modal: {
+              ondismiss: function () {
+                setProcessingOrder(false);
+              }
+            },
+            theme: {
+              color: '#1e3a29'
+            }
+          };
+
+          const rzp = new (window as any).Razorpay(options);
+          rzp.on('payment.failed', function (resp: any) {
+            alert("Payment failed or cancelled: " + (resp.error?.description || "Transaction declined."));
+            setProcessingOrder(false);
+          });
+          rzp.open();
+          return;
+        } else {
+          alert("Razorpay payment script is loading. Please try again.");
+        }
+      } catch (e: any) {
+        console.error("Razorpay buy now error:", e);
+        alert("Failed to initialize Razorpay payment: " + (e.message || "Please check your Razorpay API key."));
+      } finally {
+        setProcessingOrder(false);
+      }
     }
   };
 
@@ -435,7 +517,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
     setUpiErr('');
     setBankErr('');
 
-    if (paymentMethod === 'Cards') {
+    if ((paymentMethod as string) === 'Cards') {
       if (!cardNo || cardNo.replace(/\s/g, '').length < 15) {
         setCardErr('Please enter a valid 16-digit card number.');
         return;
@@ -473,7 +555,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
         setGatewayStep('selection');
         setUpiErr('Order completion failed. Please try again.');
       }
-    } else if (paymentMethod === 'Net Banking') {
+    } else if ((paymentMethod as string) === 'Net Banking') {
       if (!selectedBank) {
         setBankErr('Please select your banking institution.');
         return;
@@ -1039,20 +1121,20 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
 
               {/* Payment Methods */}
               <div className="space-y-2.5">
-                <span className="text-[10px] font-bold text-brand-green-800 uppercase tracking-wider block">Select Secure Gateway Method</span>
+                <span className="text-[10px] font-bold text-brand-green-800 uppercase tracking-wider block">Select Payment Method</span>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('UPI')}
                     className={`p-3 rounded-2xl border text-left flex flex-col justify-between h-20 cursor-pointer transition-all ${
-                      paymentMethod === 'UPI' ? 'border-brand-green-700 bg-brand-green-500/5 shadow-inner' : 'border-brand-green-600/10 bg-white hover:border-brand-green-600/20'
+                      paymentMethod === 'UPI' ? 'border-brand-green-700 bg-brand-green-500/10 shadow-sm' : 'border-brand-green-600/10 bg-white hover:border-brand-green-600/20'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center gap-1.5 font-bold text-brand-green-950 text-xs">
                         <Landmark className="w-3.5 h-3.5 text-brand-gold-600" />
-                        <span>UPI Mobile Pay</span>
+                        <span>UPI (via Razorpay)</span>
                       </div>
                       <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
                         paymentMethod === 'UPI' ? 'border-brand-green-700 bg-brand-green-700' : 'border-gray-300 bg-white'
@@ -1060,56 +1142,14 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                         {paymentMethod === 'UPI' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
                       </span>
                     </div>
-                    <span className="text-[9px] text-brand-green-600 leading-tight">GooglePay, PhonePe, Paytm QR or VPA.</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('Cards')}
-                    className={`p-3 rounded-2xl border text-left flex flex-col justify-between h-20 cursor-pointer transition-all ${
-                      paymentMethod === 'Cards' ? 'border-brand-green-700 bg-brand-green-500/5 shadow-inner' : 'border-brand-green-600/10 bg-white hover:border-brand-green-600/20'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-1.5 font-bold text-brand-green-950 text-xs">
-                        <Lock className="w-3.5 h-3.5 text-brand-gold-600" />
-                        <span>Credit / Debit Card</span>
-                      </div>
-                      <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                        paymentMethod === 'Cards' ? 'border-brand-green-700 bg-brand-green-700' : 'border-gray-300 bg-white'
-                      }`}>
-                        {paymentMethod === 'Cards' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                      </span>
-                    </div>
-                    <span className="text-[9px] text-brand-green-600 leading-tight">Visa, Mastercard, RuPay, Amex.</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('Net Banking')}
-                    className={`p-3 rounded-2xl border text-left flex flex-col justify-between h-20 cursor-pointer transition-all ${
-                      paymentMethod === 'Net Banking' ? 'border-brand-green-700 bg-brand-green-500/5 shadow-inner' : 'border-brand-green-600/10 bg-white hover:border-brand-green-600/20'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-1.5 font-bold text-brand-green-950 text-xs">
-                        <Landmark className="w-3.5 h-3.5 text-brand-green-700" />
-                        <span>Net Banking</span>
-                      </div>
-                      <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                        paymentMethod === 'Net Banking' ? 'border-brand-green-700 bg-brand-green-700' : 'border-gray-300 bg-white'
-                      }`}>
-                        {paymentMethod === 'Net Banking' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                      </span>
-                    </div>
-                    <span className="text-[9px] text-brand-green-600 leading-tight">HDFC, SBI, ICICI, Axis, Kotak, PNB.</span>
+                    <span className="text-[9px] text-brand-green-600 leading-tight">PhonePe, GooglePay, Paytm, BHIM or UPI ID.</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('Cash on Delivery')}
                     className={`p-3 rounded-2xl border text-left flex flex-col justify-between h-20 cursor-pointer transition-all ${
-                      paymentMethod === 'Cash on Delivery' ? 'border-brand-green-700 bg-brand-green-500/5 shadow-inner' : 'border-brand-green-600/10 bg-white hover:border-brand-green-600/20'
+                      paymentMethod === 'Cash on Delivery' ? 'border-brand-green-700 bg-brand-green-500/10 shadow-sm' : 'border-brand-green-600/10 bg-white hover:border-brand-green-600/20'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
@@ -1127,75 +1167,27 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                   </button>
                 </div>
 
-                {/* Inline method details */}
+                {/* Inline method details for UPI */}
                 {paymentMethod === 'UPI' && (
-                  <div className="p-3.5 bg-brand-green-50/60 rounded-2xl border border-brand-green-200/50 space-y-2 mt-2">
-                    <div className="flex items-center justify-between text-[10px] font-bold text-brand-green-800 uppercase tracking-wider">
-                      <span>Enter Mobile UPI ID / VPA</span>
-                      <span className="text-brand-green-600 font-normal">e.g., vkchoudhary050607@okaxis</span>
+                  <div className="p-3.5 bg-brand-green-50/80 rounded-2xl border border-brand-green-200/60 space-y-2 text-xs mt-2">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-brand-green-950">
+                      <span>Razorpay API Key ID (Optional if set in .env)</span>
+                      <span className="text-[10px] text-brand-green-700 font-semibold uppercase">Live/Test Key</span>
                     </div>
                     <input
                       type="text"
-                      placeholder={`${mobilePhone || '9425011088'}@upi`}
-                      value={upiVal}
-                      onChange={(e) => setUpiVal(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-green-200 text-xs font-mono font-bold text-brand-green-950 focus:outline-none focus:border-brand-green-700 bg-white"
+                      placeholder="e.g. rzp_test_1234567890 or rzp_live_..."
+                      value={userRazorpayKey}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setUserRazorpayKey(val);
+                        localStorage.setItem('razorpay_key_id', val.trim());
+                      }}
+                      className="w-full px-3 py-2 rounded-xl border border-brand-green-300 font-mono text-xs text-brand-green-950 bg-white focus:outline-none focus:ring-1 focus:ring-brand-green-700"
                     />
-                  </div>
-                )}
-
-                {paymentMethod === 'Cards' && (
-                  <div className="p-3.5 bg-brand-green-50/60 rounded-2xl border border-brand-green-200/50 space-y-2.5 mt-2 text-xs">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-brand-green-800 uppercase tracking-wider">Card Number</label>
-                      <input
-                        type="text"
-                        maxLength={19}
-                        placeholder="4111 2222 3333 4444"
-                        value={cardNo}
-                        onChange={(e) => setCardNo(e.target.value.replace(/\D/g, '').slice(0, 16))}
-                        className="w-full px-3.5 py-2 rounded-xl border border-brand-green-200 font-mono font-bold text-brand-green-950 bg-white"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        maxLength={5}
-                        placeholder="MM/YY"
-                        value={cardExp}
-                        onChange={(e) => {
-                          let val = e.target.value.replace(/\D/g, '');
-                          if (val.length >= 2) val = val.slice(0, 2) + '/' + val.slice(2, 4);
-                          setCardExp(val);
-                        }}
-                        className="w-full px-3 py-2 rounded-xl border border-brand-green-200 font-mono text-center font-bold text-brand-green-950 bg-white"
-                      />
-                      <input
-                        type="password"
-                        maxLength={4}
-                        placeholder="CVV"
-                        value={cardCvvInput}
-                        onChange={(e) => setCardCvvInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        className="w-full px-3 py-2 rounded-xl border border-brand-green-200 font-mono text-center font-bold text-brand-green-950 bg-white"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {paymentMethod === 'Net Banking' && (
-                  <div className="p-3.5 bg-brand-green-50/60 rounded-2xl border border-brand-green-200/50 space-y-2 mt-2">
-                    <label className="text-[10px] font-bold text-brand-green-800 uppercase tracking-wider block">Choose Bank</label>
-                    <select
-                      value={selectedBank}
-                      onChange={(e) => setSelectedBank(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-brand-green-200 text-xs font-bold text-brand-green-950 bg-white"
-                    >
-                      <option value="">Select Bank (HDFC, SBI, ICICI, etc.)</option>
-                      <option value="HDFC Bank">HDFC Bank</option>
-                      <option value="State Bank of India">State Bank of India (SBI)</option>
-                      <option value="ICICI Bank">ICICI Bank</option>
-                      <option value="Axis Bank">Axis Bank</option>
-                    </select>
+                    <p className="text-brand-green-900 font-medium leading-relaxed text-[11px]">
+                      ⚡ Clicking <strong className="text-brand-green-950 font-bold">Pay via Razorpay UPI</strong> will directly launch Razorpay's official payment screen.
+                    </p>
                   </div>
                 )}
               </div>
@@ -1276,7 +1268,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                 <div className="p-6 space-y-5">
                   {gatewayStep === 'selection' && (
                     <form onSubmit={handleGatewayAuthorize} className="space-y-4">
-                      {paymentMethod === 'Cards' && (
+                      {(paymentMethod as string) === 'Cards' && (
                         <div className="space-y-3.5">
                           {/* Virtual interactive credit card */}
                           <div className="relative h-40 rounded-2xl bg-gradient-to-br from-brand-green-900 via-brand-green-850 to-brand-green-950 p-5 text-brand-cream-100 flex flex-col justify-between shadow-lg border border-brand-gold-500/10 overflow-hidden font-mono text-left">
@@ -1391,7 +1383,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                         </div>
                       )}
 
-                      {paymentMethod === 'Net Banking' && (
+                      {(paymentMethod as string) === 'Net Banking' && (
                         <div className="space-y-3.5">
                           {bankErr && <p className="text-xs text-red-600 font-bold bg-red-50 p-2 rounded-xl border border-red-200">{bankErr}</p>}
                           

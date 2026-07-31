@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, ShieldAlert, Sparkles, X, Phone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, ShieldAlert, Sparkles, X, Phone, RotateCw } from 'lucide-react';
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
@@ -25,6 +25,47 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [resendTimer, setResendTimer] = useState<number>(30);
+
+  // Countdown timer for Resend OTP (30s)
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (step === 'otp' && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [step, resendTimer]);
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0 || loading) return;
+    setLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const otpRes = await fetch('/api/auth/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: userEmail || accountQuery.trim() })
+      });
+      const otpData = await otpRes.json();
+      if (otpData.otp) {
+        setSimulatedOtp(otpData.otp);
+      } else {
+        setSimulatedOtp(Math.floor(100000 + Math.random() * 900000).toString());
+      }
+      setResendTimer(30);
+      setSuccessMsg('A new OTP verification code has been sent successfully.');
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Failed to resend OTP code.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -71,6 +112,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         setSimulatedOtp(Math.floor(100000 + Math.random() * 900000).toString());
       }
 
+      setResendTimer(30);
       setStep('otp');
       setSuccessMsg(`Verification code dispatched to ${checkData.email} / ${phoneToUse}.`);
     } catch (err) {
@@ -230,6 +272,24 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   className="w-full text-center px-4 py-3 rounded-xl border-2 border-brand-green-300 text-base font-mono font-bold tracking-widest text-brand-green-950 focus:outline-none focus:border-brand-green-800 bg-white"
                 />
+              </div>
+
+              {/* Resend OTP Bar */}
+              <div className="flex items-center justify-between text-xs px-1">
+                <span className="text-[11px] text-brand-green-700/80 font-medium">Didn't receive code?</span>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={resendTimer > 0 || loading}
+                  className={`text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    resendTimer > 0 || loading
+                      ? 'text-brand-green-600/50 cursor-not-allowed opacity-70'
+                      : 'text-brand-gold-700 hover:text-brand-gold-800 underline'
+                  }`}
+                >
+                  <RotateCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                  <span>{resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}</span>
+                </button>
               </div>
 
               <div className="flex gap-2">

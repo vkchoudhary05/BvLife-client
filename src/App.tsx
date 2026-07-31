@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Mail, User as UserIcon, Phone, Shield, Sparkles, CheckCircle2, Lock, ArrowRight, HelpCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, User as UserIcon, Phone, Shield, Sparkles, CheckCircle2, Lock, ArrowRight, HelpCircle, Eye, EyeOff, RotateCw } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AIConsultantModal } from './components/AIConsultantModal';
@@ -154,7 +154,49 @@ export default function App() {
   const [generatedOtp, setGeneratedOtp] = useState('');
   const [otpStep, setOtpStep] = useState(false);
   const [otpMessage, setOtpMessage] = useState('');
+  const [resendTimer, setResendTimer] = useState<number>(30);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Countdown timer for Resend OTP (30s)
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (otpStep && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [otpStep, resendTimer]);
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0 || authLoading) return;
+    setAuthLoading(true);
+    setLoginError('');
+    try {
+      const res = await fetch('/api/auth/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: authPhone, email: authEmail })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setGeneratedOtp(data.otp || '');
+        setUseRealTwilio(data.useRealTwilio || false);
+        setFormattedPhone(data.formattedPhone || authPhone);
+        setOtpMessage('A new 6-digit OTP passcode has been dispatched via SMS.');
+        setResendTimer(30);
+      } else {
+        setLoginError(data.error || 'Could not resend OTP. Please try again.');
+      }
+    } catch (err) {
+      console.error(err);
+      setLoginError('Connection failure resending verification OTP.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
   const [isGoogleOAuthOpen, setIsGoogleOAuthOpen] = useState(false);
@@ -428,6 +470,7 @@ export default function App() {
             setUseRealTwilio(data.useRealTwilio || false);
             setFormattedPhone(data.formattedPhone || authPhone);
             setOtpMessage(data.message);
+            setResendTimer(30);
             setOtpStep(true);
           } else {
             setLoginError(data.error || 'Could not dispatch security OTP. Please check mobile details.');
@@ -443,7 +486,7 @@ export default function App() {
         setAuthLoading(true);
         try {
           if (useRealTwilio) {
-            // Real Twilio verification check
+            // Real MSG91 verification check
             const verifyRes = await fetch('/api/auth/verify-otp', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1389,33 +1432,21 @@ export default function App() {
                 </div>
               )}
 
-              {/* SMS Gateway Alert Banners (Differentiates between Real Twilio and Sandbox Simulation) */}
+              {/* SMS Gateway Alert Banners */}
+
               {otpStep && otpMessage && (
-                useRealTwilio ? (
-                  <div className="p-4 bg-brand-green-500/10 border border-brand-green-500/30 rounded-2xl space-y-2 shadow-sm animate-in fade-in duration-300">
+                <div className="p-4 bg-brand-green-500/10 border border-brand-green-500/30 rounded-2xl space-y-2 shadow-sm animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-brand-green-950 font-serif">
                       <Shield className="w-4 h-4 shrink-0 text-brand-green-700 animate-pulse" />
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider">Live OTP Verification</span>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider">Live MSG91 OTP Verification</span>
                     </div>
-                    <p className="text-xs text-brand-green-900 leading-relaxed font-semibold">
-                      A live 6-digit OTP passcode has been sent to your mobile phone <span className="font-mono text-brand-gold-800 font-bold">{formattedPhone}</span> via SMS. Please check your messages and enter the code below.
-                    </p>
+                    <span className="text-[10px] text-brand-green-700 bg-brand-green-100 px-2 py-0.5 rounded-full font-semibold">SMS Sent</span>
                   </div>
-                ) : (
-                  <div className="p-4 bg-brand-gold-300/10 border border-brand-gold-400/30 rounded-2xl space-y-2 animate-pulse shadow-sm">
-                    <div className="flex items-center gap-1.5 text-brand-green-900">
-                      <Shield className="w-4 h-4 shrink-0 text-brand-gold-600" />
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider">SMS Sandbox Verification</span>
-                    </div>
-                    <p className="text-xs text-brand-green-800 leading-relaxed font-medium">
-                      {otpMessage}
-                    </p>
-                    <div className="pt-1 flex items-center gap-2 text-xs text-brand-green-900 font-mono">
-                      <span className="font-sans text-brand-green-600">OTP Passcode:</span>
-                      <span className="px-2.5 py-0.5 rounded bg-brand-gold-400/30 text-brand-green-950 font-bold tracking-widest border border-brand-gold-400/20">{generatedOtp}</span>
-                    </div>
-                  </div>
-                )
+                  <p className="text-xs text-brand-green-900 leading-relaxed font-semibold">
+                    An MSG91 OTP passcode has been sent to your mobile phone <span className="font-mono text-brand-gold-800 font-bold">{formattedPhone}</span> via SMS. Please check your inbox and enter the code below.
+                  </p>
+                </div>
               )}
 
               {/* Form Block */}
@@ -1428,17 +1459,35 @@ export default function App() {
                       <div className="space-y-1.5">
                         <label className="text-[10px] uppercase tracking-wider font-bold text-brand-green-800/80 flex items-center gap-1.5 font-serif">
                           <Lock className="w-3.5 h-3.5 text-brand-gold-600" />
-                          <span>6-Digit Verification Code</span>
+                          <span>4-Digit Verification Code</span>
                         </label>
                         <input
                           type="text"
                           required
-                          maxLength={6}
-                          placeholder="Enter 6-digit OTP code"
+                          maxLength={4}
+                          placeholder="Enter 4-digit OTP code"
                           value={authOtp}
                           onChange={(e) => setAuthOtp(e.target.value.replace(/\D/g, ''))}
                           className="w-full text-center px-4 py-3 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-lg tracking-widest font-bold font-mono text-brand-green-950 placeholder-brand-green-200 transition-all shadow-sm"
                         />
+                      </div>
+
+                      {/* Resend OTP Bar */}
+                      <div className="flex items-center justify-between text-xs px-1">
+                        <span className="text-[11px] text-brand-green-700/80 font-medium">Didn't receive code?</span>
+                        <button
+                          type="button"
+                          onClick={handleResendOtp}
+                          disabled={resendTimer > 0 || authLoading}
+                          className={`text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                            resendTimer > 0 || authLoading
+                              ? 'text-brand-green-600/50 cursor-not-allowed opacity-70'
+                              : 'text-brand-gold-700 hover:text-brand-gold-800 underline'
+                          }`}
+                        >
+                          <RotateCw className={`w-3 h-3 ${authLoading ? 'animate-spin' : ''}`} />
+                          <span>{resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}</span>
+                        </button>
                       </div>
 
                       <div className="flex gap-3">
@@ -1455,7 +1504,7 @@ export default function App() {
                         </button>
                         <button
                           type="submit"
-                          disabled={authLoading || authOtp.length !== 6}
+                          disabled={authLoading || authOtp.length !== 4}
                           className="w-2/3 py-3 bg-brand-green-800 hover:bg-brand-green-900 disabled:bg-brand-green-800/45 text-brand-cream-50 font-bold rounded-2xl text-xs uppercase tracking-wider transition-all duration-200 shadow-lg hover:shadow-brand-green-900/10 flex items-center justify-center gap-1.5 cursor-pointer border border-brand-gold-500/20"
                         >
                           <span>{authLoading ? "Verifying..." : "Verify & Sign Up"}</span>

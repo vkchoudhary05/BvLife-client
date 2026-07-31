@@ -82,10 +82,12 @@ export const Cart: React.FC<CartProps> = ({
     return Math.round((taxableSub * settings.defaultTaxPercentage) / 100);
   }, [subtotal, discountAmount, settings]);
 
-  const shippingCharge = useMemo(() => {
-    if (subtotal === 0 || subtotal >= settings.freeShippingThreshold) return 0;
-    return settings.baseShippingCharge;
-  }, [subtotal, settings]);
+  // const shippingCharge = useMemo(() => {
+  //   if (subtotal === 0 || subtotal >= settings.freeShippingThreshold) return 0;
+  //   return settings.baseShippingCharge;
+  // }, [subtotal, settings]);
+
+  const shippingCharge = 0;
 
   const finalTotal = useMemo(() => {
     return Math.max(0, subtotal - discountAmount + taxAmount + shippingCharge);
