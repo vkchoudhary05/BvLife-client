@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, ShieldAlert, X } from 'lucide-react';
-import { SecureOtpWidget } from './SecureOtpWidget';
+import { SecureOtpWidget } from './secureOtpWidget';
 import { sendMSG91Otp } from '../services/msg91OtpService';
 
 interface ForgotPasswordModalProps {

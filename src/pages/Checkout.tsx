@@ -9,7 +9,7 @@ import { CartItem, Address, Coupon, WebsiteSettings, Order } from '../types';
 import { validateAndFormatIndianPhone } from '../utils';
 import { loadRazorpayScript } from '../utils/razorpay';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
-import { SecureOtpWidget } from '../components/SecureOtpWidget';
+import { SecureOtpWidget } from '../components/secureOtpWidget';
 import { sendMSG91Otp, verifyMSG91Otp, retryMSG91Otp, verifyServerAccessToken, formatMSG91Identifier } from '../services/msg91OtpService';
 
 interface CheckoutProps {
