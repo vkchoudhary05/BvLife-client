@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { Mail, User as UserIcon, Phone, Shield, Sparkles, Lock, ArrowRight, Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react';
 import { validateAndFormatIndianPhone } from '../utils';
 import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin } from '../services/msg91OtpService';
-import { SecureOtpWidget } from '../components/SecureOtpWidget';
+import { SecureOtpWidget } from '../components/secureOtpWidget';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 
 interface LoginProps {
