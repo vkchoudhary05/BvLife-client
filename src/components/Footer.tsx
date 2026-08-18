@@ -28,108 +28,109 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
   };
 
   return (
-    <footer id="site-footer" className="bg-brand-green-900 text-brand-cream-50 border-t border-brand-green-800">
-      
-      {/* Brand Value Props Bar */}
-      <div className="bg-brand-green-800 border-b border-brand-green-700/50 py-8">
+    <footer id="site-footer" className="bg-white text-black border-t border-gray-200">
+
+      {/* Brand Value Props Bar — green */}
+      <div className="bg-brand-green-900 py-9">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
           <div className="flex flex-col md:flex-row items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-brand-green-700 flex items-center justify-center text-brand-cream-300">
-              <ShieldCheck className="w-6 h-6" />
+            <div className="w-14 h-14 rounded-full bg-brand-gold-500/15 border border-brand-gold-500/40 flex items-center justify-center text-brand-gold-400 flex-shrink-0">
+              <ShieldCheck className="w-7 h-7" />
             </div>
             <div>
-              <h4 className="font-semibold text-brand-cream-100 text-sm">100% Certified Organic</h4>
-              <p className="text-xs text-brand-cream-300/80">AYUSH approved, GMP certified, chemical & heavy-metal tested.</p>
+              <h4 className="font-bold text-white text-base">100% Certified Organic</h4>
+              <p className="text-sm text-brand-cream-200/80 mt-1">AYUSH approved, GMP certified, chemical & heavy-metal tested.</p>
             </div>
           </div>
           <div className="flex flex-col md:flex-row items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-brand-green-700 flex items-center justify-center text-brand-cream-300">
-              <Sparkles className="w-6 h-6" />
+            <div className="w-14 h-14 rounded-full bg-brand-gold-500/15 border border-brand-gold-500/40 flex items-center justify-center text-brand-gold-400 flex-shrink-0">
+              <Sparkles className="w-7 h-7" />
             </div>
             <div>
-              <h4 className="font-semibold text-brand-cream-100 text-sm">Ayurvedic AI Consultant</h4>
-              <p className="text-xs text-brand-cream-300/80">Get free expert biological dosha analysis and remedy plans instantly.</p>
+              <h4 className="font-bold text-white text-base">Ayurvedic AI Consultant</h4>
+              <p className="text-sm text-brand-cream-200/80 mt-1">Get free expert biological dosha analysis and remedy plans instantly.</p>
             </div>
           </div>
           <div className="flex flex-col md:flex-row items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-brand-green-700 flex items-center justify-center text-brand-cream-300">
-              <HeartHandshake className="w-6 h-6" />
+            <div className="w-14 h-14 rounded-full bg-brand-gold-500/15 border border-brand-gold-500/40 flex items-center justify-center text-brand-gold-400 flex-shrink-0">
+              <HeartHandshake className="w-7 h-7" />
             </div>
             <div>
-              <h4 className="font-semibold text-brand-cream-100 text-sm">Our Sacred Trust</h4>
-              <p className="text-xs text-brand-cream-300/80">14-day risk free satisfaction refunds and round-the-clock supportive care.</p>
+              <h4 className="font-bold text-white text-base">Our Sacred Trust</h4>
+              <p className="text-sm text-brand-cream-200/80 mt-1">14-day risk free satisfaction refunds and round-the-clock supportive care.</p>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Main footer — white background, bold black text, larger sizes */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 grid grid-cols-1 md:grid-cols-4 gap-12">
-        
+
         {/* Brand Column */}
-        <div className="space-y-4">
-          <div 
-            className="inline-block bg-brand-cream-50/95 px-5 py-3.5 rounded-2xl shadow-lg border border-brand-gold-500/10 hover:border-brand-gold-400/35 transition-all duration-300 cursor-pointer hover:scale-[1.02]" 
+        <div className="space-y-5">
+          <div
+            className="inline-block cursor-pointer hover:opacity-80 transition-opacity duration-200"
             onClick={() => onNavigate('home')}
           >
             <Logo variant="dark" />
           </div>
-          <p className="text-xs text-brand-cream-300/80 leading-relaxed">
-            Sourcing deep wild herbs, hand-crafting pure oils, and formulating clinically researched solutions. We bridge Vedic secrets with modern bio-technology to heal your life, naturally.
+          <p className="text-sm text-black font-medium leading-relaxed">
+            BV Life brings deep wild herbs, hand crafted oils, and clinically researched Ayurvedic formulas from tradition to your doorstep pure herbs for better health.
           </p>
-          <div className="space-y-2.5 text-xs text-brand-cream-300">
+          <div className="space-y-3 text-sm text-black font-semibold">
             <div className="flex items-center gap-2.5">
-              <Phone className="w-4 h-4 text-brand-gold-500 flex-shrink-0" />
-              <span>+1 (800) 555-GRAM</span>
+              <Phone className="w-5 h-5 text-brand-green-800 flex-shrink-0" />
+              <span>+917451050607</span>
             </div>
             <div className="flex items-center gap-2.5">
-              <Mail className="w-4 h-4 text-brand-gold-500 flex-shrink-0" />
-              <span>care@gramslife.com</span>
+              <Mail className="w-5 h-5 text-brand-green-800 flex-shrink-0" />
+              <span>care@bvlife.com</span>
             </div>
             <div className="flex items-center gap-2.5">
-              <MapPin className="w-4 h-4 text-brand-gold-500 flex-shrink-0" />
-              <span className="leading-tight">Grams Life Herbals, Silicon Valley, CA 94016</span>
+              <MapPin className="w-5 h-5 text-brand-green-800 flex-shrink-0" />
+              <span className="leading-tight">Bv Life,Jhundpur Industrial Area, Sonipat, Haryana - 131021</span>
             </div>
           </div>
         </div>
 
         {/* Customer Care */}
         <div>
-          <h4 className="font-serif text-base font-semibold text-brand-cream-100 mb-5 relative after:absolute after:-bottom-1.5 after:left-0 after:w-10 after:h-0.5 after:bg-brand-gold-500">
+          <h4 className="font-serif text-xl font-bold text-black mb-6 relative after:absolute after:-bottom-2 after:left-0 after:w-10 after:h-0.5 after:bg-brand-green-800">
             Customer Trust
           </h4>
-          <ul className="space-y-2.5 text-xs text-brand-cream-300">
-            <li><button onClick={() => onNavigate('static', { page: 'shipping' })} className="hover:text-brand-gold-500 transition-colors text-left">Shipping & Delivery Policies</button></li>
-            <li><button onClick={() => onNavigate('static', { page: 'refund' })} className="hover:text-brand-gold-500 transition-colors text-left">Cancellation & Refund Policies</button></li>
-            <li><button onClick={() => onNavigate('static', { page: 'privacy' })} className="hover:text-brand-gold-500 transition-colors text-left">Privacy Guard & Cookies</button></li>
-            <li><button onClick={() => onNavigate('static', { page: 'terms' })} className="hover:text-brand-gold-500 transition-colors text-left">Terms & Conditions of Service</button></li>
-            <li><button onClick={() => onNavigate('static', { page: 'faq' })} className="hover:text-brand-gold-500 transition-colors text-left">Help Centers & FAQs</button></li>
+          <ul className="space-y-3 text-sm text-black font-semibold">
+            <li><button onClick={() => onNavigate('static', { page: 'shipping' })} className="hover:text-brand-green-800 transition-colors text-left">Shipping & Delivery Policies</button></li>
+            <li><button onClick={() => onNavigate('static', { page: 'refund' })} className="hover:text-brand-green-800 transition-colors text-left">Cancellation & Refund Policies</button></li>
+            <li><button onClick={() => onNavigate('static', { page: 'privacy' })} className="hover:text-brand-green-800 transition-colors text-left">Privacy Guard & Cookies</button></li>
+            <li><button onClick={() => onNavigate('static', { page: 'terms' })} className="hover:text-brand-green-800 transition-colors text-left">Terms & Conditions of Service</button></li>
+            <li><button onClick={() => onNavigate('static', { page: 'faq' })} className="hover:text-brand-green-800 transition-colors text-left">Help Centers & FAQs</button></li>
           </ul>
         </div>
 
         {/* Categories Quick Links */}
         <div>
-          <h4 className="font-serif text-base font-semibold text-brand-cream-100 mb-5 relative after:absolute after:-bottom-1.5 after:left-0 after:w-10 after:h-0.5 after:bg-brand-gold-500">
+          <h4 className="font-serif text-xl font-bold text-black mb-6 relative after:absolute after:-bottom-2 after:left-0 after:w-10 after:h-0.5 after:bg-brand-green-800">
             Shop By Need
           </h4>
-          <ul className="space-y-2.5 text-xs text-brand-cream-300">
-            <li><button onClick={() => onNavigate('shop', { category: 'Immunity' })} className="hover:text-brand-gold-500 transition-colors">Immunity & Vitality</button></li>
-            <li><button onClick={() => onNavigate('shop', { category: 'Digestion' })} className="hover:text-brand-gold-500 transition-colors">Digestion & Gut Agni</button></li>
-            <li><button onClick={() => onNavigate('shop', { category: 'Skin Care' })} className="hover:text-brand-gold-500 transition-colors">Saffron Skin Glow</button></li>
-            <li><button onClick={() => onNavigate('shop', { category: 'Hair Care' })} className="hover:text-brand-gold-500 transition-colors">Hair Therapy Oils</button></li>
-            <li><button onClick={() => onNavigate('shop', { category: "Women's Health" })} className="hover:text-brand-gold-500 transition-colors">Women's Hormone Balance</button></li>
+          <ul className="space-y-3 text-sm text-black font-semibold">
+            <li><button onClick={() => onNavigate('shop', { category: 'Immunity' })} className="hover:text-brand-green-800 transition-colors">Immunity & Vitality</button></li>
+            <li><button onClick={() => onNavigate('shop', { category: 'Digestion' })} className="hover:text-brand-green-800 transition-colors">Digestion & Gut Agni</button></li>
+            <li><button onClick={() => onNavigate('shop', { category: 'Skin Care' })} className="hover:text-brand-green-800 transition-colors">Saffron Skin Glow</button></li>
+            <li><button onClick={() => onNavigate('shop', { category: 'Hair Care' })} className="hover:text-brand-green-800 transition-colors">Hair Therapy Oils</button></li>
+            <li><button onClick={() => onNavigate('shop', { category: "Women's Health" })} className="hover:text-brand-green-800 transition-colors">Women's Hormone Balance</button></li>
           </ul>
         </div>
 
         {/* Newsletter */}
         <div>
-          <h4 className="font-serif text-base font-semibold text-brand-cream-100 mb-5 relative after:absolute after:-bottom-1.5 after:left-0 after:w-10 after:h-0.5 after:bg-brand-gold-500">
+          <h4 className="font-serif text-xl font-bold text-black mb-6 relative after:absolute after:-bottom-2 after:left-0 after:w-10 after:h-0.5 after:bg-brand-green-800">
             Weekly Well-Being
           </h4>
-          <p className="text-xs text-brand-cream-300 leading-relaxed mb-4">
-            Subscribe to receive ancient Ayurvedic seasonal health guides, exclusive compound recipes, and 15% discount coupons.
+          <p className="text-sm text-black font-medium leading-relaxed mb-5">
+            Subscribe for BV Life's seasonal Ayurvedic health guides, exclusive compound recipes, and 15% off your first order.
           </p>
           {subscribed ? (
-            <div className="bg-brand-green-800 text-brand-cream-300 text-xs p-3 rounded-xl border border-brand-gold-500/30">
+            <div className="bg-brand-green-950 text-white text-sm p-4 rounded-xl font-semibold">
               🎉 <strong>Thank you!</strong> Check your inbox for your 15% welcome code.
             </div>
           ) : (
@@ -140,14 +141,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full bg-brand-green-800 border border-brand-green-700 rounded-xl px-4 py-2.5 text-xs text-brand-cream-50 focus:outline-none focus:border-brand-gold-500 placeholder-brand-cream-300/40"
+                className="w-full bg-white border-2 border-black/20 rounded-xl px-4 py-3 text-sm text-black font-medium focus:outline-none focus:border-brand-green-800 placeholder-black/40"
               />
               <button
                 type="submit"
-                className="bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-900 font-bold px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
+                className="bg-brand-green-950 hover:bg-brand-green-900 text-white font-bold text-sm px-5 py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0"
               >
                 <span>Join</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-4 h-4" />
               </button>
             </form>
           )}
@@ -156,13 +157,13 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
       </div>
 
       {/* Sub Footer */}
-      <div className="bg-brand-green-955 border-t border-brand-green-800/40 py-6 text-xs text-brand-cream-300/60">
+      <div className="bg-gray-50 border-t border-gray-200 py-7 text-sm text-black font-semibold">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>© 2026 Grams Life Inc. All Ayurvedic herbs strictly source from sustainable high-altitude farms.</p>
+          <p>© 2026 BV Life Inc. All Ayurvedic herbs strictly sourced from sustainable high-altitude farms.</p>
           <div className="flex gap-4 items-center">
-            <span className="hover:text-brand-gold-500 cursor-pointer">Security SSL Verified</span>
-            <span>•</span>
-            <span className="hover:text-brand-gold-500 cursor-pointer">Cards, UPI, COD Accepted</span>
+            <span className="hover:text-brand-green-800 cursor-pointer transition-colors">Security SSL Verified</span>
+            <span className="text-black/30">•</span>
+            <span className="hover:text-brand-green-800 cursor-pointer transition-colors">Cards, UPI, COD Accepted</span>
           </div>
         </div>
       </div>

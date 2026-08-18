@@ -212,7 +212,6 @@ export const SecureOtpWidget: React.FC<SecureOtpWidgetProps> = ({
           <span>Live Gateway</span>
         </div> */}
       </div>
-EE
       {/* Target Info */}
       <div className="bg-brand-cream-100/70 p-3.5 rounded-2xl border border-brand-gold-500/20 text-center space-y-1">
         <p className="text-xs text-brand-green-800/80">
