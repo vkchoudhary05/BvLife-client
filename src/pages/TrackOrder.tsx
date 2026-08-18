@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Search, ArrowLeft, Check, Package, Truck, Calendar, 
   MapPin, AlertCircle, Clock, ShoppingBag, ArrowRight,
-  FileText, Tag, Printer, X
+  FileText, Tag, Printer, X, RefreshCw
 } from 'lucide-react';
 import { Order, User as UserType } from '../types';
 import { Language, t } from '../lib/translations';
@@ -27,13 +27,26 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [order, setOrder] = useState<Order | null>(() => {
     try {
+      const userEmail = currentUser?.email?.toLowerCase();
       const lastCompleted = localStorage.getItem('grams_last_completed_order');
-      if (lastCompleted) return JSON.parse(lastCompleted);
+      if (lastCompleted) {
+        const parsed = JSON.parse(lastCompleted);
+        // Only preload if anonymous or if it matches the current user
+        if (!userEmail || (parsed.userEmail && parsed.userEmail.toLowerCase() === userEmail)) {
+          return parsed;
+        }
+      }
       const lastPlaced = localStorage.getItem('grams_last_placed_order');
-      if (lastPlaced) return JSON.parse(lastPlaced);
+      if (lastPlaced) {
+        const parsed = JSON.parse(lastPlaced);
+        if (!userEmail || (parsed.userEmail && parsed.userEmail.toLowerCase() === userEmail)) {
+          return parsed;
+        }
+      }
     } catch (e) {}
     return null;
   });
@@ -41,72 +54,62 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
   const [shippingLabelOrder, setShippingLabelOrder] = useState<Order | null>(null);
 
-  // If user is logged in, fetch their recent orders to allow easy tracking clicks
-  useEffect(() => {
-    const fetchUserOrders = async () => {
-      if (!authToken || !currentUser) {
-        setRecentOrders([]);
-        return;
-      }
-      try {
-        const res = await fetch(`/api/orders/user/${encodeURIComponent(currentUser.email)}`, {
-          headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            const userEmailLower = currentUser.email.toLowerCase();
-            const userPhoneClean = currentUser.phone ? currentUser.phone.replace(/\D/g, '') : '';
+  // Fetch logged in customer's order history
+  const fetchUserOrders = useCallback(async () => {
+    if (!currentUser || !currentUser.email) {
+      setRecentOrders([]);
+      return;
+    }
+    try {
+      const headers: Record<string, string> = {};
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
-            // Strictly filter by current user's email or phone to guarantee privacy
-            const filtered = data.filter((o: Order) => {
-              const oEmail = o.userEmail ? o.userEmail.toLowerCase() : '';
-              const oPhone = o.shippingAddress?.phone ? o.shippingAddress.phone.replace(/\D/g, '') : '';
-              const emailMatch = !!(userEmailLower && oEmail === userEmailLower);
-              const phoneMatch = !!(userPhoneClean && userPhoneClean.length >= 10 && oPhone.endsWith(userPhoneClean.slice(-10)));
-              return emailMatch || phoneMatch;
-            });
+      const res = await fetch(`/api/orders/user/${encodeURIComponent(currentUser.email)}`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const userEmailLower = currentUser.email.toLowerCase();
+          const userPhoneClean = currentUser.phone ? currentUser.phone.replace(/\D/g, '') : '';
 
-            // Sort by date descending
-            const sorted = filtered.sort((a: any, b: any) => 
-              new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
-            );
-            setRecentOrders(sorted);
-          } else {
-            setRecentOrders([]);
-          }
+          // Strictly filter by current customer's email or phone
+          const filtered = data.filter((o: Order) => {
+            const oEmail = o.userEmail ? o.userEmail.toLowerCase() : '';
+            const oPhone = o.shippingAddress?.phone ? o.shippingAddress.phone.replace(/\D/g, '') : '';
+            const emailMatch = !!(userEmailLower && oEmail === userEmailLower);
+            const phoneMatch = !!(userPhoneClean && userPhoneClean.length >= 10 && oPhone.endsWith(userPhoneClean.slice(-10)));
+            return emailMatch || phoneMatch;
+          });
+
+          // Sort by date descending
+          const sorted = filtered.sort((a: any, b: any) => 
+            new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
+          );
+          setRecentOrders(sorted);
+
+          // If no order currently selected OR current order belongs to another customer, auto-select this customer's latest order
+          setOrder(prev => {
+            if (!prev || (prev.userEmail && prev.userEmail.toLowerCase() !== userEmailLower)) {
+              return sorted[0] || null;
+            }
+            return prev;
+          });
         } else {
           setRecentOrders([]);
         }
-      } catch (err) {
-        console.error("Error fetching orders for quick track: ", err);
+      } else {
         setRecentOrders([]);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching orders for quick track: ", err);
+      setRecentOrders([]);
+    }
+  }, [currentUser?.email, currentUser?.phone, authToken]);
 
-    fetchUserOrders();
-  }, [currentUser, authToken]);
-
-  // Live auto-poll currently tracked order every 8 seconds so admin status changes auto-update
   useEffect(() => {
-    if (!order || !order.id) return;
-    const interval = setInterval(() => {
-      fetch(`/api/orders/track/${encodeURIComponent(order.id)}`)
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data && (data.order || data.id)) {
-            const activeOrder = data.order || data;
-            setOrder(activeOrder);
-            if (Array.isArray(data.userOrders) && data.userOrders.length > 0) {
-              setRecentOrders(data.userOrders);
-            }
-          }
-        })
-        .catch(() => {});
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [order?.id]);
+    fetchUserOrders();
+  }, [fetchUserOrders]);
 
+  // Track / Search specific order by ID, tracking number, email, or phone
   const handleTrack = async (identifierStr: string) => {
     const id = identifierStr.trim();
     if (!id) return;
@@ -115,19 +118,30 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
     setError('');
 
     try {
-      const res = await fetch(`/api/orders/track/${encodeURIComponent(id)}`);
+      const headers: Record<string, string> = {};
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      const res = await fetch(`/api/orders/track/${encodeURIComponent(id)}`, { headers });
       if (res.ok) {
         const data = await res.json();
-        const activeOrder = data.order || data;
-        setOrder(activeOrder);
+        const activeOrder = data.order || (data.id ? data : null);
+        if (activeOrder) {
+          setOrder(activeOrder);
 
-        if (Array.isArray(data.userOrders) && data.userOrders.length > 0) {
-          setRecentOrders(data.userOrders);
-        } else if (activeOrder) {
-          setRecentOrders(prev => {
-            const exists = prev.some(o => o.id === activeOrder.id);
-            return exists ? prev : [activeOrder, ...prev];
-          });
+          // If logged-in and this order belongs to current user, include in recent list
+          if (currentUser?.email) {
+            const userEmailLower = currentUser.email.toLowerCase();
+            if (activeOrder.userEmail && activeOrder.userEmail.toLowerCase() === userEmailLower) {
+              setRecentOrders(prev => {
+                const exists = prev.some(o => o.id === activeOrder.id);
+                return exists ? prev : [activeOrder, ...prev];
+              });
+            }
+          } else if (Array.isArray(data.userOrders) && data.userOrders.length > 0) {
+            setRecentOrders(data.userOrders);
+          }
+        } else {
+          setError('No order found matching that reference.');
         }
       } else {
         const errData = await res.json();
@@ -138,6 +152,28 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
       setError('A connection issue occurred while fetching order status.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Manual refresh handler on demand
+  const handleRefreshStatus = async () => {
+    if (!order?.id) return;
+    setRefreshing(true);
+    try {
+      const headers: Record<string, string> = {};
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+      const res = await fetch(`/api/orders/track/${encodeURIComponent(order.id)}`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        const activeOrder = data.order || (data.id ? data : null);
+        if (activeOrder) {
+          setOrder(activeOrder);
+        }
+      }
+    } catch (e) {
+      console.warn('Status refresh notice:', e);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -347,6 +383,15 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
               </div>
 
               <div className="flex flex-wrap items-center gap-2 pt-1 md:justify-end">
+                <button
+                  onClick={handleRefreshStatus}
+                  disabled={refreshing}
+                  title="Refresh latest delivery updates from sanctuary"
+                  className="px-3 py-1.5 rounded-xl border border-brand-green-300 hover:border-brand-green-700 text-brand-green-900 bg-white hover:bg-brand-green-50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-brand-gold-600' : 'text-brand-green-800'}`} />
+                  <span>{refreshing ? 'Refreshing...' : 'Refresh Status'}</span>
+                </button>
                 <button
                   onClick={() => setInvoiceOrder(order)}
                   className="px-3 py-1.5 rounded-xl border border-brand-gold-500/30 hover:border-brand-gold-500 text-brand-gold-700 bg-brand-gold-50/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"

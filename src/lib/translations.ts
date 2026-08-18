@@ -9,7 +9,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Top banner & Navbar
     "promoBanner": "✨ FREE SHIPPING ON AUTHENTIC AYURVEDA ORDERS OVER ₹999 | USE CODE: AYUR15 FOR 15% OFF",
     "navHome": "Home",
-    "navShop": "Shop Apothecary",
+    "navShop": "Shop Ayurveda",
     "navBlogs": "Blogs",
     "navHeritage": "Our Heritage",
     "navContact": "Contact",
@@ -63,7 +63,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "section_cat_desc": "Target biological imbalances using pure herbs extracted ethically.",
 
     // Featured Products Header
-    "section_feat_subtitle": "Apothecary Curations",
+    "section_feat_subtitle": "Ayurveda Curations",
     "section_feat_title": "Our Premium Recommendations",
     "section_feat_browse": "Browse Recommendations",
 

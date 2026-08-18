@@ -1168,13 +1168,13 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                 </div>
 
                 {/* Inline method details for UPI */}
-                {paymentMethod === 'UPI' && (
+                {/* {paymentMethod === 'UPI' && (
                   <div className="p-3.5 bg-brand-green-50/80 rounded-2xl border border-brand-green-200/60 space-y-2 text-xs mt-2">
                     <div className="flex items-center justify-between text-[11px] font-bold text-brand-green-950">
                       <span>Razorpay API Key ID (Optional if set in .env)</span>
                       <span className="text-[10px] text-brand-green-700 font-semibold uppercase">Live/Test Key</span>
                     </div>
-                    <input
+                    <inputE
                       type="text"
                       placeholder="e.g. rzp_test_1234567890 or rzp_live_..."
                       value={userRazorpayKey}
@@ -1189,7 +1189,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                       ⚡ Clicking <strong className="text-brand-green-950 font-bold">Pay via Razorpay UPI</strong> will directly launch Razorpay's official payment screen.
                     </p>
                   </div>
-                )}
+                )} */}
               </div>
 
               {/* Confirm Actions */}

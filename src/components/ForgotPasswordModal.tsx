@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, ShieldAlert, Sparkles, X, Phone, RotateCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, ShieldAlert, X } from 'lucide-react';
+import { SecureOtpWidget } from './SecureOtpWidget';
+import { sendMSG91Otp } from '../services/msg91OtpService';
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
@@ -17,55 +19,14 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
-  const [otpCode, setOtpCode] = useState('');
-  const [simulatedOtp, setSimulatedOtp] = useState('');
+  const [verifiedOtpCode, setVerifiedOtpCode] = useState('');
+  const [verifiedReqId, setVerifiedReqId] = useState('');
   
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [userEmail, setUserEmail] = useState('');
-  const [resendTimer, setResendTimer] = useState<number>(30);
-
-  // Countdown timer for Resend OTP (30s)
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (step === 'otp' && resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [step, resendTimer]);
-
-  const handleResendOtp = async () => {
-    if (resendTimer > 0 || loading) return;
-    setLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const otpRes = await fetch('/api/auth/otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: userEmail || accountQuery.trim() })
-      });
-      const otpData = await otpRes.json();
-      if (otpData.otp) {
-        setSimulatedOtp(otpData.otp);
-      } else {
-        setSimulatedOtp(Math.floor(100000 + Math.random() * 900000).toString());
-      }
-      setResendTimer(30);
-      setSuccessMsg('A new OTP verification code has been sent successfully.');
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('Failed to resend OTP code.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [userPhone, setUserPhone] = useState('');
 
   if (!isOpen) return null;
 
@@ -96,26 +57,19 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       }
 
       setUserEmail(checkData.email);
+      setUserPhone(checkData.phone || accountQuery.trim());
 
-      // 2. Dispatch OTP
-      const phoneToUse = checkData.phone || accountQuery.trim();
-      const otpRes = await fetch('/api/auth/otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phoneToUse })
-      });
-      const otpData = await otpRes.json();
+      // 2. Dispatch OTP via multi-channel service
+      const targetToUse = checkData.phone || checkData.email || accountQuery.trim();
+      const sendRes = await sendMSG91Otp(targetToUse);
 
-      if (otpData.otp) {
-        setSimulatedOtp(otpData.otp);
+      if (sendRes.success) {
+        setStep('otp');
+        setSuccessMsg(`Verification code dispatched to ${targetToUse}.`);
       } else {
-        setSimulatedOtp(Math.floor(100000 + Math.random() * 900000).toString());
+        setErrorMsg(sendRes.error || 'Failed to dispatch verification code. Please try again.');
       }
-
-      setResendTimer(30);
-      setStep('otp');
-      setSuccessMsg(`Verification code dispatched to ${checkData.email} / ${phoneToUse}.`);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setErrorMsg('Failed to initiate password reset. Please try again.');
     } finally {
@@ -123,17 +77,11 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     }
   };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-
-    if (otpCode.trim() !== simulatedOtp && otpCode.trim() !== '123456') {
-      setErrorMsg('Invalid verification code. Please check the code sent to your device or the simulator banner above.');
-      return;
-    }
-
+  const handleOtpVerified = async (params: { code: string; accessToken?: string; reqId?: string }) => {
+    setVerifiedOtpCode(params.code);
+    if (params.reqId) setVerifiedReqId(params.reqId);
     setStep('new_password');
-    setSuccessMsg('OTP verified! Please create your new secure password.');
+    setSuccessMsg('Passcode verified! Please enter your new secure password.');
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -155,7 +103,12 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: userEmail || accountQuery, newPassword })
+        body: JSON.stringify({ 
+          query: userEmail || accountQuery, 
+          newPassword,
+          code: verifiedOtpCode,
+          reqId: verifiedReqId
+        })
       });
       const data = await res.json();
 
@@ -199,21 +152,10 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
             </div>
             <div>
               <h3 className="font-serif text-lg font-bold text-brand-cream-50">Account Password Reset</h3>
-              <p className="text-[10px] text-brand-cream-300/80 font-mono">Bv Life Secure Verification System</p>
+              <p className="text-[10px] text-brand-cream-300/80 font-mono">SecureOTPWidgetM7DX Verification</p>
             </div>
           </div>
         </div>
-
-        {/* Simulated SMS/Email Banner */}
-        {simulatedOtp && step === 'otp' && (
-          <div className="bg-amber-50 border-b border-amber-200 px-5 py-2.5 flex items-center gap-2 text-xs text-amber-900 font-semibold shadow-inner">
-            <Sparkles className="w-4 h-4 text-brand-gold-600 shrink-0 animate-pulse" />
-            <div className="flex-1 text-left">
-              <span className="text-[9px] font-bold uppercase text-brand-gold-800 font-mono">SMS Sandbox Code:</span>{' '}
-              <span className="font-mono font-bold tracking-widest text-brand-green-950 bg-brand-gold-500/30 px-1.5 py-0.5 rounded border border-brand-gold-500/20">{simulatedOtp}</span>
-            </div>
-          </div>
-        )}
 
         <div className="p-6 space-y-5">
           {errorMsg && (
@@ -238,14 +180,14 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                   <input
                     type="text"
                     required
-                    placeholder="vkchoudhary050607@gmail.com or 9425011088"
+                    placeholder="name@example.com or 9425011088"
                     value={accountQuery}
                     onChange={(e) => setAccountQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-brand-green-200 text-xs font-medium text-brand-green-950 focus:outline-none focus:border-brand-green-700 bg-white"
                   />
                   <Mail className="w-4 h-4 text-brand-green-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 </div>
-                <p className="text-[10px] text-brand-green-600/70">Enter the email address or 10-digit mobile number linked to your Bv Life profile.</p>
+                <p className="text-[10px] text-brand-green-600/70">Enter the email address or 10-digit mobile number linked to your profile.</p>
               </div>
 
               <button
@@ -260,55 +202,14 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           )}
 
           {step === 'otp' && (
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div className="space-y-2 text-center">
-                <p className="text-xs text-brand-green-800 font-medium">Enter the 6-digit OTP code sent to verify account ownership.</p>
-                <input
-                  type="text"
-                  required
-                  maxLength={6}
-                  placeholder="123456"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full text-center px-4 py-3 rounded-xl border-2 border-brand-green-300 text-base font-mono font-bold tracking-widest text-brand-green-950 focus:outline-none focus:border-brand-green-800 bg-white"
-                />
-              </div>
-
-              {/* Resend OTP Bar */}
-              <div className="flex items-center justify-between text-xs px-1">
-                <span className="text-[11px] text-brand-green-700/80 font-medium">Didn't receive code?</span>
-                <button
-                  type="button"
-                  onClick={handleResendOtp}
-                  disabled={resendTimer > 0 || loading}
-                  className={`text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                    resendTimer > 0 || loading
-                      ? 'text-brand-green-600/50 cursor-not-allowed opacity-70'
-                      : 'text-brand-gold-700 hover:text-brand-gold-800 underline'
-                  }`}
-                >
-                  <RotateCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-                  <span>{resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}</span>
-                </button>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setStep('request')}
-                  className="w-1/3 py-2.5 bg-brand-cream-200 hover:bg-brand-cream-300 text-brand-green-900 font-bold rounded-xl text-xs uppercase cursor-pointer"
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  className="w-2/3 py-2.5 bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 font-extrabold rounded-xl text-xs uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-1.5"
-                >
-                  <span>Verify Code</span>
-                  <CheckCircle2 className="w-4 h-4 text-brand-green-900" />
-                </button>
-              </div>
-            </form>
+            <SecureOtpWidget
+              identifier={userPhone || userEmail || accountQuery}
+              purpose="ForgotPassword"
+              widgetName="SecureOTPWidgetM7DX"
+              onVerified={handleOtpVerified}
+              onCancel={() => setStep('request')}
+              submitButtonText="Verify Code & Proceed"
+            />
           )}
 
           {step === 'new_password' && (
@@ -377,3 +278,4 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     </div>
   );
 };
+

@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { User as UserType, Order, Address, Product, Coupon, WebsiteSettings } from '../types';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
+import { SecureOtpWidget } from '../components/SecureOtpWidget';
+import { sendMSG91Otp, formatMSG91Identifier } from '../services/msg91OtpService';
 
 interface DashboardProps {
   user: UserType | null;
@@ -320,6 +322,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Admin Order filter and search states
   const [adminOrderFilter, setAdminOrderFilter] = useState<'all' | 'pending' | 'delivered' | 'cancelled'>('all');
   const [adminOrderSearch, setAdminOrderSearch] = useState('');
+
+  // Profile Security & Multi-channel verification states
+  const [showSecurityVerify, setShowSecurityVerify] = useState(false);
+  const [verifyTargetIdentifier, setVerifyTargetIdentifier] = useState('');
+  const [verifyPurpose, setVerifyPurpose] = useState<'MobileChange' | 'EmailChange' | 'Login'>('MobileChange');
+  const [verifySuccessNotice, setVerifySuccessNotice] = useState('');
 
   // Filter orders for non-admin
   const userOrders = useMemo(() => {
@@ -1327,7 +1335,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {activeTab === 'profile' && (
             <div className="space-y-6">
               <h3 className="font-serif text-lg font-bold text-brand-green-900 border-b border-brand-green-600/5 pb-2">
-                Your Biological Constitution Profile
+                Your Biological Constitution & Security Profile
               </h3>
               
               <div className="bg-brand-cream-100/50 border border-brand-gold-500/10 p-6 rounded-2xl flex flex-col md:flex-row gap-6 items-center justify-between">
@@ -1345,6 +1353,120 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   VP
                 </div>
               </div>
+
+              {/* Multi-Channel OTP & Account Security Verification */}
+              <div className="bg-white border border-brand-green-600/10 p-6 rounded-2xl space-y-4 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-brand-green-600/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-brand-gold-600" />
+                    <div>
+                      <h4 className="font-serif text-base font-bold text-brand-green-900">
+                        Multi-Channel OTP Verification (SecureOTPWidgetM7DX)
+                      </h4>
+                      <p className="text-xs text-brand-green-700/70">
+                        Supports SMS, WhatsApp, Email, and Voice verification channels.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 font-mono">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Channels Active
+                    </span>
+                  </div>
+                </div>
+
+                {verifySuccessNotice && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2 font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{verifySuccessNotice}</span>
+                  </div>
+                )}
+
+                {showSecurityVerify ? (
+                  <div className="bg-brand-cream-50 border border-brand-gold-300/40 p-4 rounded-2xl">
+                    <SecureOtpWidget
+                      identifier={verifyTargetIdentifier || user.phone || user.email}
+                      purpose={verifyPurpose}
+                      widgetName="SecureOTPWidgetM7DX"
+                      onVerified={(params) => {
+                        setVerifySuccessNotice(`Verification confirmed via ${verifyPurpose} for ${verifyTargetIdentifier || user.phone || user.email}! Token: ${params.accessToken?.slice(0, 12) || 'VERIFIED'}...`);
+                        setShowSecurityVerify(false);
+                      }}
+                      onCancel={() => setShowSecurityVerify(false)}
+                      submitButtonText={`Verify ${verifyPurpose}`}
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-4 border border-brand-green-100 rounded-xl bg-brand-cream-50/50 space-y-2">
+                      <p className="text-xs font-bold text-brand-green-900 flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-brand-gold-600" />
+                        <span>Mobile Verification</span>
+                      </p>
+                      <p className="text-[11px] text-brand-green-700/80">
+                        Test or update mobile contact with SMS, WhatsApp, or Voice OTP.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVerifyPurpose('MobileChange');
+                          setVerifyTargetIdentifier(user.phone || '9425011088');
+                          setShowSecurityVerify(true);
+                          setVerifySuccessNotice('');
+                        }}
+                        className="w-full py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-lg text-xs cursor-pointer transition-colors"
+                      >
+                        Verify Mobile
+                      </button>
+                    </div>
+
+                    <div className="p-4 border border-brand-green-100 rounded-xl bg-brand-cream-50/50 space-y-2">
+                      <p className="text-xs font-bold text-brand-green-900 flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-brand-gold-600" />
+                        <span>Email Verification</span>
+                      </p>
+                      <p className="text-[11px] text-brand-green-700/80">
+                        Dispatch passcode directly to inbox for address validation.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVerifyPurpose('EmailChange');
+                          setVerifyTargetIdentifier(user.email || 'vkchoudhary050607@gmail.com');
+                          setShowSecurityVerify(true);
+                          setVerifySuccessNotice('');
+                        }}
+                        className="w-full py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-lg text-xs cursor-pointer transition-colors"
+                      >
+                        Verify Email
+                      </button>
+                    </div>
+
+                    <div className="p-4 border border-brand-green-100 rounded-xl bg-brand-cream-50/50 space-y-2">
+                      <p className="text-xs font-bold text-brand-green-900 flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-brand-gold-600" />
+                        <span>Security Challenge</span>
+                      </p>
+                      <p className="text-[11px] text-brand-green-700/80">
+                        Authenticate high-privilege operations with instant verification.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVerifyPurpose('Login');
+                          setVerifyTargetIdentifier(user.phone || user.email);
+                          setShowSecurityVerify(true);
+                          setVerifySuccessNotice('');
+                        }}
+                        className="w-full py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-lg text-xs cursor-pointer transition-colors"
+                      >
+                        Run Challenge
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
 

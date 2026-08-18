@@ -9,6 +9,8 @@ import { CartItem, Address, Coupon, WebsiteSettings, Order } from '../types';
 import { validateAndFormatIndianPhone } from '../utils';
 import { loadRazorpayScript } from '../utils/razorpay';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
+import { SecureOtpWidget } from '../components/SecureOtpWidget';
+import { sendMSG91Otp, verifyMSG91Otp, retryMSG91Otp, verifyServerAccessToken, formatMSG91Identifier } from '../services/msg91OtpService';
 
 interface CheckoutProps {
   cart: CartItem[];
@@ -57,8 +59,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
   const [authPhone, setAuthPhone] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authOtp, setAuthOtp] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState('');
-  const [useRealTwilio, setUseRealTwilio] = useState(false);
+  const [activeReqId, setActiveReqId] = useState<string | undefined>(undefined);
   const [formattedPhone, setFormattedPhone] = useState('');
   const [otpStep, setOtpStep] = useState(false);
   const [otpMessage, setOtpMessage] = useState('');
@@ -86,20 +87,20 @@ export const Checkout: React.FC<CheckoutProps> = ({
     setAuthLoading(true);
     setLoginError('');
     try {
-      const res = await fetch('/api/auth/otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: authPhone, email: authEmail })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setGeneratedOtp(data.otp || '');
-        setUseRealTwilio(data.useRealTwilio || false);
-        setFormattedPhone(data.formattedPhone || authPhone);
-        setOtpMessage('A new 6-digit OTP passcode has been dispatched via SMS.');
+      const retryResult = await retryMSG91Otp(null, activeReqId);
+      if (retryResult.success) {
+        setOtpMessage(retryResult.message || 'A new verification passcode has been dispatched.');
         setResendTimer(30);
       } else {
-        setLoginError(data.error || 'Could not resend OTP. Please try again.');
+        const msg91Target = formatMSG91Identifier(authPhone);
+        const retrySend = await sendMSG91Otp(msg91Target);
+        if (retrySend.success) {
+          setActiveReqId(retrySend.reqId);
+          setOtpMessage(retrySend.message || 'A new OTP passcode has been dispatched.');
+          setResendTimer(30);
+        } else {
+          setLoginError(retryResult.error || retrySend.error || 'Could not resend OTP. Please try again.');
+        }
       }
     } catch (err) {
       console.error(err);
@@ -114,88 +115,59 @@ export const Checkout: React.FC<CheckoutProps> = ({
     setLoginError('');
 
     if (isRegistering) {
-      if (!otpStep) {
-        if (authPhone.length !== 10) {
-          setLoginError(language === 'hi' ? 'मोबाइल नंबर 10 अंकों का होना चाहिए।' : 'Mobile phone number must be exactly 10 digits.');
-          return;
-        }
-        setAuthLoading(true);
-        try {
-          const res = await fetch('/api/auth/otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: authPhone, email: authEmail })
-          });
-          const data = await res.json();
-          if (res.ok && data.success) {
-            setGeneratedOtp(data.otp || '');
-            setUseRealTwilio(data.useRealTwilio || false);
-            setFormattedPhone(data.formattedPhone || authPhone);
-            setOtpMessage(data.message);
-            setResendTimer(30);
-            setOtpStep(true);
-          } else {
-            setLoginError(data.error || 'Could not dispatch security OTP. Please check mobile details.');
-          }
-        } catch (err) {
-          console.error(err);
-          setLoginError('Connection failure dispatching verification OTP.');
-        } finally {
-          setAuthLoading(false);
-        }
-      } else {
-        setAuthLoading(true);
-        try {
-          if (useRealTwilio) {
-            const verifyRes = await fetch('/api/auth/verify-otp', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ phone: formattedPhone, code: authOtp })
-            });
-            const verifyData = await verifyRes.json();
-            if (!verifyRes.ok) {
-              setLoginError(verifyData.error || 'Invalid or incorrect OTP verification code.');
-              setAuthLoading(false);
-              return;
-            }
-          } else {
-            if (authOtp !== generatedOtp) {
-              setLoginError('Invalid verification code. Please enter the correct 6-digit OTP code.');
-              setAuthLoading(false);
-              return;
-            }
-          }
+      const cleanPhone = authPhone.replace(/\D/g, '');
+      if (cleanPhone.length !== 10) {
+        setLoginError(language === 'hi' ? 'मोबाइल नंबर 10 अंकों का होना चाहिए।' : 'Mobile phone number must be exactly 10 digits.');
+        return;
+      }
 
-          const res = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              fullName: authName, 
-              email: authEmail, 
-              phone: formattedPhone || authPhone, 
-              role: 'customer',
-              password: authPassword || 'password123' 
-            })
-          });
+      if (!authEmail || !authEmail.includes('@')) {
+        setLoginError(language === 'hi' ? 'कृपया एक वैध ईमेल पता दर्ज करें।' : 'Please enter a valid email address.');
+        return;
+      }
 
-          if (res.ok) {
-            const regData = await res.json();
-            if (onLoginSuccess) {
-              onLoginSuccess(regData.token);
-            }
+      setAuthLoading(true);
+      try {
+        // 1. PRE-CHECK DUPLICATE: Check if email or mobile number already exists BEFORE sending OTP
+        const checkRes = await fetch('/api/auth/check-account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: authEmail.trim(), phone: authPhone.trim() })
+        });
+        const checkData = await checkRes.json();
+
+        if (checkData.exists) {
+          if (checkData.emailExists && checkData.phoneExists) {
+            setLoginError('Both this email address and mobile number are already registered. Please sign in instead.');
+          } else if (checkData.emailExists) {
+            setLoginError('This email address is already registered. Please sign in instead.');
+          } else if (checkData.phoneExists) {
+            setLoginError('This mobile number is already registered. Please sign in instead.');
           } else {
-            const data = await res.json();
-            setLoginError(data.error || 'Account creation failed. Email or mobile may already be registered.');
-            if (data.accountExists || (data.error && data.error.toLowerCase().includes('already'))) {
-              setAuthAccountExists(true);
-            }
+            setLoginError(checkData.error || 'An account with this email or mobile number already exists. Please sign in instead.');
           }
-        } catch (err) {
-          console.error(err);
-          setLoginError('An unexpected server error occurred during account finalization.');
-        } finally {
+          setAuthAccountExists(true);
           setAuthLoading(false);
+          return; // STOP! DO NOT SEND OTP!
         }
+
+        // 2. Send SMS verification OTP
+        const msg91Target = formatMSG91Identifier(authPhone);
+        const response = await sendMSG91Otp(msg91Target);
+        if (response.success) {
+          setActiveReqId(response.reqId);
+          setFormattedPhone(msg91Target);
+          setOtpMessage(response.message || `Verification code sent via SMS to +${msg91Target}`);
+          setResendTimer(30);
+          setOtpStep(true);
+        } else {
+          setLoginError(response.error || 'Could not dispatch SMS security OTP. Please check mobile details.');
+        }
+      } catch (err) {
+        console.error(err);
+        setLoginError('Connection failure dispatching verification OTP.');
+      } finally {
+        setAuthLoading(false);
       }
     } else {
       setAuthLoading(true);
@@ -337,12 +309,10 @@ export const Checkout: React.FC<CheckoutProps> = ({
     return Math.round((taxableSub * settings.defaultTaxPercentage) / 100);
   }, [subtotal, discountAmount, settings]);
 
-  // const shippingCharge = useMemo(() => {
-  //   if (subtotal === 0 || subtotal >= settings.freeShippingThreshold) return 0;
-  //   return settings.baseShippingCharge;
-  // }, [subtotal, settings]);
-
-  const shippingCharge = 0;
+  const shippingCharge = useMemo(() => {
+    if (subtotal === 0 || subtotal >= settings.freeShippingThreshold) return 0;
+    return settings.baseShippingCharge;
+  }, [subtotal, settings]);
 
   const finalTotal = useMemo(() => {
     return Math.max(0, subtotal - discountAmount + taxAmount + shippingCharge);
@@ -483,7 +453,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
           key: finalKey,
           amount: data.amount,
           currency: data.currency || 'INR',
-          name: 'Bv Life',
+          name: 'Grams Life',
           description: 'Wellness & Herbal Remedies Order',
           image: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
           order_id: data.orderId,
@@ -823,18 +793,17 @@ export const Checkout: React.FC<CheckoutProps> = ({
           )}
 
           {otpStep && otpMessage && (
-            <div className="p-4 bg-brand-gold-300/10 border border-brand-gold-400/30 rounded-2xl space-y-2 shadow-sm animate-pulse">
-              <div className="flex items-center gap-1.5 text-brand-green-900">
-                <Shield className="w-4 h-4 shrink-0 text-brand-gold-600" />
-                <span className="text-[10px] font-extrabold uppercase tracking-wider">SMS Sandbox Verification</span>
+            <div className="p-4 bg-brand-green-500/10 border border-brand-green-500/30 rounded-2xl space-y-2 shadow-sm animate-in fade-in duration-300">
+              <div className="flex items-center justify-between text-brand-green-950 font-serif">
+                <div className="flex items-center gap-1.5">
+                  <Shield className="w-4 h-4 shrink-0 text-brand-green-700 animate-pulse" />
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider">MSG91 OTP Verification</span>
+                </div>
+                <span className="text-[10px] text-brand-green-700 bg-brand-green-100 px-2 py-0.5 rounded-full font-semibold">Live OTP</span>
               </div>
-              <p className="text-xs text-brand-green-800 leading-relaxed font-medium">
+              <p className="text-xs text-brand-green-900 leading-relaxed font-semibold">
                 {otpMessage}
               </p>
-              <div className="pt-1 flex items-center gap-2 text-xs text-brand-green-900 font-mono">
-                <span className="font-sans text-brand-green-600">OTP Passcode:</span>
-                <span className="px-2.5 py-0.5 rounded bg-brand-gold-400/30 text-brand-green-950 font-bold tracking-widest border border-brand-gold-400/20">{generatedOtp}</span>
-              </div>
             </div>
           )}
 
@@ -889,68 +858,65 @@ export const Checkout: React.FC<CheckoutProps> = ({
             </div>
           )}
 
-          <form onSubmit={handleCheckoutAuthSubmit} className="space-y-4">
-            {isRegistering ? (
-              otpStep ? (
-                /* OTP STEP UI */
-                <div className="space-y-4 animate-in slide-in-from-bottom duration-300">
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider font-bold text-brand-green-800 flex items-center gap-1 font-serif">
-                      <Lock className="w-3.5 h-3.5 text-brand-gold-600" />
-                      <span>6-Digit Security OTP</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={6}
-                      placeholder="Enter 6-digit verification code"
-                      value={authOtp}
-                      onChange={(e) => setAuthOtp(e.target.value.replace(/\D/g, ''))}
-                      className="w-full text-center px-4 py-3 rounded-xl bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 text-lg tracking-widest font-bold font-mono text-brand-green-950 shadow-sm"
-                    />
-                  </div>
+          {isRegistering && otpStep ? (
+            <div className="animate-in slide-in-from-bottom duration-300">
+              <SecureOtpWidget
+                identifier={formattedPhone || authPhone}
+                purpose="Registration"
+                widgetName="SecureOTPWidgetM7DX"
+                smsOnly={true}
+                allowedChannels={['SMS']}
+                initialReqId={activeReqId}
+                onVerified={async (params) => {
+                  setAuthLoading(true);
+                  try {
+                    let accessToken = params.accessToken;
+                    if (accessToken) {
+                      await verifyServerAccessToken(accessToken).catch(console.warn);
+                    }
 
-                  {/* Resend OTP Bar */}
-                  <div className="flex items-center justify-between text-xs px-1">
-                    <span className="text-[11px] text-brand-green-700/80 font-medium">Didn't receive code?</span>
-                    <button
-                      type="button"
-                      onClick={handleResendOtp}
-                      disabled={resendTimer > 0 || authLoading}
-                      className={`text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                        resendTimer > 0 || authLoading
-                          ? 'text-brand-green-600/50 cursor-not-allowed opacity-70'
-                          : 'text-brand-gold-700 hover:text-brand-gold-800 underline'
-                      }`}
-                    >
-                      <RotateCw className={`w-3 h-3 ${authLoading ? 'animate-spin' : ''}`} />
-                      <span>{resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}</span>
-                    </button>
-                  </div>
+                    const res = await fetch('/api/auth/register', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ 
+                        fullName: authName, 
+                        email: authEmail, 
+                        phone: formattedPhone || authPhone, 
+                        role: 'customer',
+                        password: authPassword || 'password123',
+                        accessToken,
+                        code: params.code,
+                        reqId: params.reqId || activeReqId
+                      })
+                    });
 
-                  <div className="flex gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOtpStep(false);
-                        setLoginError('');
-                        setAuthOtp('');
-                      }}
-                      className="w-1/3 py-3 bg-brand-cream-200 hover:bg-brand-cream-300 text-brand-green-900 font-bold rounded-xl transition-all cursor-pointer text-center"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={authLoading || authOtp.length !== 6}
-                      className="w-2/3 py-3 bg-brand-green-800 hover:bg-brand-green-900 disabled:opacity-50 text-brand-cream-50 font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
-                    >
-                      <span>{authLoading ? "Verifying..." : "Confirm & Register"}</span>
-                      <ArrowRight className="w-4 h-4 text-brand-gold-400" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
+                    if (res.ok) {
+                      const regData = await res.json();
+                      if (onLoginSuccess) {
+                        onLoginSuccess(regData.token);
+                      }
+                    } else {
+                      const data = await res.json();
+                      setLoginError(data.error || 'Account creation failed. Email or mobile may already be registered.');
+                      if (data.accountExists || (data.error && data.error.toLowerCase().includes('already'))) {
+                        setAuthAccountExists(true);
+                      }
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    setLoginError('An unexpected server error occurred during account finalization.');
+                  } finally {
+                    setAuthLoading(false);
+                  }
+                }}
+                onCancel={() => setOtpStep(false)}
+                submitButtonText="Verify & Confirm Registration"
+                isSubmitting={authLoading}
+              />
+            </div>
+          ) : (
+            <form onSubmit={handleCheckoutAuthSubmit} className="space-y-4">
+              {isRegistering ? (
                 /* REGISTRATION REGULAR FIELDS */
                 <div className="space-y-4 animate-in slide-in-from-bottom duration-300">
                   <div className="space-y-1">
@@ -1027,9 +993,8 @@ export const Checkout: React.FC<CheckoutProps> = ({
                     <ArrowRight className="w-4 h-4 text-brand-gold-400" />
                   </button>
                 </div>
-              )
-            ) : (
-              /* LOGIN REGULAR FIELDS */
+              ) : (
+                /* LOGIN REGULAR FIELDS */
               <div className="space-y-4 animate-in slide-in-from-bottom duration-300">
                 <div className="space-y-1">
                   <label className="text-[10px] uppercase tracking-wider font-bold text-brand-green-800 flex items-center gap-1 font-serif text-left block">
@@ -1081,7 +1046,8 @@ export const Checkout: React.FC<CheckoutProps> = ({
               </div>
             )}
           </form>
-        </div>
+        )}
+      </div>
       ) : (
         /* STANDARD CHECKOUT DETAILS VIEW */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -1299,7 +1265,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
                     </label>
 
                     {/* Info helper for UPI */}
-                    {paymentMethod === 'UPI' && pay.id === 'UPI' && (
+                    {/* {paymentMethod === 'UPI' && pay.id === 'UPI' && (
                       <div className="ml-7 p-3.5 bg-brand-green-50/80 rounded-xl border border-brand-green-200/80 space-y-2 text-xs">
                         <div className="flex items-center justify-between text-[11px] font-bold text-brand-green-950">
                           <span>Razorpay API Key ID (Optional if set in .env)</span>
@@ -1320,7 +1286,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
                           ⚡ Clicking <strong className="text-brand-green-950 font-bold">Pay via Razorpay & Place Order</strong> directly opens Razorpay's official checkout screen.
                         </p>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 ))}
               </div>
