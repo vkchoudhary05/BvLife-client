@@ -68,6 +68,27 @@ body {
   background: var(--color-brand-gold-500);
 }
 
+/* Custom internal container scrollbars */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-brand-gold-500) rgba(27, 67, 50, 0.05);
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(27, 67, 50, 0.04);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-brand-gold-500);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-gold-700);
+}
+
 /* Hide scrollbars for horizontal panels */
 .scrollbar-none {
   -ms-overflow-style: none;  /* IE and Edge */
@@ -85,7 +106,7 @@ body {
 .animate-marquee {
   display: flex;
   width: max-content;
-  animation: marquee 80s linear infinite;
+  animation: marquee 65s linear infinite;
 }
 .animate-marquee:hover {
   animation-play-state: paused;

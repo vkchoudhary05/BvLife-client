@@ -244,7 +244,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
   };
 
   const activeSettings: WebsiteSettings = settings || {
-    logoName: "Grams Life",
+    logoName: "Bv Life",
     logoUrl: "",
     contactEmail: "care@gramslife.com",
     contactPhone: "+91 98765 43210",

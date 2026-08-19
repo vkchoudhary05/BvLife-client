@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { Mail, User as UserIcon, Phone, Shield, Sparkles, Lock, ArrowRight, Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react';
 import { validateAndFormatIndianPhone } from '../utils';
 import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin } from '../services/msg91OtpService';
-import { SecureOtpWidget } from '../components/secureOtpWidget';
+import { SecureOtpWidget } from '../components/SecureOtpWidget';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 
 interface LoginProps {
@@ -223,7 +223,6 @@ export const Login: React.FC<LoginProps> = ({
         localStorage.setItem('grams_auth_token', res.token);
         localStorage.setItem('token', res.token);
         setLoginSuccess('Authentication successful! Welcome back.');
-          onNavigate('home');
         setTimeout(() => {
           window.location.reload();
         }, 500);
@@ -264,9 +263,7 @@ export const Login: React.FC<LoginProps> = ({
         setAuthEmail('');
         setAuthPassword('');
         onNavigate('home');
-       } else{
-          setLoginError('E');
-          }
+      }
     } catch (err: any) {
       setLoginError('An unexpected error occurred during sign in.');
       console.error(err);
@@ -277,15 +274,15 @@ export const Login: React.FC<LoginProps> = ({
 
   return (
     <div className="max-w-md mx-auto my-12 px-4 sm:px-6 animate-in fade-in zoom-in-95 duration-300">
-      <div className="bg-brand-cream-50 border border-brand-gold-500 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl flex flex-col space-y-6 relative overflow-hidden">
+      <div className="bg-brand-cream-50 border border-brand-gold-300 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl flex flex-col space-y-6 relative overflow-hidden">
         
         {/* Decorative top gold line */}
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-gold-400 via-brand-cream-400 to-brand-gold-500" />
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-gold-500 via-brand-cream-300 to-brand-gold-600" />
 
         {/* Header block with Logo and Title */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center   text-brand-gold-700 font-serif text-2xl font-bold  mx-auto">
-            Bv Life
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-brand-green-800 text-brand-gold-400 font-serif text-2xl font-bold border border-brand-gold-500/30 shadow-md mx-auto">
+            G
           </div>
           <div className="space-y-1">
             <h2 className="font-serif text-2xl sm:text-3xl font-bold text-brand-green-900 tracking-tight">
@@ -423,7 +420,7 @@ export const Login: React.FC<LoginProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="enter your full name"
+                  placeholder="e.g., Vipin Choudhary"
                   value={authName}
                   onChange={(e) => setAuthName(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-green-900 transition-all placeholder-brand-green-300 shadow-sm"
@@ -440,7 +437,7 @@ export const Login: React.FC<LoginProps> = ({
                   type="tel"
                   required
                   maxLength={10}
-                  placeholder="Enter your mobile number"
+                  placeholder="e.g., 9425011088"
                   value={authPhone}
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, '').slice(0, 10);
@@ -459,7 +456,7 @@ export const Login: React.FC<LoginProps> = ({
                 <input
                   type="email"
                   required
-                  placeholder=" Enter your email address"
+                  placeholder="e.g., vkchoudhary050607@gmail.com"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-green-900 transition-all placeholder-brand-green-300 shadow-sm"
@@ -536,18 +533,23 @@ export const Login: React.FC<LoginProps> = ({
           loginMode === 'otp' ? (
             /* DIRECT SMS OTP SIGN IN */
             otpLoginStarted ? (
-              <SecureOtpWidget
-                identifier={otpLoginIdentifier}
-                purpose="Login"
-                widgetName="SecureOTPWidgetM7DX"
-                smsOnly={true}
-                allowedChannels={['SMS']}
-                initialReqId={activeReqId}
-                onVerified={handleOtpLoginVerified}
-                onCancel={() => setOtpLoginStarted(false)}
-                submitButtonText="Verify SMS OTP & Sign In"
-                isSubmitting={authLoading}
-              />
+              <div className="space-y-3">
+                <SecureOtpWidget
+                  identifier={otpLoginIdentifier}
+                  purpose="Login"
+                  widgetName="SecureOTPWidgetM7DX"
+                  smsOnly={false}
+                  allowedChannels={['SMS', 'WHATSAPP', 'EMAIL', 'VOICE']}
+                  initialReqId={activeReqId}
+                  onVerified={handleOtpLoginVerified}
+                  onCancel={() => setOtpLoginStarted(false)}
+                  submitButtonText="Verify OTP & Sign In"
+                  isSubmitting={authLoading}
+                />
+                <div className="text-center p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 font-medium">
+                  ⚡ <span className="font-bold">Sandbox & Instant Passcode:</span> <span className="font-mono font-bold bg-amber-200/80 px-1.5 py-0.5 rounded text-amber-950">1234</span> (or enter SMS code received on your phone)
+                </div>
+              </div>
             ) : (
               <form onSubmit={handleStartOtpLogin} className="space-y-4 animate-in slide-in-from-bottom duration-300">
                 <div className="space-y-1">
@@ -593,7 +595,7 @@ export const Login: React.FC<LoginProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder=" Please Enter Email or Mobile Number"
+                  placeholder="e.g., vkchoudhary050607@gmail.com or 9425011088"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-green-900 transition-all placeholder-brand-green-300 shadow-sm"
@@ -645,7 +647,7 @@ export const Login: React.FC<LoginProps> = ({
           )
         )}
 
-        {/* Quick Profiles Autofill Panel
+        {/* Quick Profiles Autofill Panel */}
         {!otpStep && !otpLoginStarted && (
           <div className="bg-brand-cream-100 border border-brand-gold-300/40 p-3.5 rounded-2xl space-y-2.5 shadow-inner">
             <div className="flex items-center justify-between">
@@ -658,6 +660,29 @@ export const Login: React.FC<LoginProps> = ({
             
             {isRegistering ? (
               <div className="grid grid-cols-1 gap-1.5">
+                <button
+                   type="button"
+                   onClick={() => {
+                     setAuthName('Vivek Baliyan');
+                     setAuthPhone('7451050607');
+                     setAuthEmail('iamvivekbaliyan07@gmail.com');
+                     setAuthPassword('123123123');
+                     setAuthConfirmPassword('123123123');
+                     setOtpStep(false);
+                     setLoginError('');
+                     setLoginSuccess('');
+                   }}
+                   className="p-2.5 text-left border border-brand-gold-300/30 hover:border-brand-green-800 hover:bg-white rounded-xl bg-white/70 transition-all duration-200 cursor-pointer group shadow-sm flex items-center gap-2.5"
+                >
+                  <span className="p-1.5 rounded-lg bg-brand-green-50 text-brand-green-800 group-hover:bg-brand-gold-500/10 group-hover:text-brand-gold-700 transition-colors">
+                    <UserIcon className="w-3.5 h-3.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <span className="block text-xs font-bold text-brand-green-900 group-hover:text-brand-gold-700 transition-colors">Vivek Baliyan</span>
+                    <span className="block text-[10px] text-brand-green-700/70 font-mono truncate">iamvivekbaliyan07@gmail.com</span>
+                  </div>
+                </button>
+
                 <button
                    type="button"
                    onClick={() => {
@@ -680,49 +705,26 @@ export const Login: React.FC<LoginProps> = ({
                     <span className="block text-[10px] text-brand-green-700/70 font-mono truncate">vkchoudhary050607@gmail.com</span>
                   </div>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthName('Demo Client');
-                    setAuthPhone('9876543210');
-                    setAuthEmail('customer@example.com');
-                    setAuthPassword('password123');
-                    setAuthConfirmPassword('password123');
-                    setOtpStep(false);
-                    setLoginError('');
-                    setLoginSuccess('');
-                  }}
-                  className="p-2.5 text-left border border-brand-gold-300/30 hover:border-brand-green-800 hover:bg-white rounded-xl bg-white/70 transition-all duration-200 cursor-pointer group shadow-sm flex items-center gap-2.5"
-                >
-                  <span className="p-1.5 rounded-lg bg-brand-green-50 text-brand-green-800 group-hover:bg-brand-gold-500/10 group-hover:text-brand-gold-700 transition-colors">
-                    <UserIcon className="w-3.5 h-3.5" />
-                  </span>
-                  <div className="min-w-0">
-                    <span className="block text-xs font-bold text-brand-green-900 group-hover:text-brand-gold-700 transition-colors">Demo Client</span>
-                    <span className="block text-[10px] text-brand-green-700/70 font-mono truncate">customer@example.com</span>
-                  </div>
-                </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-1.5">
                 <button
                   type="button"
                   onClick={() => {
-                    setAuthEmail('customer@example.com');
-                    setAuthPassword('password123');
-                    setOtpLoginIdentifier('customer@example.com');
+                    setAuthEmail('iamvivekbaliyan07@gmail.com');
+                    setAuthPassword('123123123');
+                    setOtpLoginIdentifier('7451050607');
                     setLoginError('');
                     setLoginSuccess('');
                   }}
-                  className="p-2.5 text-left border border-brand-gold-300/30 hover:border-brand-green-800 hover:bg-white rounded-xl bg-white/70 transition-all duration-200 cursor-pointer group shadow-sm flex items-center gap-2.5"
+                  className="p-2.5 text-left border border-brand-gold-300/50 hover:border-brand-green-800 hover:bg-white rounded-xl bg-white transition-all duration-200 cursor-pointer group shadow-sm flex items-center gap-2.5"
                 >
-                  <span className="p-1.5 rounded-lg bg-brand-green-50 text-brand-green-800 group-hover:bg-brand-gold-500/10 group-hover:text-brand-gold-700 transition-colors">
+                  <span className="p-1.5 rounded-lg bg-brand-gold-500/10 text-brand-gold-700 group-hover:bg-brand-gold-500/20 transition-colors">
                     <UserIcon className="w-3.5 h-3.5" />
                   </span>
                   <div className="min-w-0">
-                    <span className="block text-xs font-bold text-brand-green-900 group-hover:text-brand-gold-700 transition-colors">Customer Profile</span>
-                    <span className="block text-[10px] text-brand-green-700/70 font-mono truncate">customer@example.com</span>
+                    <span className="block text-xs font-bold text-brand-green-900 group-hover:text-brand-gold-700 transition-colors">Vivek Baliyan (Admin)</span>
+                    <span className="block text-[10px] text-brand-green-700/70 font-mono truncate">iamvivekbaliyan07@gmail.com (7451050607)</span>
                   </div>
                 </button>
 
@@ -746,9 +748,9 @@ export const Login: React.FC<LoginProps> = ({
                   </div>
                 </button>
               </div>
-            )} */}
-          {/* </div> */}
-        {/* )} */}
+            )}
+          </div>
+        )}
 
       </div>
 

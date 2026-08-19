@@ -32,18 +32,19 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
   const [order, setOrder] = useState<Order | null>(() => {
     try {
       const userEmail = currentUser?.email?.toLowerCase();
+      if (!userEmail) return null; // Strictly avoid preloading unverified storage without active user match
+
       const lastCompleted = localStorage.getItem('grams_last_completed_order');
       if (lastCompleted) {
         const parsed = JSON.parse(lastCompleted);
-        // Only preload if anonymous or if it matches the current user
-        if (!userEmail || (parsed.userEmail && parsed.userEmail.toLowerCase() === userEmail)) {
+        if (parsed.userEmail && parsed.userEmail.toLowerCase() === userEmail) {
           return parsed;
         }
       }
       const lastPlaced = localStorage.getItem('grams_last_placed_order');
       if (lastPlaced) {
         const parsed = JSON.parse(lastPlaced);
-        if (!userEmail || (parsed.userEmail && parsed.userEmail.toLowerCase() === userEmail)) {
+        if (parsed.userEmail && parsed.userEmail.toLowerCase() === userEmail) {
           return parsed;
         }
       }
@@ -362,7 +363,7 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
                 </span>
                 {order.trackingNumber && (
                   <span className="text-[10px] font-extrabold uppercase tracking-widest bg-brand-gold-500/10 text-brand-gold-700 px-2.5 py-0.5 rounded-full border border-brand-gold-500/20">
-                    Carrier: Grams Express
+                    Carrier: Bv Express
                   </span>
                 )}
               </div>
@@ -610,7 +611,7 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
               `}</style>
               <div className="flex justify-between items-center border-b border-brand-green-700/10 pb-6">
                 <div>
-                  <h2 className="font-serif text-2xl font-bold text-brand-green-900">Grams Life</h2>
+                  <h2 className="font-serif text-2xl font-bold text-brand-green-900">Bv Life</h2>
                   <span className="text-[10px] uppercase tracking-widest text-brand-gold-700 font-extrabold block">Ayurvedic Sanctuary Invoice</span>
                 </div>
                 <div className="text-right">
@@ -779,7 +780,7 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
                 </div>
 
                 <div className="text-[11px] font-bold border-b-4 border-black pb-3">
-                  <p className="font-black text-gray-800">RETURN TO: Grams Life Sanctuary, Plot 42, Veda Heritage, Jaipur, RJ - 302020</p>
+                  <p className="font-black text-gray-800">RETURN TO: Bv Life Sanctuary, Plot 42, Veda Heritage, Jaipur, RJ - 302020</p>
                 </div>
 
                 <div className="text-[10px] font-mono border-t border-black pt-1 flex justify-between">

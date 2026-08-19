@@ -81,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header id="site-header" className="sticky top-0 z-40 w-full bg-white backdrop-blur-md border-b border-brand-green-600/10">
       {/* Top Banner Alert - Running Marquee Line */}
-      <div id="top-promo-banner" className="bg-brand-green-800 text-brand-gold-300 text-[11px] sm:text-xs py-1.5 sm:py-2 px-0 overflow-hidden whitespace-nowrap border-b border-brand-gold-500/20 font-bold uppercase tracking-widest">
+      <div id="top-promo-banner" className="bg-brand-green-900 text-white text-[13px] sm:text-xs py-1.5 sm:py-2 px-0 overflow-hidden whitespace-nowrap border-b border-brand-gold-500/20 font-bold uppercase tracking-widest">
         <div className="flex animate-marquee select-none">
           <div className="flex shrink-0 items-center gap-10 sm:gap-16 px-4">
             <span className="text-brand-gold-400">✨ FREE SHIPPING ON ALL ORDERS OVER ₹999</span>
@@ -250,7 +250,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <>
                       <div className="px-4 py-2 border-b border-brand-green-600/10 flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-brand-green-800">Welcome to Grams Life</p>
+                          <p className="text-sm font-semibold text-brand-green-800">Welcome to Bv Life</p>
                           <p className="text-xs text-brand-green-600/70">Connect to synchronize your holistic cart & health logs.</p>
                         </div>
                         <button

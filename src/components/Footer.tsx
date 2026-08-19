@@ -157,7 +157,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
       </div>
 
       {/* Sub Footer */}
-      <div className="bg-gray-50 border-t border-gray-200 py-7 text-sm text-black font-semibold">
+      <div className="bg-brand-green-900 border-t border-gray-200 py-4 text-sm text-white font-semibold">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p>© 2026 BV Life Inc. All Ayurvedic herbs strictly sourced from sustainable high-altitude farms.</p>
           <div className="flex gap-4 items-center">

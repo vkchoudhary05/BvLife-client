@@ -8,12 +8,14 @@ import {
   History, MapPin, User, LayoutDashboard, Leaf, ShoppingBag, 
   Tag, Plus, Trash2, Edit2, ShieldAlert, Sparkles, Check, CheckCircle2, Shield, Activity,
   Printer, FileText, X, Download, Settings, Lock, Mail, Phone, ArrowRight, Eye, EyeOff, RotateCw,
-  Search, Clock, Truck, AlertCircle
+  Search, Clock, Truck, AlertCircle, RefreshCw, Filter, ArrowUpDown, Layers, Radio, Copy,
+  ExternalLink, SlidersHorizontal, BarChart3, TrendingUp, DollarSign, PackageCheck, AlertTriangle, CreditCard
 } from 'lucide-react';
 import { User as UserType, Order, Address, Product, Coupon, WebsiteSettings } from '../types';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
-import { SecureOtpWidget } from '../components/secureOtpWidget';
+import { SecureOtpWidget } from '../components/SecureOtpWidget';
 import { sendMSG91Otp, formatMSG91Identifier } from '../services/msg91OtpService';
+import { Pagination } from '../components/Pagination';
 
 interface DashboardProps {
   user: UserType | null;
@@ -158,6 +160,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
+  // Live Sync & Auto Refresh states
+  const [isLiveSyncActive, setIsLiveSyncActive] = useState(true);
+  const [isRefreshingData, setIsRefreshingData] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>(
+    new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  );
+
   const fetchPayments = () => {
     if (isAdmin) {
       setLoadingPayments(true);
@@ -185,6 +194,43 @@ export const Dashboard: React.FC<DashboardProps> = ({
     onRefreshOrdersRef.current = onRefreshOrders;
     onRefreshProductsRef.current = onRefreshProducts;
   });
+
+  // Dedicated Live Refresh trigger with tactile loading animation
+  const handleTriggerLiveRefresh = async () => {
+    setIsRefreshingData(true);
+    try {
+      if (onRefreshOrders) await onRefreshOrders();
+      if (onRefreshProducts) await onRefreshProducts();
+      if (onFetchCoupons) await onFetchCoupons();
+      fetchPayments();
+      if (activeTab === 'admin-logs') {
+        fetch('/api/logs')
+          .then(r => r.json())
+          .then(d => { if (Array.isArray(d)) setLogs(d); })
+          .catch(() => {});
+      }
+      setLastSyncTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    } catch (err) {
+      console.error('Error refreshing live data: ', err);
+    } finally {
+      setTimeout(() => setIsRefreshingData(false), 500);
+    }
+  };
+
+  // Live Auto-Sync interval (every 30s) when active
+  useEffect(() => {
+    if (!isAdmin || !isLiveSyncActive) return;
+
+    const syncInterval = setInterval(() => {
+      onRefreshOrdersRef.current?.();
+      fetchPayments();
+      if (activeTab === 'admin-catalog') onRefreshProductsRef.current?.();
+      if (activeTab === 'admin-coupons') onFetchCouponsRef.current?.();
+      setLastSyncTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    }, 30000);
+
+    return () => clearInterval(syncInterval);
+  }, [isAdmin, isLiveSyncActive, activeTab]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -276,7 +322,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [prodImg4, setProdImg4] = useState('');
   const [prodBenefits, setProdBenefits] = useState('');
   const [prodDosage, setProdDosage] = useState('');
-  const [prodBrand, setProdBrand] = useState('Grams Life');
+  const [prodBrand, setProdBrand] = useState('Bv Life');
   const [prodSubcategory, setProdSubcategory] = useState('');
   const [prodUsageInstructions, setProdUsageInstructions] = useState('As directed');
   const [prodFeatured, setProdFeatured] = useState(false);
@@ -319,9 +365,53 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [cpnVal, setCpnVal] = useState(15);
   const [cpnMin, setCpnMin] = useState(500);
 
-  // Admin Order filter and search states
-  const [adminOrderFilter, setAdminOrderFilter] = useState<'all' | 'pending' | 'delivered' | 'cancelled'>('all');
+  // 1. Admin Orders filter, search, sort, and pagination states
+  const [adminOrderFilter, setAdminOrderFilter] = useState<'all' | 'pending' | 'shipped' | 'delivered' | 'cancelled'>('all');
   const [adminOrderSearch, setAdminOrderSearch] = useState('');
+  const [adminOrderSort, setAdminOrderSort] = useState<'newest' | 'oldest' | 'amount-high' | 'amount-low'>('newest');
+  const [adminOrderPage, setAdminOrderPage] = useState(1);
+  const [adminOrderPageSize, setAdminOrderPageSize] = useState(10);
+
+  // 2. Admin Catalog search, category, stock filter, sort, and pagination states
+  const [adminCatalogSearch, setAdminCatalogSearch] = useState('');
+  const [adminCatalogCategory, setAdminCatalogCategory] = useState('');
+  const [adminCatalogStockFilter, setAdminCatalogStockFilter] = useState<'all' | 'in-stock' | 'low-stock' | 'out-of-stock'>('all');
+  const [adminCatalogSort, setAdminCatalogSort] = useState<'name' | 'price-low' | 'price-high' | 'stock-low' | 'stock-high'>('name');
+  const [adminCatalogPage, setAdminCatalogPage] = useState(1);
+  const [adminCatalogPageSize, setAdminCatalogPageSize] = useState(8);
+
+  // 3. Admin Payments search, status, method, and pagination states
+  const [adminPaymentSearch, setAdminPaymentSearch] = useState('');
+  const [adminPaymentFilter, setAdminPaymentFilter] = useState<'all' | 'paid' | 'pending' | 'failed'>('all');
+  const [adminPaymentMethod, setAdminPaymentMethod] = useState<string>('all');
+  const [adminPaymentPage, setAdminPaymentPage] = useState(1);
+  const [adminPaymentPageSize, setAdminPaymentPageSize] = useState(10);
+
+  // 4. Admin Coupons search, filter, and pagination states
+  const [adminCouponSearch, setAdminCouponSearch] = useState('');
+  const [adminCouponStatus, setAdminCouponStatus] = useState<'all' | 'active' | 'archived'>('all');
+  const [adminCouponPage, setAdminCouponPage] = useState(1);
+  const [adminCouponPageSize, setAdminCouponPageSize] = useState(10);
+
+  // 5. Admin Security & Activity Logs search, filter, and pagination states
+  const [adminLogSearch, setAdminLogSearch] = useState('');
+  const [adminLogActionFilter, setAdminLogActionFilter] = useState('');
+  const [adminLogPage, setAdminLogPage] = useState(1);
+  const [adminLogPageSize, setAdminLogPageSize] = useState(15);
+
+  // 6. Customer Orders filter, search, and pagination states
+  const [customerOrderFilter, setCustomerOrderFilter] = useState<'all' | 'active' | 'delivered' | 'cancelled'>('all');
+  const [customerOrderSearch, setCustomerOrderSearch] = useState('');
+  const [customerOrderPage, setCustomerOrderPage] = useState(1);
+  const [customerOrderPageSize, setCustomerOrderPageSize] = useState(5);
+
+  // Scroll container refs for contained scrolling without moving whole page
+  const adminOrdersScrollRef = useRef<HTMLDivElement>(null);
+  const adminCatalogScrollRef = useRef<HTMLDivElement>(null);
+  const adminPaymentsScrollRef = useRef<HTMLDivElement>(null);
+  const adminCouponsScrollRef = useRef<HTMLDivElement>(null);
+  const adminLogsScrollRef = useRef<HTMLDivElement>(null);
+  const customerOrdersScrollRef = useRef<HTMLDivElement>(null);
 
   // Profile Security & Multi-channel verification states
   const [showSecurityVerify, setShowSecurityVerify] = useState(false);
@@ -445,7 +535,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg4(prod.images?.[2] || '');
     setProdBenefits(prod.benefits.join(', '));
     setProdDosage(prod.dosage);
-    setProdBrand(prod.brand || 'Grams Life');
+    setProdBrand(prod.brand || 'Bv Life');
     setProdSubcategory(prod.subcategory || '');
     setProdUsageInstructions(prod.usageInstructions || 'As directed');
     setProdFeatured(prod.featured || false);
@@ -473,7 +563,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg4('');
     setProdBenefits('');
     setProdDosage('');
-    setProdBrand('Grams Life');
+    setProdBrand('Bv Life');
     setProdSubcategory('');
     setProdUsageInstructions('As directed');
     setProdFeatured(false);
@@ -774,7 +864,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand-gold-400 bg-brand-gold-500/10 border border-brand-gold-500/20 px-2 py-0.5 rounded-full">Administrative Node</span>
               </div>
-              <h1 className="font-serif text-2xl font-bold tracking-tight mt-1 text-brand-cream-50">Grams Life Admin Panel</h1>
+              <h1 className="font-serif text-2xl font-bold tracking-tight mt-1 text-brand-cream-50">Bv Life Admin Panel</h1>
               <p className="text-xs text-brand-cream-300/80 mt-0.5">Apothecary Director: <span className="font-semibold text-brand-cream-50">{user.fullName}</span> ({user.email})</p>
             </div>
           </div>
@@ -813,7 +903,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
         {/* Navigation Sidebar Drawer */}
-        <div className="lg:col-span-1 bg-white border border-brand-green-600/5 p-4 rounded-2xl h-fit flex flex-col gap-3 min-w-0">
+        <div className="lg:col-span-1 bg-white border border-brand-green-600/5 p-4 rounded-2xl h-fit lg:sticky lg:top-24 flex flex-col gap-3 min-w-0 shadow-2xs z-10">
           
           {/* Quick Sandbox Role Switcher */}
           {isAdmin && (
@@ -1184,99 +1274,253 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
 
           {/* TAB: ORDERS HISTORY (CUSTOMER) */}
-          {activeTab === 'orders' && (
-            <div className="space-y-6">
-              <h3 className="font-serif text-lg font-bold text-brand-green-900 border-b border-brand-green-600/5 pb-2">
-                Your Ayurvedic Orders Ledger
-              </h3>
+          {activeTab === 'orders' && (() => {
+            // Filter and search customer orders
+            const filteredUserOrders = userOrders.filter(order => {
+              if (customerOrderFilter === 'active' && (order.status === 'Delivered' || order.status === 'Cancelled')) return false;
+              if (customerOrderFilter === 'delivered' && order.status !== 'Delivered') return false;
+              if (customerOrderFilter === 'cancelled' && order.status !== 'Cancelled') return false;
 
-              {userOrders.length === 0 ? (
-                <div className="text-center py-12 space-y-3">
-                  <ShoppingBag className="w-10 h-10 text-brand-gold-500/50 mx-auto" />
-                  <p className="text-xs text-brand-green-600 italic">No packages logged yet.</p>
-                  <button onClick={() => onNavigate('shop')} className="bg-brand-green-700 text-brand-cream-100 font-bold px-4 py-2 rounded-xl text-xs">
-                    Start Remedies Shop
+              if (customerOrderSearch.trim()) {
+                const q = customerOrderSearch.toLowerCase().trim();
+                const idMatch = (order.id || '').toLowerCase().includes(q);
+                const itemMatch = (order.items || []).some(it => (it.productName || '').toLowerCase().includes(q));
+                return idMatch || itemMatch;
+              }
+              return true;
+            });
+
+            const totalPages = Math.ceil(filteredUserOrders.length / customerOrderPageSize) || 1;
+            const validPage = Math.min(customerOrderPage, totalPages);
+            const paginatedUserOrders = filteredUserOrders.slice((validPage - 1) * customerOrderPageSize, validPage * customerOrderPageSize);
+
+            return (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-brand-green-600/10 pb-3">
+                  <div>
+                    <h3 className="font-serif text-xl font-bold text-brand-green-900">
+                      Your Ayurvedic Orders Ledger
+                    </h3>
+                    <p className="text-xs text-brand-green-600/70">
+                      Real-time shipment milestones, invoice printing, and delivery receipts.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (onRefreshOrders) onRefreshOrders();
+                    }}
+                    className="px-3.5 py-1.5 bg-brand-green-50 hover:bg-brand-green-100 text-brand-green-900 border border-brand-green-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <RotateCw className="w-3 h-3 text-brand-gold-600" />
+                    <span>Refresh Orders</span>
                   </button>
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  {userOrders.map(order => (
-                    <div key={order.id} className="border border-brand-green-600/10 rounded-2xl p-4.5 space-y-4">
-                      
-                      {/* Meta */}
-                      <div className="flex flex-col sm:flex-row justify-between text-xs border-b border-brand-green-600/5 pb-3 gap-2">
-                        <div>
-                          <p className="font-bold text-brand-green-950 font-mono">ORDER ID: {order.id}</p>
-                          <p className="text-brand-green-600/50">Placed: {order.orderDate}</p>
-                        </div>
-                        <div className="sm:text-right">
-                          <p className="font-bold text-brand-green-900">Total Secured: ₹{order.finalTotal}</p>
-                          <p className="text-[10px] text-brand-gold-700 font-bold uppercase">{order.paymentMethod} • {order.paymentStatus}</p>
-                        </div>
-                      </div>
 
-                      {/* Delivery Status stepper */}
-                      <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-bold">
-                        {[
-                          { key: 'Ordered', label: 'Ordered' },
-                          { key: 'Prepared', label: 'Brewed / Prepared' },
-                          { key: 'Dispatched', label: 'In Transit' },
-                          { key: 'Delivered', label: 'Delivered' }
-                        ].map((step, idx) => {
-                          const steps = ['Ordered', 'Prepared', 'Dispatched', 'Delivered'];
-                          const currentIdx = steps.indexOf(order.status);
-                          const active = idx <= currentIdx;
-                          return (
-                            <div key={idx} className="space-y-1">
-                              <div className={`w-6 h-6 rounded-full mx-auto flex items-center justify-center font-bold border ${
-                                active ? 'bg-brand-green-700 text-brand-cream-50 border-brand-green-700' : 'bg-gray-100 text-gray-400 border-gray-200'
-                              }`}>
-                                {active ? <Check className="w-3.5 h-3.5" /> : idx + 1}
-                              </div>
-                              <span className={active ? 'text-brand-green-800' : 'text-gray-400'}>{step.label}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Items row */}
-                      <div className="space-y-2 pt-2 border-t border-brand-green-600/5 text-xs text-brand-green-800 font-medium">
-                        {order.items.map((item, i) => (
-                          <div key={i} className="flex justify-between items-center">
-                            <span>{item.productName} (x{item.quantity})</span>
-                            <span className="font-serif">₹{item.price * item.quantity}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="flex flex-wrap justify-between items-center gap-2 pt-3.5 border-t border-brand-green-600/5">
-                        <span className="text-[10px] text-brand-green-600 font-mono">
-                          Batch: GL-CH-{order.id.slice(-6).toUpperCase()}
-                        </span>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            onClick={() => setInvoiceOrder(order)}
-                            className="px-3.5 py-1.5 rounded-xl border border-brand-gold-500/30 hover:border-brand-gold-500 text-brand-gold-700 bg-brand-gold-50/25 text-[11px] font-bold tracking-wide flex items-center gap-1.5 transition-all cursor-pointer hover:bg-brand-gold-50"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>Print Bill Invoice</span>
-                          </button>
-                          <button
-                            onClick={() => setShippingLabelOrder(order)}
-                            className="px-3.5 py-1.5 rounded-xl border border-brand-green-600/30 hover:border-brand-green-600 text-brand-green-800 bg-brand-green-50/50 text-[11px] font-bold tracking-wide flex items-center gap-1.5 transition-all cursor-pointer hover:bg-brand-green-100"
-                          >
-                            <Truck className="w-3.5 h-3.5 text-brand-green-700" />
-                            <span>Print Shipping Label</span>
-                          </button>
-                        </div>
-                      </div>
-
+                {/* Filter and Search Bar */}
+                {userOrders.length > 0 && (
+                  <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-brand-green-600/10 shadow-xs">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                      <button
+                        onClick={() => { setCustomerOrderFilter('all'); setCustomerOrderPage(1); }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                          customerOrderFilter === 'all'
+                            ? 'bg-brand-green-900 text-white shadow-xs'
+                            : 'bg-brand-green-50 text-brand-green-800 hover:bg-brand-green-100'
+                        }`}
+                      >
+                        All Orders ({userOrders.length})
+                      </button>
+                      <button
+                        onClick={() => { setCustomerOrderFilter('active'); setCustomerOrderPage(1); }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                          customerOrderFilter === 'active'
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
+                        }`}
+                      >
+                        In Transit ({userOrders.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled').length})
+                      </button>
+                      <button
+                        onClick={() => { setCustomerOrderFilter('delivered'); setCustomerOrderPage(1); }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                          customerOrderFilter === 'delivered'
+                            ? 'bg-emerald-700 text-white shadow-xs'
+                            : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                        }`}
+                      >
+                        Delivered ({userOrders.filter(o => o.status === 'Delivered').length})
+                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+
+                    <div className="relative min-w-[200px]">
+                      <Search className="w-3.5 h-3.5 text-brand-green-600/50 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        placeholder="Search Order ID or remedy..."
+                        value={customerOrderSearch}
+                        onChange={(e) => { setCustomerOrderSearch(e.target.value); setCustomerOrderPage(1); }}
+                        className="w-full bg-brand-green-50/50 border border-brand-green-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-brand-green-900 focus:outline-none focus:border-brand-green-600"
+                      />
+                      {customerOrderSearch && (
+                        <button
+                          onClick={() => setCustomerOrderSearch('')}
+                          className="absolute right-2.5 top-1.5 text-xs text-brand-green-600 hover:text-brand-green-900 font-bold"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {userOrders.length === 0 ? (
+                  <div className="text-center py-12 space-y-3 bg-white rounded-2xl border border-brand-green-600/10 p-8">
+                    <ShoppingBag className="w-10 h-10 text-brand-gold-500/50 mx-auto" />
+                    <p className="text-sm font-bold text-brand-green-900">No packages logged yet.</p>
+                    <p className="text-xs text-brand-green-600 italic">Discover authentic Vedic herbs and formulations customized for your dosha balance.</p>
+                    <button onClick={() => onNavigate('shop')} className="bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 font-bold px-5 py-2.5 rounded-xl text-xs shadow-md transition-all cursor-pointer">
+                      Start Remedies Shop
+                    </button>
+                  </div>
+                ) : filteredUserOrders.length === 0 ? (
+                  <div className="text-center py-10 bg-white rounded-2xl border border-brand-green-600/10 p-6 space-y-2">
+                    <p className="text-sm font-bold text-brand-green-900">No orders match the current filter.</p>
+                    <p className="text-xs text-brand-green-600/70">Try selecting "All Orders" or clearing your search term.</p>
+                    <button
+                      onClick={() => { setCustomerOrderFilter('all'); setCustomerOrderSearch(''); }}
+                      className="text-xs font-bold text-brand-gold-700 underline pt-1 cursor-pointer"
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div 
+                      ref={customerOrdersScrollRef}
+                      className="max-h-[620px] overflow-y-auto pr-1.5 space-y-4 custom-scrollbar rounded-xl scroll-smooth"
+                    >
+                      {paginatedUserOrders.map(order => (
+                        <div key={order.id} className="border border-brand-green-600/10 rounded-2xl p-5 space-y-4 bg-white shadow-xs hover:border-brand-green-600/30 transition-all">
+                          
+                          {/* Meta */}
+                          <div className="flex flex-col sm:flex-row justify-between text-xs border-b border-brand-green-600/5 pb-3 gap-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-brand-green-950 font-mono text-sm">{order.id}</p>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                  order.status === 'Delivered' ? 'bg-emerald-100 text-emerald-800' :
+                                  order.status === 'Cancelled' ? 'bg-rose-100 text-rose-800' :
+                                  'bg-amber-100 text-amber-800'
+                                }`}>
+                                  {order.status}
+                                </span>
+                              </div>
+                              <p className="text-brand-green-600/60 mt-0.5">Placed: {new Date(order.orderDate).toLocaleString()}</p>
+                            </div>
+                            <div className="sm:text-right">
+                              <p className="font-bold text-brand-green-900 text-base">Total: ₹{order.finalTotal}</p>
+                              <p className="text-[10px] text-brand-gold-700 font-bold uppercase">{order.paymentMethod} • {order.paymentStatus}</p>
+                            </div>
+                          </div>
+
+                          {/* Delivery Status stepper */}
+                          <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-bold py-1">
+                            {[
+                              { key: 'Ordered', label: 'Ordered' },
+                              { key: 'Prepared', label: 'Brewed / Prepared' },
+                              { key: 'Dispatched', label: 'In Transit' },
+                              { key: 'Delivered', label: 'Delivered' }
+                            ].map((step, idx) => {
+                              const steps = ['Ordered', 'Prepared', 'Dispatched', 'Delivered'];
+                              const currentIdx = steps.indexOf(order.status === 'Shipped' ? 'Dispatched' : order.status);
+                              const active = idx <= currentIdx;
+                              return (
+                                <div key={idx} className="space-y-1">
+                                  <div className={`w-6 h-6 rounded-full mx-auto flex items-center justify-center font-bold border transition-all ${
+                                    active ? 'bg-brand-green-700 text-brand-cream-50 border-brand-green-700 shadow-xs' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                  }`}>
+                                    {active ? <Check className="w-3.5 h-3.5" /> : idx + 1}
+                                  </div>
+                                  <span className={active ? 'text-brand-green-800 font-bold' : 'text-gray-400'}>{step.label}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Items row */}
+                          <div className="space-y-2 pt-2 border-t border-brand-green-600/5 text-xs text-brand-green-800 font-medium">
+                            {order.items.map((item, i) => (
+                              <div key={i} className="flex justify-between items-center bg-brand-cream-50/50 p-2 rounded-xl">
+                                <div className="flex items-center gap-2">
+                                  {item.mainImage && (
+                                    <img src={item.mainImage} alt={item.productName} className="w-8 h-8 rounded object-cover" />
+                                  )}
+                                  <span>{item.productName} <span className="text-brand-green-600 font-bold">× {item.quantity}</span></span>
+                                </div>
+                                <span className="font-serif font-bold text-brand-green-900">₹{item.price * item.quantity}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="flex flex-wrap justify-between items-center gap-2 pt-3.5 border-t border-brand-green-600/5">
+                            <span className="text-[10px] text-brand-green-600 font-mono">
+                              Batch: GL-CH-{order.id.slice(-6).toUpperCase()}
+                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                onClick={() => onNavigate('track', { orderId: order.id })}
+                                className="px-3.5 py-1.5 rounded-xl border border-brand-green-700/20 hover:border-brand-green-700 text-brand-green-800 bg-brand-green-50/50 text-[11px] font-bold tracking-wide flex items-center gap-1.5 transition-all cursor-pointer"
+                              >
+                                <Truck className="w-3.5 h-3.5 text-brand-green-700" />
+                                <span>Live Tracking</span>
+                              </button>
+                              <button
+                                onClick={() => setInvoiceOrder(order)}
+                                className="px-3.5 py-1.5 rounded-xl border border-brand-gold-500/30 hover:border-brand-gold-500 text-brand-gold-700 bg-brand-gold-50/25 text-[11px] font-bold tracking-wide flex items-center gap-1.5 transition-all cursor-pointer hover:bg-brand-gold-50"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>Print Bill Invoice</span>
+                              </button>
+                              <button
+                                onClick={() => setShippingLabelOrder(order)}
+                                className="px-3.5 py-1.5 rounded-xl border border-brand-green-600/30 hover:border-brand-green-600 text-brand-green-800 bg-brand-green-50/50 text-[11px] font-bold tracking-wide flex items-center gap-1.5 transition-all cursor-pointer hover:bg-brand-green-100"
+                              >
+                                <Tag className="w-3.5 h-3.5 text-brand-green-700" />
+                                <span>Print Shipping Label</span>
+                              </button>
+                            </div>
+                          </div>
+
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Pagination */}
+                    {filteredUserOrders.length > 0 && (
+                      <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 px-1 z-10 border-t border-brand-green-600/10 rounded-b-xl">
+                        <Pagination
+                          currentPage={validPage}
+                          totalItems={filteredUserOrders.length}
+                          pageSize={customerOrderPageSize}
+                          onPageChange={(p) => {
+                            setCustomerOrderPage(p);
+                            customerOrdersScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          onPageSizeChange={(s) => {
+                            setCustomerOrderPageSize(s);
+                            setCustomerOrderPage(1);
+                            customerOrdersScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          pageSizeOptions={[5, 10, 20]}
+                          itemLabel="orders"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* TAB: ADDRESSES (CUSTOMER) */}
           {activeTab === 'addresses' && (
@@ -1528,402 +1772,763 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
 
           {/* TAB: PAYMENTS LEDGER (ADMIN) */}
-          {activeTab === 'admin-payments' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="border-b border-brand-green-600/5 pb-2">
-                <h3 className="font-serif text-lg font-bold text-brand-green-900">
-                  Payments Transaction Audit Ledger
-                </h3>
-                <p className="text-xs text-brand-green-600/70 mt-1">
-                  Manage database-backed payment settled events, trace transaction references, and audit manual bank transfers.
-                </p>
-              </div>
+          {activeTab === 'admin-payments' && (() => {
+            const filteredPayments = payments.filter(p => {
+              if (adminPaymentFilter === 'paid' && p.status !== 'Paid') return false;
+              if (adminPaymentFilter === 'pending' && p.status !== 'Pending') return false;
+              if (adminPaymentFilter === 'failed' && p.status !== 'Failed') return false;
 
-              {loadingPayments ? (
-                <div className="text-center py-12 text-xs text-brand-green-600 animate-pulse">
-                  Querying live database-backed payment transactions...
-                </div>
-              ) : payments.length === 0 ? (
-                <div className="text-center py-12 text-xs text-brand-green-600/60">
-                  No payment ledger transactions registered.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {payments.map((p) => {
-                    const isEditing = editingPaymentId === p.id;
-                    return (
-                      <div key={p.id} className="border border-brand-green-600/10 bg-brand-cream-100/5 p-4 rounded-xl space-y-3 text-xs">
-                        
-                        <div className="flex justify-between items-start border-b pb-2">
-                          <div>
-                            <span className="font-mono font-bold text-brand-green-950">TXID: {p.id}</span>
-                            <p className="text-[10px] text-brand-green-600/60 font-mono mt-0.5">Order ID: {p.orderId}</p>
-                          </div>
-                          <span className={`px-2.5 py-0.5 rounded-full font-bold uppercase text-[9px] ${
-                            p.status === 'Paid' ? 'bg-brand-green-100 text-brand-green-700' :
-                            p.status === 'Failed' ? 'bg-red-100 text-red-500' :
-                            'bg-brand-gold-100 text-brand-gold-700'
-                          }`}>
-                            {p.status}
-                          </span>
-                        </div>
+              if (adminPaymentSearch.trim()) {
+                const q = adminPaymentSearch.toLowerCase().trim();
+                const idMatch = (p.id || '').toLowerCase().includes(q);
+                const orderIdMatch = (p.orderId || '').toLowerCase().includes(q);
+                const emailMatch = (p.userEmail || '').toLowerCase().includes(q);
+                const refMatch = (p.transactionReference || '').toLowerCase().includes(q);
+                const methodMatch = (p.paymentMethod || '').toLowerCase().includes(q);
+                return idMatch || orderIdMatch || emailMatch || refMatch || methodMatch;
+              }
+              return true;
+            });
 
-                        {isEditing ? (
-                          <form onSubmit={(e) => handleUpdatePaymentSubmit(e, p.id)} className="space-y-3 pt-1">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div className="space-y-1">
-                                <label className="font-bold text-brand-green-800">Payment Status</label>
-                                <select
-                                  value={editPayStatus}
-                                  onChange={(e) => setEditPayStatus(e.target.value as any)}
-                                  className="w-full bg-white border p-1.5 rounded text-xs"
+            const totalPages = Math.ceil(filteredPayments.length / adminPaymentPageSize) || 1;
+            const validPage = Math.min(adminPaymentPage, totalPages);
+            const paginatedPayments = filteredPayments.slice((validPage - 1) * adminPaymentPageSize, validPage * adminPaymentPageSize);
+
+            const paidCount = payments.filter(p => p.status === 'Paid').length;
+            const pendingCount = payments.filter(p => p.status === 'Pending').length;
+            const failedCount = payments.filter(p => p.status === 'Failed').length;
+
+            return (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-brand-green-600/10 pb-3">
+                  <div>
+                    <h3 className="font-serif text-xl font-bold text-brand-green-900 flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-brand-gold-600" />
+                      <span>Payments Transaction Audit Ledger</span>
+                    </h3>
+                    <p className="text-xs text-brand-green-600/70 mt-0.5">
+                      Audit database-backed settlement events, reconcile gateway references, and verify manual transfers.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleTriggerLiveRefresh}
+                      disabled={isRefreshingData}
+                      className="px-3.5 py-1.5 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                    >
+                      <RotateCw className={`w-3.5 h-3.5 text-brand-gold-400 ${isRefreshingData ? 'animate-spin' : ''}`} />
+                      <span>{isRefreshingData ? 'Syncing...' : 'Sync Payments'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Filter and Search Bar */}
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-brand-green-600/10 shadow-xs">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                    <button
+                      onClick={() => { setAdminPaymentFilter('all'); setAdminPaymentPage(1); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        adminPaymentFilter === 'all'
+                          ? 'bg-brand-green-900 text-white shadow-xs'
+                          : 'bg-brand-green-50 text-brand-green-800 hover:bg-brand-green-100'
+                      }`}
+                    >
+                      All ({payments.length})
+                    </button>
+                    <button
+                      onClick={() => { setAdminPaymentFilter('paid'); setAdminPaymentPage(1); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        adminPaymentFilter === 'paid'
+                          ? 'bg-emerald-700 text-white shadow-xs'
+                          : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                      }`}
+                    >
+                      Paid ({paidCount})
+                    </button>
+                    <button
+                      onClick={() => { setAdminPaymentFilter('pending'); setAdminPaymentPage(1); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        adminPaymentFilter === 'pending'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
+                      }`}
+                    >
+                      Pending ({pendingCount})
+                    </button>
+                    <button
+                      onClick={() => { setAdminPaymentFilter('failed'); setAdminPaymentPage(1); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        adminPaymentFilter === 'failed'
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'bg-rose-50 text-rose-900 hover:bg-rose-100'
+                      }`}
+                    >
+                      Failed ({failedCount})
+                    </button>
+                  </div>
+
+                  <div className="relative min-w-[220px]">
+                    <Search className="w-3.5 h-3.5 text-brand-green-600/50 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search TXID, Order, Email, Ref..."
+                      value={adminPaymentSearch}
+                      onChange={(e) => { setAdminPaymentSearch(e.target.value); setAdminPaymentPage(1); }}
+                      className="w-full bg-brand-green-50/50 border border-brand-green-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-brand-green-900 focus:outline-none focus:border-brand-green-600"
+                    />
+                    {adminPaymentSearch && (
+                      <button
+                        onClick={() => setAdminPaymentSearch('')}
+                        className="absolute right-2.5 top-1.5 text-xs text-brand-green-600 hover:text-brand-green-900 font-bold"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {loadingPayments ? (
+                  <div className="text-center py-12 text-xs text-brand-green-600 animate-pulse bg-white rounded-2xl border border-brand-green-600/10 p-6">
+                    Querying live database-backed payment transactions...
+                  </div>
+                ) : filteredPayments.length === 0 ? (
+                  <div className="text-center py-10 bg-white rounded-2xl border border-brand-green-600/10 p-6 space-y-2">
+                    <p className="text-sm font-bold text-brand-green-900">No payment records found.</p>
+                    <p className="text-xs text-brand-green-600/70">
+                      {adminPaymentSearch ? `No records match "${adminPaymentSearch}"` : 'No transactions recorded under this filter.'}
+                    </p>
+                    {adminPaymentSearch && (
+                      <button
+                        onClick={() => { setAdminPaymentSearch(''); setAdminPaymentFilter('all'); }}
+                        className="text-xs font-bold text-brand-gold-700 underline cursor-pointer"
+                      >
+                        Clear Filters
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div 
+                      ref={adminPaymentsScrollRef}
+                      className="max-h-[620px] overflow-y-auto pr-1.5 space-y-3.5 custom-scrollbar rounded-xl scroll-smooth"
+                    >
+                      {paginatedPayments.map((p) => {
+                        const isEditing = editingPaymentId === p.id;
+                        return (
+                          <div key={p.id} className="border border-brand-green-600/10 bg-white p-4.5 rounded-2xl space-y-3 text-xs shadow-xs hover:border-brand-green-600/30 transition-all">
+                            
+                            <div className="flex justify-between items-start border-b border-brand-green-600/5 pb-2.5">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono font-bold text-brand-green-950 text-sm">{p.id}</span>
+                                  <span className="text-[10px] text-brand-gold-700 font-bold uppercase bg-brand-gold-50 px-2 py-0.5 rounded border border-brand-gold-200">
+                                    {p.paymentMethod}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-brand-green-600/70 font-mono mt-0.5">Order Reference: {p.orderId}</p>
+                              </div>
+                              <span className={`px-3 py-1 rounded-full font-bold uppercase text-[10px] shadow-2xs ${
+                                p.status === 'Paid' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                p.status === 'Failed' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                                'bg-amber-100 text-amber-800 border border-amber-300'
+                              }`}>
+                                {p.status}
+                              </span>
+                            </div>
+
+                            {isEditing ? (
+                              <form onSubmit={(e) => handleUpdatePaymentSubmit(e, p.id)} className="space-y-3 pt-1 bg-brand-cream-50/50 p-3 rounded-xl border border-brand-green-600/10">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <label className="font-bold text-brand-green-800">Payment Status</label>
+                                    <select
+                                      value={editPayStatus}
+                                      onChange={(e) => setEditPayStatus(e.target.value as any)}
+                                      className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs font-bold"
+                                    >
+                                      <option value="Pending">Pending</option>
+                                      <option value="Paid">Paid</option>
+                                      <option value="Failed">Failed / Declined</option>
+                                    </select>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="font-bold text-brand-green-800">Transaction Reference Code</label>
+                                    <input
+                                      type="text"
+                                      value={editTxnRef}
+                                      onChange={(e) => setEditTxnRef(e.target.value)}
+                                      className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs font-mono"
+                                      placeholder="TXN-ID / UTR / Reference"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2 justify-end pt-1">
+                                  <button type="button" onClick={() => setEditingPaymentId(null)} className="px-3.5 py-1.5 border border-brand-green-300 rounded-xl text-xs font-bold hover:bg-brand-green-50">Cancel</button>
+                                  <button type="submit" className="px-4 py-1.5 bg-brand-green-800 text-brand-cream-100 font-bold rounded-xl text-xs shadow-xs">Save Audit</button>
+                                </div>
+                              </form>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-brand-cream-50/30 p-3 rounded-xl">
+                                <div className="space-y-1">
+                                  <p className="text-brand-green-600/70">Client Email: <span className="font-bold text-brand-green-900">{p.userEmail}</span></p>
+                                  <p className="text-brand-green-600/70">Secured Amount: <span className="font-bold text-brand-green-900 font-serif text-sm">₹{p.amount}</span></p>
+                                </div>
+                                <div className="space-y-1 sm:text-right">
+                                  <p className="text-brand-green-600/70">Channel: <span className="font-bold text-brand-green-900 uppercase">{p.paymentMethod}</span></p>
+                                  <p className="text-brand-green-600/70">Gateway Ref: <span className="font-mono text-brand-green-900 font-bold">{p.transactionReference || 'N/A'}</span></p>
+                                </div>
+                              </div>
+                            )}
+
+                            {!isEditing && (
+                              <div className="flex justify-between items-center pt-2.5 border-t border-brand-green-600/5">
+                                <span className="text-[10px] text-brand-green-600/50 font-mono">Timestamp: {new Date(p.createdAt).toLocaleString()}</span>
+                                <button
+                                  onClick={() => {
+                                    setEditingPaymentId(p.id);
+                                    setEditTxnRef(p.transactionReference || '');
+                                    setEditPayStatus(p.status);
+                                  }}
+                                  className="px-3 py-1.5 rounded-xl border border-brand-green-600/30 hover:bg-brand-green-50 text-brand-green-800 text-xs font-bold cursor-pointer transition-colors shadow-2xs"
                                 >
-                                  <option value="Pending">Pending</option>
-                                  <option value="Paid">Paid</option>
-                                  <option value="Failed">Failed / Declined</option>
-                                </select>
+                                  Edit Audit Status
+                                </button>
                               </div>
-                              <div className="space-y-1">
-                                <label className="font-bold text-brand-green-800">Transaction Reference Code</label>
-                                <input
-                                  type="text"
-                                  value={editTxnRef}
-                                  onChange={(e) => setEditTxnRef(e.target.value)}
-                                  className="w-full bg-white border p-1.5 rounded text-xs"
-                                  placeholder="TXN-ID / Reference"
-                                />
-                              </div>
-                            </div>
-                            <div className="flex gap-2 justify-end pt-1">
-                              <button type="button" onClick={() => setEditingPaymentId(null)} className="px-3 py-1 border rounded text-[10px]">Cancel</button>
-                              <button type="submit" className="px-4 py-1 bg-brand-green-700 text-brand-cream-100 font-bold rounded text-[10px]">Save Audit</button>
-                            </div>
-                          </form>
-                        ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <p className="text-brand-green-600/70">Client details: <span className="font-bold text-brand-green-900">{p.userEmail}</span></p>
-                              <p className="text-brand-green-600/70">Secured Amount: <span className="font-bold text-brand-green-900">₹{p.amount}</span></p>
-                            </div>
-                            <div className="space-y-1 sm:text-right">
-                              <p className="text-brand-green-600/70">Channel: <span className="font-bold text-brand-green-900 uppercase">{p.paymentMethod}</span></p>
-                              <p className="text-brand-green-600/70">Gateway Ref: <span className="font-mono text-brand-green-900 font-bold">{p.transactionReference || 'N/A'}</span></p>
-                            </div>
+                            )}
                           </div>
-                        )}
+                        );
+                      })}
+                    </div>
 
-                        {!isEditing && (
-                          <div className="flex justify-between items-center pt-2.5 border-t border-brand-green-600/5">
-                            <span className="text-[10px] text-brand-green-600/50 font-mono">Timestamp: {new Date(p.createdAt).toLocaleString()}</span>
-                            <button
-                              onClick={() => {
-                                setEditingPaymentId(p.id);
-                                setEditTxnRef(p.transactionReference || '');
-                                setEditPayStatus(p.status);
-                              }}
-                              className="px-3 py-1.5 rounded-lg border border-brand-green-200 hover:bg-brand-green-50 text-brand-green-800 text-[10px] font-bold cursor-pointer transition-colors"
-                            >
-                              Edit Audit Status
-                            </button>
-                          </div>
-                        )}
+                    {/* Pagination */}
+                    {filteredPayments.length > 0 && (
+                      <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 px-1 z-10 border-t border-brand-green-600/10 rounded-b-xl">
+                        <Pagination
+                          currentPage={validPage}
+                          totalItems={filteredPayments.length}
+                          pageSize={adminPaymentPageSize}
+                          onPageChange={(p) => {
+                            setAdminPaymentPage(p);
+                            adminPaymentsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          onPageSizeChange={(s) => {
+                            setAdminPaymentPageSize(s);
+                            setAdminPaymentPage(1);
+                            adminPaymentsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          pageSizeOptions={[5, 10, 20, 50]}
+                          itemLabel="transactions"
+                        />
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* TAB: REMEDIES CATALOG CRUD (ADMIN) */}
-          {activeTab === 'admin-catalog' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="flex justify-between items-center border-b border-brand-green-600/5 pb-2">
-                <h3 className="font-serif text-lg font-bold text-brand-green-900">Remedies Catalog</h3>
-                <button 
-                  onClick={() => setShowAddProd(!showAddProd)}
-                  className="bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Compound</span>
-                </button>
-              </div>
+          {activeTab === 'admin-catalog' && (() => {
+            // Filter and search catalog
+            const filteredCatalog = products.filter(prod => {
+              if (adminCatalogCategory && prod.category !== adminCatalogCategory) return false;
+              
+              if (adminCatalogStockFilter === 'in-stock' && prod.stock <= 0) return false;
+              if (adminCatalogStockFilter === 'low-stock') {
+                const limit = prod.lowStockAlertLimit || 10;
+                if (prod.stock > limit || prod.stock <= 0) return false;
+              }
+              if (adminCatalogStockFilter === 'out-of-stock' && prod.stock > 0) return false;
 
-              {/* Add/Edit Product Inline Form */}
-              {showAddProd && (
-                <form onSubmit={handleSaveProduct} className="bg-brand-cream-100/30 border border-brand-green-600/10 p-5 rounded-2xl space-y-4 text-xs">
-                  <h4 className="font-serif font-bold text-brand-green-900">{editProdId ? 'Edit Product Details' : 'Add New Remedy Compound'}</h4>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-1 sm:col-span-1">
-                      <label className="font-bold text-brand-green-900">Product Name</label>
-                      <input required type="text" value={prodName} onChange={e => setProdName(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
-                    </div>
-                    <div className="space-y-1 sm:col-span-1">
-                      <label className="font-bold text-brand-green-900">SKU / Item Code</label>
-                      <input type="text" placeholder="E.g. GL-1001" value={prodSku} onChange={e => setProdSku(e.target.value)} className="w-full bg-white border p-2 rounded-lg font-mono" />
-                    </div>
-                    <div className="space-y-1 sm:col-span-1">
-                      <label className="font-bold text-brand-green-900">Category</label>
-                      <select value={prodCategory} onChange={e => setProdCategory(e.target.value)} className="w-full bg-white border p-2 rounded-lg">
-                        <option value="Immunity">Immunity</option>
-                        <option value="Skin Care">Skin Care</option>
-                        <option value="Hair Care">Hair Care</option>
-                        <option value="Digestion">Digestion</option>
-                        <option value="Diabetes">Diabetes</option>
-                        <option value="Joint Care">Joint Care</option>
-                        <option value="Women's Health">Women's Health</option>
-                        <option value="Men's Health">Men's Health</option>
-                        <option value="Brain & Memory">Brain & Memory</option>
-                        <option value="Sleep & Stress">Sleep & Stress</option>
-                        <option value="Sexual Wellness">Sexual Wellness</option>
-                        <option value="Liver & Detox">Liver & Detox</option>
-                        <option value="Heart Health">Heart Health</option>
-                        <option value="Respiratory Care">Respiratory Care</option>
-                      </select>
-                    </div>
+              if (adminCatalogSearch.trim()) {
+                const q = adminCatalogSearch.toLowerCase().trim();
+                const nameMatch = (prod.name || '').toLowerCase().includes(q);
+                const skuMatch = (prod.sku || '').toLowerCase().includes(q);
+                const brandMatch = (prod.brand || '').toLowerCase().includes(q);
+                const catMatch = (prod.category || '').toLowerCase().includes(q);
+                return nameMatch || skuMatch || brandMatch || catMatch;
+              }
+              return true;
+            });
+
+            const totalPages = Math.ceil(filteredCatalog.length / adminCatalogPageSize) || 1;
+            const validPage = Math.min(adminCatalogPage, totalPages);
+            const paginatedCatalog = filteredCatalog.slice((validPage - 1) * adminCatalogPageSize, validPage * adminCatalogPageSize);
+
+            const lowStockCount = products.filter(p => p.stock > 0 && p.stock <= (p.lowStockAlertLimit || 10)).length;
+            const outOfStockCount = products.filter(p => p.stock <= 0).length;
+
+            return (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-brand-green-600/10 pb-3">
+                  <div>
+                    <h3 className="font-serif text-xl font-bold text-brand-green-900 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-brand-gold-600" />
+                      <span>Remedies Catalog & Formulation Registry</span>
+                    </h3>
+                    <p className="text-xs text-brand-green-600/70 mt-0.5">
+                      Configure botanical ingredients, pricing, image galleries, dosha benefits, and inventory levels.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button 
+                      onClick={() => setShowAddProd(!showAddProd)}
+                      className="bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
+                    >
+                      <Plus className="w-4 h-4 text-brand-gold-400" />
+                      <span>{showAddProd ? 'Close Editor' : 'Add New Compound'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Filter and Search Toolbar */}
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-brand-green-600/10 shadow-xs">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                    <button
+                      onClick={() => { setAdminCatalogStockFilter('all'); setAdminCatalogPage(1); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        adminCatalogStockFilter === 'all'
+                          ? 'bg-brand-green-900 text-white shadow-xs'
+                          : 'bg-brand-green-50 text-brand-green-800 hover:bg-brand-green-100'
+                      }`}
+                    >
+                      All Products ({products.length})
+                    </button>
+                    <button
+                      onClick={() => { setAdminCatalogStockFilter('in-stock'); setAdminCatalogPage(1); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        adminCatalogStockFilter === 'in-stock'
+                          ? 'bg-emerald-700 text-white shadow-xs'
+                          : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                      }`}
+                    >
+                      In Stock ({products.filter(p => p.stock > (p.lowStockAlertLimit || 10)).length})
+                    </button>
+                    <button
+                      onClick={() => { setAdminCatalogStockFilter('low-stock'); setAdminCatalogPage(1); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        adminCatalogStockFilter === 'low-stock'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
+                      }`}
+                    >
+                      Low Stock ({lowStockCount})
+                    </button>
+                    <button
+                      onClick={() => { setAdminCatalogStockFilter('out-of-stock'); setAdminCatalogPage(1); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        adminCatalogStockFilter === 'out-of-stock'
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'bg-rose-50 text-rose-900 hover:bg-rose-100'
+                      }`}
+                    >
+                      Out of Stock ({outOfStockCount})
+                    </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="font-bold text-brand-green-900">Brand</label>
-                      <input required type="text" value={prodBrand} onChange={e => setProdBrand(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="font-bold text-brand-green-900">Subcategory (Optional)</label>
-                      <input type="text" placeholder="E.g. Herbal Drops, Oils" value={prodSubcategory} onChange={e => setProdSubcategory(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={adminCatalogCategory}
+                      onChange={(e) => { setAdminCatalogCategory(e.target.value); setAdminCatalogPage(1); }}
+                      className="bg-brand-green-50/50 border border-brand-green-200 px-2.5 py-1.5 rounded-xl text-xs text-brand-green-900 font-bold focus:outline-none focus:border-brand-green-600"
+                    >
+                      <option value="">All Categories</option>
+                      <option value="Immunity">Immunity</option>
+                      <option value="Skin Care">Skin Care</option>
+                      <option value="Hair Care">Hair Care</option>
+                      <option value="Digestion">Digestion</option>
+                      <option value="Diabetes">Diabetes</option>
+                      <option value="Joint Care">Joint Care</option>
+                      <option value="Women's Health">Women's Health</option>
+                      <option value="Men's Health">Men's Health</option>
+                      <option value="Brain & Memory">Brain & Memory</option>
+                      <option value="Sleep & Stress">Sleep & Stress</option>
+                      <option value="Sexual Wellness">Sexual Wellness</option>
+                      <option value="Liver & Detox">Liver & Detox</option>
+                      <option value="Heart Health">Heart Health</option>
+                      <option value="Respiratory Care">Respiratory Care</option>
+                    </select>
+
+                    <div className="relative min-w-[200px]">
+                      <Search className="w-3.5 h-3.5 text-brand-green-600/50 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        placeholder="Search name, SKU, brand..."
+                        value={adminCatalogSearch}
+                        onChange={(e) => { setAdminCatalogSearch(e.target.value); setAdminCatalogPage(1); }}
+                        className="w-full bg-brand-green-50/50 border border-brand-green-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-brand-green-900 focus:outline-none focus:border-brand-green-600"
+                      />
+                      {adminCatalogSearch && (
+                        <button
+                          onClick={() => setAdminCatalogSearch('')}
+                          className="absolute right-2.5 top-1.5 text-xs text-brand-green-600 hover:text-brand-green-900 font-bold"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                      <label className="font-bold text-brand-green-900">Price (₹)</label>
-                      <input required type="number" value={prodPrice} onChange={e => setProdPrice(Number(e.target.value))} className="w-full bg-white border p-2 rounded-lg" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="font-bold text-brand-green-900">Original Price (₹)</label>
-                      <input required type="number" value={prodOrigPrice} onChange={e => setProdOrigPrice(Number(e.target.value))} className="w-full bg-white border p-2 rounded-lg" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="font-bold text-brand-green-900">Stock Count</label>
-                      <input required type="number" value={prodStock} onChange={e => setProdStock(Number(e.target.value))} className="w-full bg-white border p-2 rounded-lg" />
-                    </div>
-                  </div>
-
-                  <div className="bg-brand-green-50/30 border border-brand-green-600/5 p-3.5 rounded-xl space-y-3">
-                    <span className="block font-bold text-brand-green-950 text-[11px] uppercase tracking-wider">Product Visuals (Image Gallery)</span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      <div className="space-y-1">
-                        <label className="font-semibold text-brand-green-900">Primary Image URL</label>
-                        <input type="text" placeholder="https://..." value={prodImg} onChange={e => setProdImg(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="font-semibold text-brand-green-900">Second Image URL (Optional)</label>
-                        <input type="text" placeholder="https://..." value={prodImg2} onChange={e => setProdImg2(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="font-semibold text-brand-green-900">Third Image URL (Optional)</label>
-                        <input type="text" placeholder="https://..." value={prodImg3} onChange={e => setProdImg3(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="font-semibold text-brand-green-900">Fourth Image URL (Optional)</label>
-                        <input type="text" placeholder="https://..." value={prodImg4} onChange={e => setProdImg4(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                      <label className="font-bold text-brand-green-900">Dosage</label>
-                      <input type="text" placeholder="E.g. Take 1 capsule daily" value={prodDosage} onChange={e => setProdDosage(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="font-bold text-brand-green-900">Usage Instructions</label>
-                      <input type="text" placeholder="E.g. With warm water after meal" value={prodUsageInstructions} onChange={e => setProdUsageInstructions(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="font-bold text-brand-green-900">Low Stock Limit Alert</label>
-                      <input type="number" value={prodLowStockAlertLimit} onChange={e => setProdLowStockAlertLimit(Number(e.target.value))} className="w-full bg-white border p-2 rounded-lg" />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-6 items-center bg-brand-green-50/20 p-3 rounded-xl border border-brand-green-600/5">
-                    <label className="flex items-center gap-2 font-bold text-brand-green-900 cursor-pointer select-none">
-                      <input type="checkbox" checked={prodFeatured} onChange={e => setProdFeatured(e.target.checked)} className="w-4 h-4 rounded text-brand-green-700" />
-                      <span>Featured Remedy</span>
-                    </label>
-                    <label className="flex items-center gap-2 font-bold text-brand-green-900 cursor-pointer select-none">
-                      <input type="checkbox" checked={prodBestSeller} onChange={e => setProdBestSeller(e.target.checked)} className="w-4 h-4 rounded text-brand-green-700" />
-                      <span>Best Seller Tag</span>
-                    </label>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold text-brand-green-900">Health Benefits (Comma separated)</label>
-                    <input type="text" placeholder="Boosts immunity, Relieves fatigue, Rejuvenates cells" value={prodBenefits} onChange={e => setProdBenefits(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold text-brand-green-900">Description</label>
-                    <textarea required rows={3} value={prodDesc} onChange={e => setProdDesc(e.target.value)} className="w-full bg-white border p-2 rounded-lg" />
-                  </div>
-
-                  {/* Botanical Ingredients Section */}
-                  <div className="bg-brand-cream-50/60 border border-brand-green-600/5 p-4 rounded-xl space-y-3.5">
-                    <div className="flex justify-between items-center border-b border-brand-green-600/5 pb-1.5">
-                      <span className="font-serif font-bold text-brand-green-950 text-xs">Vedic Botanical Ingredients ({prodIngredients.length})</span>
-                    </div>
-
-                    {prodIngredients.length > 0 && (
-                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                        {prodIngredients.map((ing, index) => (
-                          <div key={index} className="flex justify-between items-start gap-3 bg-white p-2.5 rounded-lg border border-brand-green-100 shadow-xs">
-                            <div className="space-y-0.5">
-                              <span className="font-bold text-brand-green-900 block">{ing.name}</span>
-                              <span className="text-[11px] text-brand-green-700/80 block">{ing.description}</span>
-                            </div>
-                            <button 
-                              type="button" 
-                              onClick={() => handleRemoveIngredient(index)}
-                              className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="bg-white p-3 rounded-lg border border-brand-green-600/5 space-y-3">
-                      <span className="block font-semibold text-brand-green-900 text-[11px]">Add Botanical Ingredient</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <input 
-                          type="text" 
-                          placeholder="Ingredient Name (e.g. Ashwagandha)" 
-                          value={ingName} 
-                          onChange={e => setIngName(e.target.value)} 
-                          className="bg-white border rounded-lg px-2.5 py-2 text-xs" 
-                        />
-                        <input 
-                          type="text" 
-                          placeholder="Description / Benefit (e.g. Adapts to stress)" 
-                          value={ingDesc} 
-                          onChange={e => setIngDesc(e.target.value)} 
-                          className="bg-white border rounded-lg px-2.5 py-2 text-xs" 
-                        />
-                      </div>
-                      <button 
-                        type="button" 
-                        onClick={handleAddIngredient}
-                        className="bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 ml-auto cursor-pointer"
+                {/* Add/Edit Product Inline Form */}
+                {showAddProd && (
+                  <form onSubmit={handleSaveProduct} className="bg-brand-cream-50/50 border border-brand-green-600/20 p-6 rounded-2xl space-y-4 text-xs shadow-md">
+                    <div className="flex justify-between items-center border-b border-brand-green-600/10 pb-3">
+                      <h4 className="font-serif text-base font-bold text-brand-green-900">{editProdId ? 'Edit Product Details' : 'Add New Remedy Compound'}</h4>
+                      <button
+                        type="button"
+                        onClick={handleResetProductForm}
+                        className="text-xs text-brand-green-600 hover:text-brand-green-900 font-bold underline"
                       >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add Ingredient</span>
+                        Cancel
                       </button>
                     </div>
-                  </div>
-
-                  {/* Product FAQs Section */}
-                  <div className="bg-brand-cream-50/60 border border-brand-green-600/5 p-4 rounded-xl space-y-3.5">
-                    <div className="flex justify-between items-center border-b border-brand-green-600/5 pb-1.5">
-                      <span className="font-serif font-bold text-brand-green-950 text-xs">Product FAQs ({prodFaqs.length})</span>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1 sm:col-span-1">
+                        <label className="font-bold text-brand-green-900">Product Name</label>
+                        <input required type="text" value={prodName} onChange={e => setProdName(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                      </div>
+                      <div className="space-y-1 sm:col-span-1">
+                        <label className="font-bold text-brand-green-900">SKU / Item Code</label>
+                        <input type="text" placeholder="E.g. GL-1001" value={prodSku} onChange={e => setProdSku(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl font-mono text-xs" />
+                      </div>
+                      <div className="space-y-1 sm:col-span-1">
+                        <label className="font-bold text-brand-green-900">Category</label>
+                        <select value={prodCategory} onChange={e => setProdCategory(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs font-bold">
+                          <option value="Immunity">Immunity</option>
+                          <option value="Skin Care">Skin Care</option>
+                          <option value="Hair Care">Hair Care</option>
+                          <option value="Digestion">Digestion</option>
+                          <option value="Diabetes">Diabetes</option>
+                          <option value="Joint Care">Joint Care</option>
+                          <option value="Women's Health">Women's Health</option>
+                          <option value="Men's Health">Men's Health</option>
+                          <option value="Brain & Memory">Brain & Memory</option>
+                          <option value="Sleep & Stress">Sleep & Stress</option>
+                          <option value="Sexual Wellness">Sexual Wellness</option>
+                          <option value="Liver & Detox">Liver & Detox</option>
+                          <option value="Heart Health">Heart Health</option>
+                          <option value="Respiratory Care">Respiratory Care</option>
+                        </select>
+                      </div>
                     </div>
 
-                    {prodFaqs.length > 0 && (
-                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                        {prodFaqs.map((faq, index) => (
-                          <div key={index} className="flex justify-between items-start gap-3 bg-white p-2.5 rounded-lg border border-brand-green-100 shadow-xs">
-                            <div className="space-y-0.5">
-                              <span className="font-bold text-brand-green-900 block">Q: {faq.question}</span>
-                              <span className="text-[11px] text-brand-green-700/80 block">A: {faq.answer}</span>
-                            </div>
-                            <button 
-                              type="button" 
-                              onClick={() => handleRemoveFaq(index)}
-                              className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="font-bold text-brand-green-900">Brand</label>
+                        <input required type="text" value={prodBrand} onChange={e => setProdBrand(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
                       </div>
-                    )}
-
-                    <div className="bg-white p-3 rounded-lg border border-brand-green-600/5 space-y-3">
-                      <span className="block font-semibold text-brand-green-900 text-[11px]">Add FAQ Item</span>
-                      <div className="space-y-2.5">
-                        <input 
-                          type="text" 
-                          placeholder="Question (e.g. Can I take this with milk?)" 
-                          value={faqQ} 
-                          onChange={e => setFaqQ(e.target.value)} 
-                          className="w-full bg-white border rounded-lg px-2.5 py-2 text-xs" 
-                        />
-                        <textarea 
-                          rows={2} 
-                          placeholder="Answer (e.g. Yes, warm milk is highly recommended.)" 
-                          value={faqA} 
-                          onChange={e => setFaqA(e.target.value)} 
-                          className="w-full bg-white border rounded-lg px-2.5 py-2 text-xs" 
-                        />
+                      <div className="space-y-1">
+                        <label className="font-bold text-brand-green-900">Subcategory (Optional)</label>
+                        <input type="text" placeholder="E.g. Herbal Drops, Oils" value={prodSubcategory} onChange={e => setProdSubcategory(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
                       </div>
-                      <button 
-                        type="button" 
-                        onClick={handleAddFaq}
-                        className="bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 ml-auto cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add FAQ</span>
-                      </button>
                     </div>
-                  </div>
 
-                  <div className="flex gap-2 justify-end pt-2 border-t border-brand-green-600/5">
-                    <button type="button" onClick={handleResetProductForm} className="px-4 py-2 border rounded-lg font-bold hover:bg-brand-cream-50">Cancel</button>
-                    <button type="submit" className="px-5 py-2 bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 font-bold rounded-lg cursor-pointer">Save Compound</button>
-                  </div>
-                </form>
-              )}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <label className="font-bold text-brand-green-900">Price (₹)</label>
+                        <input required type="number" value={prodPrice} onChange={e => setProdPrice(Number(e.target.value))} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-bold text-brand-green-900">Original Price (₹)</label>
+                        <input required type="number" value={prodOrigPrice} onChange={e => setProdOrigPrice(Number(e.target.value))} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-bold text-brand-green-900">Stock Count</label>
+                        <input required type="number" value={prodStock} onChange={e => setProdStock(Number(e.target.value))} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                      </div>
+                    </div>
 
-              {/* Products Catalog list */}
-              <div className="space-y-3.5">
-                {products.map(prod => (
-                  <div key={prod.id} className="border border-brand-green-600/10 p-4 rounded-xl flex items-center justify-between gap-4 text-xs">
-                    <div className="flex items-center gap-3">
-                      <img src={prod.mainImage} alt={prod.name} className="w-10 h-10 rounded object-cover flex-shrink-0" />
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h5 className="font-serif font-bold text-brand-green-900">{prod.name}</h5>
-                          {prod.sku && (
-                            <span className="text-[10px] font-mono bg-brand-gold-500/10 text-brand-gold-700 font-bold px-2 py-0.5 rounded border border-brand-gold-500/20">
-                              SKU: {prod.sku}
-                            </span>
-                          )}
+                    <div className="bg-brand-green-50/30 border border-brand-green-600/5 p-3.5 rounded-xl space-y-3">
+                      <span className="block font-bold text-brand-green-950 text-[11px] uppercase tracking-wider">Product Visuals (Image Gallery)</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div className="space-y-1">
+                          <label className="font-semibold text-brand-green-900">Primary Image URL</label>
+                          <input type="text" placeholder="https://..." value={prodImg} onChange={e => setProdImg(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
                         </div>
-                        <p className="text-brand-green-600/70 font-semibold mt-0.5">{prod.category} • ₹{prod.price} • Stock: {prod.stock}</p>
+                        <div className="space-y-1">
+                          <label className="font-semibold text-brand-green-900">Second Image URL (Optional)</label>
+                          <input type="text" placeholder="https://..." value={prodImg2} onChange={e => setProdImg2(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="font-semibold text-brand-green-900">Third Image URL (Optional)</label>
+                          <input type="text" placeholder="https://..." value={prodImg3} onChange={e => setProdImg3(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="font-semibold text-brand-green-900">Fourth Image URL (Optional)</label>
+                          <input type="text" placeholder="https://..." value={prodImg4} onChange={e => setProdImg4(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                        </div>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => handleEditProductOpen(prod)}
-                        className="p-1.5 rounded border border-brand-green-200 hover:bg-brand-green-50 text-brand-green-800"
-                        title="Edit Details"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button 
-                        onClick={() => onDeleteProduct(prod.id)}
-                        className="p-1.5 rounded border border-red-100 hover:bg-red-50 text-red-500"
-                        title="Delete Compound"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <label className="font-bold text-brand-green-900">Dosage</label>
+                        <input type="text" placeholder="E.g. Take 1 capsule daily" value={prodDosage} onChange={e => setProdDosage(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-bold text-brand-green-900">Usage Instructions</label>
+                        <input type="text" placeholder="E.g. With warm water after meal" value={prodUsageInstructions} onChange={e => setProdUsageInstructions(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-bold text-brand-green-900">Low Stock Limit Alert</label>
+                        <input type="number" value={prodLowStockAlertLimit} onChange={e => setProdLowStockAlertLimit(Number(e.target.value))} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                      </div>
                     </div>
+
+                    <div className="flex gap-6 items-center bg-brand-green-50/20 p-3 rounded-xl border border-brand-green-600/5">
+                      <label className="flex items-center gap-2 font-bold text-brand-green-900 cursor-pointer select-none">
+                        <input type="checkbox" checked={prodFeatured} onChange={e => setProdFeatured(e.target.checked)} className="w-4 h-4 rounded text-brand-green-700" />
+                        <span>Featured Remedy</span>
+                      </label>
+                      <label className="flex items-center gap-2 font-bold text-brand-green-900 cursor-pointer select-none">
+                        <input type="checkbox" checked={prodBestSeller} onChange={e => setProdBestSeller(e.target.checked)} className="w-4 h-4 rounded text-brand-green-700" />
+                        <span>Best Seller Tag</span>
+                      </label>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-bold text-brand-green-900">Health Benefits (Comma separated)</label>
+                      <input type="text" placeholder="Boosts immunity, Relieves fatigue, Rejuvenates cells" value={prodBenefits} onChange={e => setProdBenefits(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-bold text-brand-green-900">Description</label>
+                      <textarea required rows={3} value={prodDesc} onChange={e => setProdDesc(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                    </div>
+
+                    {/* Botanical Ingredients Section */}
+                    <div className="bg-brand-cream-50/60 border border-brand-green-600/5 p-4 rounded-xl space-y-3.5">
+                      <div className="flex justify-between items-center border-b border-brand-green-600/5 pb-1.5">
+                        <span className="font-serif font-bold text-brand-green-950 text-xs">Vedic Botanical Ingredients ({prodIngredients.length})</span>
+                      </div>
+
+                      {prodIngredients.length > 0 && (
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {prodIngredients.map((ing, index) => (
+                            <div key={index} className="flex justify-between items-start gap-3 bg-white p-2.5 rounded-lg border border-brand-green-100 shadow-2xs">
+                              <div className="space-y-0.5">
+                                <span className="font-bold text-brand-green-900 block">{ing.name}</span>
+                                <span className="text-[11px] text-brand-green-700/80 block">{ing.description}</span>
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => handleRemoveIngredient(index)}
+                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="bg-white p-3 rounded-lg border border-brand-green-600/5 space-y-3">
+                        <span className="block font-semibold text-brand-green-900 text-[11px]">Add Botanical Ingredient</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <input 
+                            type="text" 
+                            placeholder="Ingredient Name (e.g. Ashwagandha)" 
+                            value={ingName} 
+                            onChange={e => setIngName(e.target.value)} 
+                            className="bg-white border border-brand-green-200 rounded-lg px-2.5 py-2 text-xs" 
+                          />
+                          <input 
+                            type="text" 
+                            placeholder="Description / Benefit (e.g. Adapts to stress)" 
+                            value={ingDesc} 
+                            onChange={e => setIngDesc(e.target.value)} 
+                            className="bg-white border border-brand-green-200 rounded-lg px-2.5 py-2 text-xs" 
+                          />
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={handleAddIngredient}
+                          className="bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 ml-auto cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Ingredient</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Product FAQs Section */}
+                    <div className="bg-brand-cream-50/60 border border-brand-green-600/5 p-4 rounded-xl space-y-3.5">
+                      <div className="flex justify-between items-center border-b border-brand-green-600/5 pb-1.5">
+                        <span className="font-serif font-bold text-brand-green-950 text-xs">Product FAQs ({prodFaqs.length})</span>
+                      </div>
+
+                      {prodFaqs.length > 0 && (
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {prodFaqs.map((faq, index) => (
+                            <div key={index} className="flex justify-between items-start gap-3 bg-white p-2.5 rounded-lg border border-brand-green-100 shadow-2xs">
+                              <div className="space-y-0.5">
+                                <span className="font-bold text-brand-green-900 block">Q: {faq.question}</span>
+                                <span className="text-[11px] text-brand-green-700/80 block">A: {faq.answer}</span>
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => handleRemoveFaq(index)}
+                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="bg-white p-3 rounded-lg border border-brand-green-600/5 space-y-3">
+                        <span className="block font-semibold text-brand-green-900 text-[11px]">Add FAQ Item</span>
+                        <div className="space-y-2.5">
+                          <input 
+                            type="text" 
+                            placeholder="Question (e.g. Can I take this with milk?)" 
+                            value={faqQ} 
+                            onChange={e => setFaqQ(e.target.value)} 
+                            className="w-full bg-white border border-brand-green-200 rounded-lg px-2.5 py-2 text-xs" 
+                          />
+                          <textarea 
+                            rows={2} 
+                            placeholder="Answer (e.g. Yes, warm milk is highly recommended.)" 
+                            value={faqA} 
+                            onChange={e => setFaqA(e.target.value)} 
+                            className="w-full bg-white border border-brand-green-200 rounded-lg px-2.5 py-2 text-xs" 
+                          />
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={handleAddFaq}
+                          className="bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 ml-auto cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add FAQ</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 justify-end pt-2 border-t border-brand-green-600/5">
+                      <button type="button" onClick={handleResetProductForm} className="px-4 py-2 border rounded-xl font-bold hover:bg-brand-cream-50">Cancel</button>
+                      <button type="submit" className="px-5 py-2 bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 font-bold rounded-xl cursor-pointer shadow-xs">Save Compound</button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Products Catalog list */}
+                {filteredCatalog.length === 0 ? (
+                  <div className="text-center py-10 bg-white rounded-2xl border border-brand-green-600/10 p-6 space-y-2">
+                    <p className="text-sm font-bold text-brand-green-900">No remedies match the filter.</p>
+                    <p className="text-xs text-brand-green-600/70">Try selecting a different category or clearing search.</p>
+                    {(adminCatalogSearch || adminCatalogCategory || adminCatalogStockFilter !== 'all') && (
+                      <button
+                        onClick={() => { setAdminCatalogSearch(''); setAdminCatalogCategory(''); setAdminCatalogStockFilter('all'); }}
+                        className="text-xs font-bold text-brand-gold-700 underline cursor-pointer"
+                      >
+                        Reset Filters
+                      </button>
+                    )}
                   </div>
-                ))}
+                ) : (
+                  <div className="space-y-4">
+                    <div 
+                      ref={adminCatalogScrollRef}
+                      className="max-h-[620px] overflow-y-auto pr-1.5 space-y-3 custom-scrollbar rounded-xl scroll-smooth"
+                    >
+                      {paginatedCatalog.map(prod => {
+                        const isLowStock = prod.stock > 0 && prod.stock <= (prod.lowStockAlertLimit || 10);
+                        const isOutOfStock = prod.stock <= 0;
+
+                        return (
+                          <div key={prod.id} className="border border-brand-green-600/10 bg-white hover:border-brand-green-600/30 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs shadow-xs transition-all">
+                            <div className="flex items-center gap-3.5 min-w-0">
+                              <img src={prod.mainImage} alt={prod.name} className="w-14 h-14 rounded-xl object-cover flex-shrink-0 border border-brand-green-600/10 bg-brand-cream-50" />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h5 className="font-serif font-bold text-brand-green-900 text-sm">{prod.name}</h5>
+                                  {prod.sku && (
+                                    <span className="text-[10px] font-mono bg-brand-gold-500/10 text-brand-gold-700 font-bold px-2 py-0.5 rounded border border-brand-gold-500/20">
+                                      SKU: {prod.sku}
+                                    </span>
+                                  )}
+                                  {prod.featured && (
+                                    <span className="text-[10px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
+                                      Featured
+                                    </span>
+                                  )}
+                                  {prod.bestSeller && (
+                                    <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
+                                      Best Seller
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-brand-green-700 mt-1 flex-wrap">
+                                  <span className="font-semibold">{prod.category}</span>
+                                  <span>•</span>
+                                  <span className="font-serif font-bold text-brand-green-950 text-sm">₹{prod.price}</span>
+                                  {prod.originalPrice > prod.price && (
+                                    <span className="text-brand-green-600/50 line-through text-[11px]">₹{prod.originalPrice}</span>
+                                  )}
+                                  <span>•</span>
+                                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                                    isOutOfStock ? 'bg-rose-100 text-rose-800' :
+                                    isLowStock ? 'bg-amber-100 text-amber-800 animate-pulse' :
+                                    'bg-emerald-100 text-emerald-800'
+                                  }`}>
+                                    {isOutOfStock ? 'Out of Stock (0)' : isLowStock ? `Low Stock (${prod.stock})` : `Stock: ${prod.stock}`}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                              <button 
+                                onClick={() => handleEditProductOpen(prod)}
+                                className="px-3 py-1.5 rounded-xl border border-brand-green-200 hover:bg-brand-green-50 text-brand-green-800 font-bold text-xs flex items-center gap-1 cursor-pointer transition-all"
+                                title="Edit Details"
+                              >
+                                <Edit2 className="w-3.5 h-3.5 text-brand-green-700" />
+                                <span>Edit</span>
+                              </button>
+                              <button 
+                                onClick={() => onDeleteProduct(prod.id)}
+                                className="px-3 py-1.5 rounded-xl border border-red-200 hover:bg-red-50 text-red-600 font-bold text-xs flex items-center gap-1 cursor-pointer transition-all"
+                                title="Delete Compound"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Pagination */}
+                    {filteredCatalog.length > 0 && (
+                      <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 px-1 z-10 border-t border-brand-green-600/10 rounded-b-xl">
+                        <Pagination
+                          currentPage={validPage}
+                          totalItems={filteredCatalog.length}
+                          pageSize={adminCatalogPageSize}
+                          onPageChange={(p) => {
+                            setAdminCatalogPage(p);
+                            adminCatalogScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          onPageSizeChange={(s) => {
+                            setAdminCatalogPageSize(s);
+                            setAdminCatalogPage(1);
+                            adminCatalogScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          pageSizeOptions={[6, 12, 24, 48]}
+                          itemLabel="remedies"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* TAB: ALL ORDERS DISPATCH REGISTRY (ADMIN/OWNER) */}
           {activeTab === 'admin-orders' && (() => {
@@ -1950,6 +2555,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
               return true;
             }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
 
+            const totalPages = Math.ceil(filteredOrders.length / adminOrderPageSize) || 1;
+            const validPage = Math.min(adminOrderPage, totalPages);
+            const paginatedOrders = filteredOrders.slice((validPage - 1) * adminOrderPageSize, validPage * adminOrderPageSize);
+
             return (
               <div className="space-y-6 animate-in fade-in duration-300">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-brand-green-600/10 pb-4">
@@ -1957,27 +2566,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <span className="text-[10px] font-bold uppercase tracking-widest text-brand-gold-600 bg-brand-gold-500/10 px-2 py-0.5 rounded-full border border-brand-gold-500/20">
                       👑 Platform Owner Command
                     </span>
-                    <h3 className="font-serif text-xl font-bold text-brand-green-900 mt-1">
-                      Live Customer Orders Dispatch Registry
+                    <h3 className="font-serif text-xl font-bold text-brand-green-900 mt-1 flex items-center gap-2">
+                      <span>Live Customer Orders Dispatch Registry</span>
+                      {isRefreshingData && (
+                        <span className="text-[11px] font-sans font-normal text-brand-gold-700 bg-brand-gold-50 px-2 py-0.5 rounded-full animate-pulse border border-brand-gold-200">
+                          Updating Live...
+                        </span>
+                      )}
                     </h3>
                     <p className="text-xs text-brand-green-600/70">
                       Manage order fulfillment, verify payments, track pending dispatches, and mark completed deliveries.
                     </p>
                   </div>
 
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="px-3.5 py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer shrink-0"
-                  >
-                    <RotateCw className="w-3.5 h-3.5 text-brand-gold-400" />
-                    <span>Refresh Registry</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleTriggerLiveRefresh}
+                      disabled={isRefreshingData}
+                      className="px-3.5 py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                    >
+                      <RotateCw className={`w-3.5 h-3.5 text-brand-gold-400 ${isRefreshingData ? 'animate-spin' : ''}`} />
+                      <span>{isRefreshingData ? 'Refreshing Live...' : 'Refresh Orders'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Top Overview Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <button
-                    onClick={() => setAdminOrderFilter('all')}
+                    onClick={() => { setAdminOrderFilter('all'); setAdminOrderPage(1); }}
                     className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
                       adminOrderFilter === 'all'
                         ? 'bg-brand-green-900 text-brand-cream-50 border-brand-gold-500/30 shadow-md ring-2 ring-brand-green-800'
@@ -1989,7 +2606,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </button>
 
                   <button
-                    onClick={() => setAdminOrderFilter('pending')}
+                    onClick={() => { setAdminOrderFilter('pending'); setAdminOrderPage(1); }}
                     className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
                       adminOrderFilter === 'pending'
                         ? 'bg-amber-600 text-white border-amber-500 shadow-md ring-2 ring-amber-400'
@@ -2006,7 +2623,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </button>
 
                   <button
-                    onClick={() => setAdminOrderFilter('delivered')}
+                    onClick={() => { setAdminOrderFilter('delivered'); setAdminOrderPage(1); }}
                     className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
                       adminOrderFilter === 'delivered'
                         ? 'bg-emerald-700 text-white border-emerald-500 shadow-md ring-2 ring-emerald-500'
@@ -2021,7 +2638,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </button>
 
                   <button
-                    onClick={() => setAdminOrderFilter('cancelled')}
+                    onClick={() => { setAdminOrderFilter('cancelled'); setAdminOrderPage(1); }}
                     className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
                       adminOrderFilter === 'cancelled'
                         ? 'bg-rose-700 text-white border-rose-500 shadow-md ring-2 ring-rose-400'
@@ -2038,7 +2655,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   {/* Category Filter Pills */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
                     <button
-                      onClick={() => setAdminOrderFilter('all')}
+                      onClick={() => { setAdminOrderFilter('all'); setAdminOrderPage(1); }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                         adminOrderFilter === 'all'
                           ? 'bg-brand-green-900 text-white shadow-sm'
@@ -2048,7 +2665,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       All Orders ({orders.length})
                     </button>
                     <button
-                      onClick={() => setAdminOrderFilter('pending')}
+                      onClick={() => { setAdminOrderFilter('pending'); setAdminOrderPage(1); }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 ${
                         adminOrderFilter === 'pending'
                           ? 'bg-amber-600 text-white shadow-sm'
@@ -2059,7 +2676,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <span className="bg-amber-900/20 px-1.5 py-0.2 text-[10px] rounded-full">{pendingOrdersCount}</span>
                     </button>
                     <button
-                      onClick={() => setAdminOrderFilter('delivered')}
+                      onClick={() => { setAdminOrderFilter('delivered'); setAdminOrderPage(1); }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 ${
                         adminOrderFilter === 'delivered'
                           ? 'bg-emerald-600 text-white shadow-sm'
@@ -2070,7 +2687,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <span className="bg-emerald-900/20 px-1.5 py-0.2 text-[10px] rounded-full">{deliveredOrdersCount}</span>
                     </button>
                     <button
-                      onClick={() => setAdminOrderFilter('cancelled')}
+                      onClick={() => { setAdminOrderFilter('cancelled'); setAdminOrderPage(1); }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                         adminOrderFilter === 'cancelled'
                           ? 'bg-rose-600 text-white shadow-sm'
@@ -2088,12 +2705,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       type="text"
                       placeholder="Search ID, name, phone, email..."
                       value={adminOrderSearch}
-                      onChange={(e) => setAdminOrderSearch(e.target.value)}
+                      onChange={(e) => { setAdminOrderSearch(e.target.value); setAdminOrderPage(1); }}
                       className="w-full bg-brand-green-50/50 border border-brand-green-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-brand-green-900 focus:outline-none focus:border-brand-green-600"
                     />
                     {adminOrderSearch && (
                       <button
-                        onClick={() => setAdminOrderSearch('')}
+                        onClick={() => { setAdminOrderSearch(''); setAdminOrderPage(1); }}
                         className="absolute right-2.5 top-2 text-xs text-brand-green-600 hover:text-brand-green-900 font-bold"
                       >
                         ✕
@@ -2116,7 +2733,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </p>
                     {(adminOrderSearch || adminOrderFilter !== 'all') && (
                       <button
-                        onClick={() => { setAdminOrderFilter('all'); setAdminOrderSearch(''); }}
+                        onClick={() => { setAdminOrderFilter('all'); setAdminOrderSearch(''); setAdminOrderPage(1); }}
                         className="px-4 py-2 bg-brand-green-800 text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-brand-green-900 transition-all"
                       >
                         Reset All Filters
@@ -2125,7 +2742,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filteredOrders.map(ord => {
+                    <div 
+                      ref={adminOrdersScrollRef}
+                      className="max-h-[640px] overflow-y-auto pr-1.5 space-y-4 custom-scrollbar rounded-xl scroll-smooth"
+                    >
+                      {paginatedOrders.map(ord => {
                       const isDelivered = ord.status === 'Delivered';
                       const isPending = ord.status === 'Pending' || ord.status === 'Processing';
                       const isShipped = ord.status === 'Shipped';
@@ -2318,6 +2939,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         </div>
                       );
                     })}
+                    </div>
+
+                    {/* Orders Pagination */}
+                    {filteredOrders.length > 0 && (
+                      <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 px-1 z-10 border-t border-brand-green-600/10 rounded-b-xl">
+                        <Pagination
+                          currentPage={validPage}
+                          totalItems={filteredOrders.length}
+                          pageSize={adminOrderPageSize}
+                          onPageChange={(p) => {
+                            setAdminOrderPage(p);
+                            adminOrdersScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          onPageSizeChange={(s) => {
+                            setAdminOrderPageSize(s);
+                            setAdminOrderPage(1);
+                            adminOrdersScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          pageSizeOptions={[5, 10, 20, 50]}
+                          itemLabel="orders"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2325,163 +2969,384 @@ export const Dashboard: React.FC<DashboardProps> = ({
           })()}
 
           {/* TAB: COUPONS MANAGEMENT (ADMIN) */}
-          {activeTab === 'admin-coupons' && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="flex justify-between items-center border-b border-brand-green-600/5 pb-2">
-                <h3 className="font-serif text-lg font-bold text-brand-green-900">Discount Coupons</h3>
-                <button 
-                  onClick={() => setShowAddCpn(!showAddCpn)}
-                  className="bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Create Coupon</span>
-                </button>
-              </div>
+          {activeTab === 'admin-coupons' && (() => {
+            const filteredCoupons = coupons.filter(cpn => {
+              if (adminCouponStatus === 'active' && !cpn.active) return false;
+              if (adminCouponStatus === 'archived' && cpn.active) return false;
+              if (adminCouponSearch.trim()) {
+                const q = adminCouponSearch.toLowerCase().trim();
+                const codeMatch = (cpn.code || '').toLowerCase().includes(q);
+                const descMatch = String(cpn.value).includes(q) || String(cpn.minOrderValue).includes(q);
+                return codeMatch || descMatch;
+              }
+              return true;
+            });
 
-              {/* Add Coupon form inline */}
-              {showAddCpn && (
-                <form onSubmit={handleAddCouponSubmit} className="bg-brand-cream-100/30 border border-brand-green-600/10 p-5 rounded-xl space-y-4 text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <label className="font-bold">Code (Uppercase)</label>
-                      <input required type="text" placeholder="E.g. AYUR20" value={cpnCode} onChange={e => setCpnCode(e.target.value)} className="w-full bg-white border p-1.5 rounded" />
+            const totalPages = Math.ceil(filteredCoupons.length / adminCouponPageSize) || 1;
+            const validPage = Math.min(adminCouponPage, totalPages);
+            const paginatedCoupons = filteredCoupons.slice((validPage - 1) * adminCouponPageSize, validPage * adminCouponPageSize);
+
+            return (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-brand-green-600/10 pb-4">
+                  <div>
+                    <h3 className="font-serif text-xl font-bold text-brand-green-900 flex items-center gap-2">
+                      <Tag className="w-5 h-5 text-brand-gold-600" />
+                      <span>Promotional Coupons & Discounts</span>
+                    </h3>
+                    <p className="text-xs text-brand-green-600/70">
+                      Configure custom promo codes, discount percentages, and minimum order requirements.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleTriggerLiveRefresh}
+                      disabled={isRefreshingData}
+                      className="px-3.5 py-2 bg-brand-green-50 hover:bg-brand-green-100 text-brand-green-900 border border-brand-green-200 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                    >
+                      <RotateCw className={`w-3.5 h-3.5 text-brand-green-700 ${isRefreshingData ? 'animate-spin' : ''}`} />
+                      <span>{isRefreshingData ? 'Refreshing...' : 'Refresh'}</span>
+                    </button>
+
+                    <button 
+                      onClick={() => setShowAddCpn(!showAddCpn)}
+                      className="bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-brand-gold-400" />
+                      <span>Create Coupon</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Add Coupon form inline */}
+                {showAddCpn && (
+                  <form onSubmit={handleAddCouponSubmit} className="bg-brand-cream-100/40 border border-brand-gold-500/30 p-5 rounded-2xl space-y-4 text-xs shadow-sm animate-in fade-in">
+                    <h4 className="font-serif font-bold text-brand-green-900 text-sm">Create New Promo Code</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <label className="font-bold text-brand-green-900">Coupon Code (Uppercase)</label>
+                        <input required type="text" placeholder="E.g. AYUR20" value={cpnCode} onChange={e => setCpnCode(e.target.value.toUpperCase())} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-brand-green-600 focus:outline-none" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-bold text-brand-green-900">Discount Rate (%)</label>
+                        <input required type="number" min="1" max="90" value={cpnVal} onChange={e => setCpnVal(Number(e.target.value))} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-green-600 focus:outline-none" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-bold text-brand-green-900">Minimum Order Subtotal (₹)</label>
+                        <input required type="number" min="0" value={cpnMin} onChange={e => setCpnMin(Number(e.target.value))} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-green-600 focus:outline-none" />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="font-bold">Percentage Value (%)</label>
-                      <input required type="number" value={cpnVal} onChange={e => setCpnVal(Number(e.target.value))} className="w-full bg-white border p-1.5 rounded" />
+                    <div className="flex gap-2 justify-end pt-2">
+                      <button type="button" onClick={() => setShowAddCpn(false)} className="px-4 py-2 border border-brand-green-200 text-brand-green-800 rounded-xl font-bold cursor-pointer hover:bg-white transition-all">Cancel</button>
+                      <button type="submit" className="px-5 py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-xl shadow-sm cursor-pointer transition-all">Save & Deploy Coupon</button>
                     </div>
-                    <div className="space-y-1">
-                      <label className="font-bold">Min Subtotal (₹)</label>
-                      <input required type="number" value={cpnMin} onChange={e => setCpnMin(Number(e.target.value))} className="w-full bg-white border p-1.5 rounded" />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <button type="button" onClick={() => setShowAddCpn(false)} className="px-3 py-1.5 border rounded">Cancel</button>
-                    <button type="submit" className="px-4 py-1.5 bg-brand-green-700 text-brand-cream-100 font-bold rounded">Add Coupon</button>
-                  </div>
-                </form>
-              )}
+                  </form>
+                )}
 
-              {/* Coupons list */}
-              <div className="space-y-3">
-                {coupons.map((cpn, i) => (
-                  <div key={i} className="border border-brand-green-600/10 p-4 rounded-xl flex justify-between items-center text-xs">
-                    <div>
-                      <span className="font-serif font-bold text-brand-green-900 bg-brand-gold-500/10 border border-brand-gold-500/20 px-2 py-0.5 rounded uppercase">{cpn.code}</span>
-                      <p className="text-brand-green-600/70 mt-1">Deducts {cpn.value}% • Minimum Order required: ₹{cpn.minOrderValue}</p>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded-full font-bold uppercase text-[9px] ${cpn.active ? 'bg-brand-green-100 text-brand-green-700' : 'bg-red-100 text-red-500'}`}>
-                      {cpn.active ? 'Active' : 'Archived'}
-                    </span>
+                {/* Filter and Search Bar */}
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-brand-green-600/10 shadow-xs">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => { setAdminCouponStatus('all'); setAdminCouponPage(1); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        adminCouponStatus === 'all'
+                          ? 'bg-brand-green-900 text-white shadow-xs'
+                          : 'bg-brand-green-50 text-brand-green-800 hover:bg-brand-green-100'
+                      }`}
+                    >
+                      All ({coupons.length})
+                    </button>
+                    <button
+                      onClick={() => { setAdminCouponStatus('active'); setAdminCouponPage(1); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        adminCouponStatus === 'active'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                      }`}
+                    >
+                      Active ({coupons.filter(c => c.active).length})
+                    </button>
+                    <button
+                      onClick={() => { setAdminCouponStatus('archived'); setAdminCouponPage(1); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        adminCouponStatus === 'archived'
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'bg-rose-50 text-rose-900 hover:bg-rose-100'
+                      }`}
+                    >
+                      Archived ({coupons.filter(c => !c.active).length})
+                    </button>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* TAB: SECURITY & ACTIVITY LOGS (ADMIN ONLY) */}
-          {activeTab === 'admin-logs' && isAdmin && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="border-b border-brand-green-600/10 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h3 className="font-serif text-xl font-bold text-brand-green-900 flex items-center gap-2">
-                    <ShieldAlert className="w-5 h-5 text-brand-gold-600" />
-                    <span>Security Ledger & System Audit Trails</span>
-                  </h3>
-                  <p className="text-xs text-brand-green-600/70 mt-1">
-                    Real-time cryptographic monitoring of user sessions, password updates, and order activity logs.
-                  </p>
-                </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200 text-xs font-bold shrink-0">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Session Protected (256-Bit SSL)</span>
-                </div>
-              </div>
-
-              {/* Security Status Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-4 rounded-xl border border-brand-green-600/10 bg-white space-y-1">
-                  <div className="flex items-center justify-between text-xs text-brand-green-700 font-bold">
-                    <span>Account Security</span>
-                    <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                  <div className="relative min-w-[200px]">
+                    <Search className="w-3.5 h-3.5 text-brand-green-600/50 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      placeholder="Search code or value..."
+                      value={adminCouponSearch}
+                      onChange={(e) => { setAdminCouponSearch(e.target.value); setAdminCouponPage(1); }}
+                      className="w-full bg-brand-green-50/50 border border-brand-green-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-brand-green-900 focus:outline-none focus:border-brand-green-600"
+                    />
+                    {adminCouponSearch && (
+                      <button
+                        onClick={() => { setAdminCouponSearch(''); setAdminCouponPage(1); }}
+                        className="absolute right-2.5 top-2 text-xs text-brand-green-600 hover:text-brand-green-900 font-bold"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
-                  <p className="text-sm font-bold text-brand-green-950">Password Encrypted</p>
-                  <p className="text-[10px] text-brand-green-600/70">Bcrypt Salt 10 Rounds</p>
-                </div>
-
-                <div className="p-4 rounded-xl border border-brand-green-600/10 bg-white space-y-1">
-                  <div className="flex items-center justify-between text-xs text-brand-green-700 font-bold">
-                    <span>JWT Auth Token</span>
-                    <Shield className="w-3.5 h-3.5 text-emerald-600" />
-                  </div>
-                  <p className="text-sm font-bold text-brand-green-950">Active & Valid</p>
-                  <p className="text-[10px] text-brand-green-600/70">Automatic Expiry Control</p>
                 </div>
 
-                <div className="p-4 rounded-xl border border-brand-green-600/10 bg-white space-y-1">
-                  <div className="flex items-center justify-between text-xs text-brand-green-700 font-bold">
-                    <span>Active Session</span>
-                    <Activity className="w-3.5 h-3.5 text-emerald-600" />
-                  </div>
-                  <p className="text-sm font-bold text-brand-green-950">{user?.email || 'Current User'}</p>
-                  <p className="text-[10px] text-brand-green-600/70">IP Verified Access</p>
-                </div>
-              </div>
-
-              {/* Activity Logs Listing */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-brand-green-800">Recent Activity & Audit Logs</h4>
-                  <button 
-                    onClick={() => {
-                      setLoadingLogs(true);
-                      fetch('/api/logs')
-                        .then(r => r.json())
-                        .then(d => { setLogs(Array.isArray(d) ? d : []); setLoadingLogs(false); })
-                        .catch(() => setLoadingLogs(false));
-                    }}
-                    className="text-[11px] font-bold text-brand-gold-700 hover:text-brand-gold-800 flex items-center gap-1 cursor-pointer"
-                  >
-                    <RotateCw className="w-3 h-3" /> Refresh Logs
-                  </button>
-                </div>
-
-                {loadingLogs ? (
-                  <div className="text-center py-12 text-xs text-brand-green-600 animate-pulse">
-                    Unrolling secure logs from the temple ledger...
-                  </div>
-                ) : logs.length === 0 ? (
-                  <div className="text-center py-12 text-xs text-brand-green-600/60 bg-white rounded-2xl border border-brand-green-600/10 p-6">
-                    <p className="font-bold text-brand-green-900 mb-1">No recorded security incidents</p>
-                    <p className="text-[11px] text-brand-green-600/70">Your account and session activities are completely clean and secure.</p>
+                {/* Coupons list */}
+                {filteredCoupons.length === 0 ? (
+                  <div className="p-8 bg-white border border-brand-green-600/10 rounded-2xl text-center space-y-2">
+                    <p className="text-sm font-bold text-brand-green-900">No coupons match your criteria.</p>
+                    <p className="text-xs text-brand-green-600/70">Create a coupon or adjust your active search filters.</p>
                   </div>
                 ) : (
-                  <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-2">
-                    {logs.map((lg) => (
-                      <div key={lg.id} className="border border-brand-green-600/10 bg-white hover:bg-brand-cream-50/50 p-3.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs transition-colors">
-                        <div className="space-y-1">
+                  <div className="space-y-4">
+                    <div 
+                      ref={adminCouponsScrollRef}
+                      className="max-h-[600px] overflow-y-auto pr-1.5 space-y-3 custom-scrollbar rounded-xl scroll-smooth"
+                    >
+                      {paginatedCoupons.map((cpn, i) => (
+                        <div key={i} className="border border-brand-green-600/10 bg-white hover:border-brand-green-600/30 p-4 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-3 text-xs shadow-xs transition-all">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-brand-green-950 bg-brand-gold-500/15 border border-brand-gold-500/30 px-3 py-1 rounded-lg text-xs uppercase tracking-wider">
+                                {cpn.code}
+                              </span>
+                              <span className="text-brand-green-900 font-bold text-xs">
+                                {cpn.value}% OFF
+                              </span>
+                            </div>
+                            <p className="text-brand-green-600/70 mt-1">
+                              Applies on orders with minimum subtotal of <span className="font-bold text-brand-green-900">₹{cpn.minOrderValue}</span>
+                            </p>
+                          </div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-brand-green-900 bg-brand-green-100/70 text-brand-green-800 px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider">
-                              {lg.action}
-                            </span>
-                            <span className="text-[11px] text-brand-green-700 font-mono font-medium">
-                              {lg.userEmail}
+                            <span className={`px-2.5 py-1 rounded-full font-bold uppercase text-[10px] ${cpn.active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                              {cpn.active ? '✓ Active in Store' : 'Archived'}
                             </span>
                           </div>
-                          <p className="text-brand-green-900 font-medium text-xs leading-relaxed mt-1">
-                            {lg.details}
-                          </p>
                         </div>
-                        <div className="text-[10px] text-brand-green-600/60 font-mono text-right shrink-0 bg-brand-cream-100/30 px-2 py-1 rounded-lg">
-                          {new Date(lg.timestamp).toLocaleString()}
-                        </div>
+                      ))}
+                    </div>
+
+                    {/* Pagination */}
+                    {filteredCoupons.length > 0 && (
+                      <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 px-1 z-10 border-t border-brand-green-600/10 rounded-b-xl">
+                        <Pagination
+                          currentPage={validPage}
+                          totalItems={filteredCoupons.length}
+                          pageSize={adminCouponPageSize}
+                          onPageChange={(p) => {
+                            setAdminCouponPage(p);
+                            adminCouponsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          onPageSizeChange={(s) => {
+                            setAdminCouponPageSize(s);
+                            setAdminCouponPage(1);
+                            adminCouponsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          pageSizeOptions={[5, 10, 20]}
+                          itemLabel="coupons"
+                        />
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            );
+          })()}
+
+          {/* TAB: SECURITY & ACTIVITY LOGS (ADMIN ONLY) */}
+          {activeTab === 'admin-logs' && isAdmin && (() => {
+            const filteredLogs = logs.filter(lg => {
+              if (adminLogActionFilter && lg.action !== adminLogActionFilter) return false;
+              if (adminLogSearch.trim()) {
+                const q = adminLogSearch.toLowerCase().trim();
+                const userMatch = (lg.userEmail || '').toLowerCase().includes(q);
+                const actionMatch = (lg.action || '').toLowerCase().includes(q);
+                const detailsMatch = (lg.details || '').toLowerCase().includes(q);
+                return userMatch || actionMatch || detailsMatch;
+              }
+              return true;
+            });
+
+            const uniqueActions = Array.from(new Set(logs.map(l => l.action).filter(Boolean)));
+            const totalPages = Math.ceil(filteredLogs.length / adminLogPageSize) || 1;
+            const validPage = Math.min(adminLogPage, totalPages);
+            const paginatedLogs = filteredLogs.slice((validPage - 1) * adminLogPageSize, validPage * adminLogPageSize);
+
+            return (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="border-b border-brand-green-600/10 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-serif text-xl font-bold text-brand-green-900 flex items-center gap-2">
+                      <ShieldAlert className="w-5 h-5 text-brand-gold-600" />
+                      <span>Security Ledger & System Audit Trails</span>
+                    </h3>
+                    <p className="text-xs text-brand-green-600/70 mt-1">
+                      Real-time cryptographic monitoring of user sessions, password updates, and order activity logs.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button 
+                      onClick={() => {
+                        setLoadingLogs(true);
+                        fetch('/api/logs')
+                          .then(r => r.json())
+                          .then(d => { setLogs(Array.isArray(d) ? d : []); setLoadingLogs(false); })
+                          .catch(() => setLoadingLogs(false));
+                      }}
+                      disabled={loadingLogs}
+                      className="px-3.5 py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                    >
+                      <RotateCw className={`w-3.5 h-3.5 text-brand-gold-400 ${loadingLogs ? 'animate-spin' : ''}`} />
+                      <span>{loadingLogs ? 'Refreshing...' : 'Refresh Logs'}</span>
+                    </button>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs font-bold shrink-0">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Session Protected (256-Bit SSL)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Security Status Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-4 rounded-2xl border border-brand-green-600/10 bg-white space-y-1 shadow-xs">
+                    <div className="flex items-center justify-between text-xs text-brand-green-700 font-bold">
+                      <span>Account Security</span>
+                      <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                    </div>
+                    <p className="text-sm font-bold text-brand-green-950">Password Encrypted</p>
+                    <p className="text-[10px] text-brand-green-600/70">Bcrypt Salt 10 Rounds</p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl border border-brand-green-600/10 bg-white space-y-1 shadow-xs">
+                    <div className="flex items-center justify-between text-xs text-brand-green-700 font-bold">
+                      <span>JWT Auth Token</span>
+                      <Shield className="w-3.5 h-3.5 text-emerald-600" />
+                    </div>
+                    <p className="text-sm font-bold text-brand-green-950">Active & Valid</p>
+                    <p className="text-[10px] text-brand-green-600/70">Automatic Expiry Control</p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl border border-brand-green-600/10 bg-white space-y-1 shadow-xs">
+                    <div className="flex items-center justify-between text-xs text-brand-green-700 font-bold">
+                      <span>Active Session</span>
+                      <Activity className="w-3.5 h-3.5 text-emerald-600" />
+                    </div>
+                    <p className="text-sm font-bold text-brand-green-950">{user?.email || 'Current User'}</p>
+                    <p className="text-[10px] text-brand-green-600/70">IP Verified Access</p>
+                  </div>
+                </div>
+
+                {/* Search & Filter Controls */}
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-brand-green-600/10 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-brand-green-800">Action:</span>
+                    <select
+                      value={adminLogActionFilter}
+                      onChange={(e) => { setAdminLogActionFilter(e.target.value); setAdminLogPage(1); }}
+                      className="bg-brand-green-50/70 border border-brand-green-200 px-3 py-1.5 rounded-xl text-xs text-brand-green-900 font-bold focus:outline-none focus:border-brand-green-600 cursor-pointer"
+                    >
+                      <option value="">All Action Types ({logs.length})</option>
+                      {uniqueActions.map(act => (
+                        <option key={act} value={act}>{act}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="relative min-w-[220px]">
+                    <Search className="w-3.5 h-3.5 text-brand-green-600/50 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      placeholder="Search email, action, details..."
+                      value={adminLogSearch}
+                      onChange={(e) => { setAdminLogSearch(e.target.value); setAdminLogPage(1); }}
+                      className="w-full bg-brand-green-50/50 border border-brand-green-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-brand-green-900 focus:outline-none focus:border-brand-green-600"
+                    />
+                    {adminLogSearch && (
+                      <button
+                        onClick={() => { setAdminLogSearch(''); setAdminLogPage(1); }}
+                        className="absolute right-2.5 top-2 text-xs text-brand-green-600 hover:text-brand-green-900 font-bold"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Activity Logs Listing */}
+                {loadingLogs ? (
+                  <div className="text-center py-12 text-xs text-brand-green-600 animate-pulse bg-white rounded-2xl border border-brand-green-600/10">
+                    Unrolling secure logs from the temple ledger...
+                  </div>
+                ) : filteredLogs.length === 0 ? (
+                  <div className="text-center py-12 text-xs text-brand-green-600/60 bg-white rounded-2xl border border-brand-green-600/10 p-6">
+                    <p className="font-bold text-brand-green-900 mb-1">No activity log entries found</p>
+                    <p className="text-[11px] text-brand-green-600/70">
+                      {adminLogSearch || adminLogActionFilter ? 'No logs match your filter criteria.' : 'Your session and account activities are completely clean and secure.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div 
+                      ref={adminLogsScrollRef}
+                      className="max-h-[600px] overflow-y-auto pr-1.5 space-y-2.5 custom-scrollbar rounded-xl scroll-smooth"
+                    >
+                      {paginatedLogs.map((lg) => (
+                        <div key={lg.id} className="border border-brand-green-600/10 bg-white hover:bg-brand-cream-50/50 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs transition-colors">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-brand-green-900 bg-brand-green-100/70 text-brand-green-800 px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider">
+                                {lg.action}
+                              </span>
+                              <span className="text-[11px] text-brand-green-700 font-mono font-medium">
+                                {lg.userEmail}
+                              </span>
+                            </div>
+                            <p className="text-brand-green-900 font-medium text-xs leading-relaxed mt-1">
+                              {lg.details}
+                            </p>
+                          </div>
+                          <div className="text-[10px] text-brand-green-600/60 font-mono text-right shrink-0 bg-brand-cream-100/40 px-2.5 py-1 rounded-xl">
+                            {new Date(lg.timestamp).toLocaleString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Pagination */}
+                    {filteredLogs.length > 0 && (
+                      <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 px-1 z-10 border-t border-brand-green-600/10 rounded-b-xl">
+                        <Pagination
+                          currentPage={validPage}
+                          totalItems={filteredLogs.length}
+                          pageSize={adminLogPageSize}
+                          onPageChange={(p) => {
+                            setAdminLogPage(p);
+                            adminLogsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          onPageSizeChange={(s) => {
+                            setAdminLogPageSize(s);
+                            setAdminLogPage(1);
+                            adminLogsScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          pageSizeOptions={[10, 15, 25, 50]}
+                          itemLabel="activity logs"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* TAB: WEBSITE SETTINGS (ADMIN) */}
           {activeTab === 'admin-settings' && (
@@ -2506,7 +3371,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
                 const updatedSettings: WebsiteSettings = {
-                  logoName: fd.get('logoName') as string || 'Grams Life',
+                  logoName: fd.get('logoName') as string || 'Bv Life',
                   logoUrl: fd.get('logoUrl') as string || '',
                   contactEmail: fd.get('contactEmail') as string || '',
                   contactPhone: fd.get('contactPhone') as string || '',
@@ -2739,7 +3604,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     G
                   </div>
                   <div>
-                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Grams Life</h2>
+                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Bv Life</h2>
                     <span className="text-[10px] uppercase tracking-widest text-brand-gold-700 font-extrabold mt-1 block">Ayurvedic Sanctuary</span>
                   </div>
                 </div>
@@ -2840,7 +3705,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </p>
                 <div className="space-y-0.5">
                   <p className="text-[10px] font-bold text-brand-gold-700 uppercase tracking-widest">Aacharya Dhanvantari</p>
-                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Grams Life Sanctuary</p>
+                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Bv Life Sanctuary</p>
                 </div>
               </div>
 
@@ -3000,7 +3865,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       RETURN ADDRESS (SHIPPER / SELLER)
                     </p>
                     <div className="text-[11px] font-bold leading-tight text-gray-800">
-                      <p className="font-black">Grams Life Ayurvedic Sanctuary</p>
+                      <p className="font-black">Bv Life Ayurvedic Sanctuary</p>
                       <p>Plot 42, Veda Heritage Enclave, Mansarovar</p>
                       <p>Jaipur, Rajasthan - 302020</p>
                       <p className="font-mono text-[10px] pt-0.5">Seller Care: +91 98765 43210 | care@gramslife.com</p>

@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, SlidersHorizontal, Grid, List, RotateCcw, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
 import { ProductCard } from '../components/ProductCard';
 import { Language, t, translateProductAttr } from '../lib/translations';
+import { Pagination } from '../components/Pagination';
 
 interface ShopProps {
   products: Product[];
@@ -41,15 +42,24 @@ export const Shop: React.FC<ShopProps> = ({
   const [sortBy, setSortBy] = useState<string>('featured');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
+  const [shopPage, setShopPage] = useState<number>(1);
+  const [shopPageSize, setShopPageSize] = useState<number>(12);
 
   // Synchronize incoming search queries and category filters from URL/navigation params
   React.useEffect(() => {
     setSearch(searchQuery);
+    setShopPage(1);
   }, [searchQuery]);
 
   React.useEffect(() => {
     setSelectedCategory(categoryFilter);
+    setShopPage(1);
   }, [categoryFilter]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setShopPage(1);
+  }, [priceRange, sortBy]);
 
   // Categories list
   const categoriesList = [
@@ -63,6 +73,7 @@ export const Shop: React.FC<ShopProps> = ({
     setPriceRange(2500);
     setSearch('');
     setSortBy('featured');
+    setShopPage(1);
   };
 
   // Filtered and Sorted Products
@@ -100,6 +111,13 @@ export const Shop: React.FC<ShopProps> = ({
 
     return result;
   }, [products, search, selectedCategory, priceRange, sortBy]);
+
+  const paginatedProducts = useMemo(() => {
+    const totalPages = Math.ceil(filteredProducts.length / shopPageSize) || 1;
+    const safePage = Math.min(shopPage, totalPages);
+    const start = (safePage - 1) * shopPageSize;
+    return filteredProducts.slice(start, start + shopPageSize);
+  }, [filteredProducts, shopPage, shopPageSize]);
 
   return (
     <div id="shop-page" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -303,82 +321,105 @@ export const Shop: React.FC<ShopProps> = ({
             </div>
           ) : (
             /* Products Grid or List */
-            <div className={viewMode === 'grid' 
-              ? "grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6" 
-              : "space-y-4"
-            }>
-              {filteredProducts.map(p => {
-                const isWishlisted = wishlist.includes(p.id);
+            <div className="space-y-8">
+              <div className={viewMode === 'grid' 
+                ? "grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6" 
+                : "space-y-4"
+              }>
+                {paginatedProducts.map(p => {
+                  const isWishlisted = wishlist.includes(p.id);
 
-                if (viewMode === 'grid') {
-                  return (
-                    <ProductCard
-                      key={p.id}
-                      product={p}
-                      onNavigate={onNavigate}
-                      onAddToCart={onAddToCart}
-                      onQuickView={onQuickView}
-                      isWishlisted={isWishlisted}
-                      onToggleWishlist={onToggleWishlist}
-                      onBuyNow={onBuyNow}
-                    />
-                  );
-                } else {
-                  // List Layout
-                  const discountPercent = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
-                  return (
-                    <div key={p.id} className="bg-white border border-brand-green-600/5 rounded-2xl p-4 flex flex-col sm:flex-row gap-5 hover:shadow-md transition-shadow">
-                      <div 
-                        className="w-full sm:w-44 aspect-square rounded-xl overflow-hidden bg-brand-green-50/20 relative cursor-pointer flex-shrink-0"
-                        onClick={() => onNavigate('product', { id: p.id })}
-                      >
-                        <img src={p.mainImage} alt={p.name} className="w-full h-full object-cover" />
-                        {discountPercent > 0 && (
-                          <span className="absolute top-2 left-2 bg-brand-gold-500 text-brand-green-950 text-[9px] font-bold px-1.5 py-0.5 rounded">
-                            {discountPercent}% OFF
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 flex flex-col justify-between py-1">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold uppercase text-brand-gold-700">
-                            {translateProductAttr(p.category, language)}
-                          </span>
-                          <h4 
-                            onClick={() => onNavigate('product', { id: p.id })}
-                            className="font-serif text-base font-bold text-brand-green-900 hover:text-brand-gold-600 cursor-pointer"
-                          >
-                            {p.name}
-                          </h4>
-                          <p className="text-xs text-brand-green-800/80 leading-relaxed line-clamp-2">{p.description}</p>
+                  if (viewMode === 'grid') {
+                    return (
+                      <ProductCard
+                        key={p.id}
+                        product={p}
+                        onNavigate={onNavigate}
+                        onAddToCart={onAddToCart}
+                        onQuickView={onQuickView}
+                        isWishlisted={isWishlisted}
+                        onToggleWishlist={onToggleWishlist}
+                        onBuyNow={onBuyNow}
+                      />
+                    );
+                  } else {
+                    // List Layout
+                    const discountPercent = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
+                    return (
+                      <div key={p.id} className="bg-white border border-brand-green-600/5 rounded-2xl p-4 flex flex-col sm:flex-row gap-5 hover:shadow-md transition-shadow">
+                        <div 
+                          className="w-full sm:w-44 aspect-square rounded-xl overflow-hidden bg-brand-green-50/20 relative cursor-pointer flex-shrink-0"
+                          onClick={() => onNavigate('product', { id: p.id })}
+                        >
+                          <img src={p.mainImage} alt={p.name} className="w-full h-full object-cover" />
+                          {discountPercent > 0 && (
+                            <span className="absolute top-2 left-2 bg-brand-gold-500 text-brand-green-950 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                              {discountPercent}% OFF
+                            </span>
+                          )}
                         </div>
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pt-4 border-t border-brand-green-600/5">
-                          <div className="flex items-baseline gap-2 font-serif text-sm">
-                            <span className="font-bold text-brand-green-900 text-lg">₹{p.price}</span>
-                            {p.originalPrice > p.price && (
-                              <span className="text-xs text-brand-green-600/50 line-through">₹{p.originalPrice}</span>
-                            )}
+                        <div className="flex-1 flex flex-col justify-between py-1">
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-bold uppercase text-brand-gold-700">
+                              {translateProductAttr(p.category, language)}
+                            </span>
+                            <h4 
+                              onClick={() => onNavigate('product', { id: p.id })}
+                              className="font-serif text-base font-bold text-brand-green-900 hover:text-brand-gold-600 cursor-pointer"
+                            >
+                              {p.name}
+                            </h4>
+                            <p className="text-xs text-brand-green-800/80 leading-relaxed line-clamp-2">{p.description}</p>
                           </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => onQuickView(p)}
-                              className="px-3 py-1.5 rounded-lg border border-brand-green-600/20 text-brand-green-800 text-xs font-bold hover:bg-brand-green-50 cursor-pointer"
-                            >
-                              {t('btn_quick_view', language)}
-                            </button>
-                            <button
-                              onClick={() => onAddToCart(p, 1)}
-                              className="px-4 py-1.5 bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 rounded-lg text-xs font-bold cursor-pointer"
-                            >
-                              {t('btn_add_to_cart', language)}
-                            </button>
+                          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pt-4 border-t border-brand-green-600/5">
+                            <div className="flex items-baseline gap-2 font-serif text-sm">
+                              <span className="font-bold text-brand-green-900 text-lg">₹{p.price}</span>
+                              {p.originalPrice > p.price && (
+                                <span className="text-xs text-brand-green-600/50 line-through">₹{p.originalPrice}</span>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => onQuickView(p)}
+                                className="px-3 py-1.5 rounded-lg border border-brand-green-600/20 text-brand-green-800 text-xs font-bold hover:bg-brand-green-50 cursor-pointer"
+                              >
+                                {t('btn_quick_view', language)}
+                              </button>
+                              <button
+                                onClick={() => onAddToCart(p, 1)}
+                                className="px-4 py-1.5 bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 rounded-lg text-xs font-bold cursor-pointer"
+                              >
+                                {t('btn_add_to_cart', language)}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                }
-              })}
+                    );
+                  }
+                })}
+              </div>
+
+              {/* Pagination Controls */}
+              {filteredProducts.length > 0 && (
+                <div className="pt-4 border-t border-brand-green-600/10">
+                  <Pagination
+                    currentPage={shopPage}
+                    totalItems={filteredProducts.length}
+                    pageSize={shopPageSize}
+                    onPageChange={(newPage) => {
+                      setShopPage(newPage);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    onPageSizeChange={(newSize) => {
+                      setShopPageSize(newSize);
+                      setShopPage(1);
+                    }}
+                    pageSizeOptions={[9, 12, 24, 36]}
+                    itemLabel={language === 'hi' ? 'उत्पाद' : 'products'}
+                  />
+                </div>
+              )}
             </div>
           )}
 

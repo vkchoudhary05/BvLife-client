@@ -289,7 +289,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
       </section>
 
       {/* 3.5. TOP SELLING PRODUCTS SECTION */}
-      <section id="top-selling-products" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+      {/* <section id="top-selling-products" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row justify-between items-baseline gap-4 mb-10 border-b border-brand-green-600/10 pb-5">
           <div>
             <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">{t('section_top_subtitle', language)}</span>
@@ -357,7 +357,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
             />
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* 5. USER TESTIMONIALS */}
       <section id="user-testimonials" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">

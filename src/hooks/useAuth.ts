@@ -25,6 +25,8 @@ export function useAuth() {
     sessionStorage.removeItem('grams_auth_token');
     localStorage.removeItem('grams_auth_token');
     localStorage.removeItem('grams_recent_orders');
+    localStorage.removeItem('grams_last_completed_order');
+    localStorage.removeItem('grams_last_placed_order');
     setAuthToken(null);
     setCurrentUser(null);
   }, []);
@@ -34,7 +36,7 @@ export function useAuth() {
       const data = await api.login(credentials);
       if (data) {
         const cleanEmail = (data.user?.email || credentials.email).toLowerCase();
-        const isUserAdmin = data.user?.role === 'admin' || ['vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes(cleanEmail);
+        const isUserAdmin = data.user?.role === 'admin' || ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes(cleanEmail);
 
         handleLoginSuccess(data.token, isUserAdmin);
         setCurrentUser(data.user);
@@ -60,7 +62,7 @@ export function useAuth() {
       });
       if (regData) {
         const cleanEmail = (regData.user?.email || data.email).toLowerCase();
-        const isUserAdmin = regData.user?.role === 'admin' || ['vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes(cleanEmail);
+        const isUserAdmin = regData.user?.role === 'admin' || ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes(cleanEmail);
 
         handleLoginSuccess(regData.token, isUserAdmin);
         setCurrentUser(regData.user);
