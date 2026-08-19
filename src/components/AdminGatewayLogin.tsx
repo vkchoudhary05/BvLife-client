@@ -21,7 +21,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin } from '../services/msg91OtpService';
-import { SecureOtpWidget } from './SecureOtpWidget';
+import { SecureOtpWidget } from './secureOtpWidget';
 import { validateAndFormatIndianPhone } from '../utils';
 
 interface AdminGatewayLoginProps {
