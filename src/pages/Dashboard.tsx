@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { User as UserType, Order, Address, Product, Coupon, WebsiteSettings } from '../types';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
-import { SecureOtpWidget } from '../components/SecureOtpWidget';
+import { SecureOtpWidget } from '../components/secureOtpWidget';
 import { sendMSG91Otp, formatMSG91Identifier } from '../services/msg91OtpService';
 import { Pagination } from '../components/Pagination';
 
