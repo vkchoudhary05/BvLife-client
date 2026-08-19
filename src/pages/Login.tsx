@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Mail, User as UserIcon, Phone, Shield, Sparkles, Lock, ArrowRight, Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react';
+import { Mail, User as UserIcon, Phone, Shield, Lock, ArrowRight, Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react';
 import { validateAndFormatIndianPhone } from '../utils';
 import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin } from '../services/msg91OtpService';
 import { SecureOtpWidget } from '../components/secureOtpWidget';
@@ -223,6 +223,7 @@ export const Login: React.FC<LoginProps> = ({
         localStorage.setItem('grams_auth_token', res.token);
         localStorage.setItem('token', res.token);
         setLoginSuccess('Authentication successful! Welcome back.');
+        onNavigate('home');
         setTimeout(() => {
           window.location.reload();
         }, 500);
@@ -399,9 +400,8 @@ export const Login: React.FC<LoginProps> = ({
             <SecureOtpWidget
               identifier={formattedPhone || authPhone}
               purpose="Registration"
-              widgetName="SecureOTPWidgetM7DX"
+              widgetName="Verification"
               smsOnly={true}
-              allowedChannels={['SMS']}
               initialReqId={activeReqId}
               onVerified={handleRegisterOtpVerified}
               onCancel={() => setOtpStep(false)}
@@ -537,18 +537,14 @@ export const Login: React.FC<LoginProps> = ({
                 <SecureOtpWidget
                   identifier={otpLoginIdentifier}
                   purpose="Login"
-                  widgetName="SecureOTPWidgetM7DX"
-                  smsOnly={false}
-                  allowedChannels={['SMS', 'WHATSAPP', 'EMAIL', 'VOICE']}
+                  widgetName="SMS Login"
+                  smsOnly={true}
                   initialReqId={activeReqId}
                   onVerified={handleOtpLoginVerified}
                   onCancel={() => setOtpLoginStarted(false)}
                   submitButtonText="Verify OTP & Sign In"
                   isSubmitting={authLoading}
                 />
-                <div className="text-center p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 font-medium">
-                  ⚡ <span className="font-bold">Sandbox & Instant Passcode:</span> <span className="font-mono font-bold bg-amber-200/80 px-1.5 py-0.5 rounded text-amber-950">1234</span> (or enter SMS code received on your phone)
-                </div>
               </div>
             ) : (
               <form onSubmit={handleStartOtpLogin} className="space-y-4 animate-in slide-in-from-bottom duration-300">
@@ -645,111 +641,6 @@ export const Login: React.FC<LoginProps> = ({
               </button>
             </form>
           )
-        )}
-
-        {/* Quick Profiles Autofill Panel */}
-        {!otpStep && !otpLoginStarted && (
-          <div className="bg-brand-cream-100 border border-brand-gold-300/40 p-3.5 rounded-2xl space-y-2.5 shadow-inner">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-brand-gold-600 animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800/80">Quick Profiles (Autofill)</span>
-              </div>
-              <span className="text-[9px] text-brand-gold-700 font-extrabold bg-brand-gold-300/20 border border-brand-gold-400/30 px-2 py-0.5 rounded-full">One-Tap</span>
-            </div>
-            
-            {isRegistering ? (
-              <div className="grid grid-cols-1 gap-1.5">
-                <button
-                   type="button"
-                   onClick={() => {
-                     setAuthName('Vivek Baliyan');
-                     setAuthPhone('7451050607');
-                     setAuthEmail('iamvivekbaliyan07@gmail.com');
-                     setAuthPassword('123123123');
-                     setAuthConfirmPassword('123123123');
-                     setOtpStep(false);
-                     setLoginError('');
-                     setLoginSuccess('');
-                   }}
-                   className="p-2.5 text-left border border-brand-gold-300/30 hover:border-brand-green-800 hover:bg-white rounded-xl bg-white/70 transition-all duration-200 cursor-pointer group shadow-sm flex items-center gap-2.5"
-                >
-                  <span className="p-1.5 rounded-lg bg-brand-green-50 text-brand-green-800 group-hover:bg-brand-gold-500/10 group-hover:text-brand-gold-700 transition-colors">
-                    <UserIcon className="w-3.5 h-3.5" />
-                  </span>
-                  <div className="min-w-0">
-                    <span className="block text-xs font-bold text-brand-green-900 group-hover:text-brand-gold-700 transition-colors">Vivek Baliyan</span>
-                    <span className="block text-[10px] text-brand-green-700/70 font-mono truncate">iamvivekbaliyan07@gmail.com</span>
-                  </div>
-                </button>
-
-                <button
-                   type="button"
-                   onClick={() => {
-                     setAuthName('Vipin Choudhary');
-                     setAuthPhone('9425011088');
-                     setAuthEmail('vkchoudhary050607@gmail.com');
-                     setAuthPassword('password123');
-                     setAuthConfirmPassword('password123');
-                     setOtpStep(false);
-                     setLoginError('');
-                     setLoginSuccess('');
-                   }}
-                   className="p-2.5 text-left border border-brand-gold-300/30 hover:border-brand-green-800 hover:bg-white rounded-xl bg-white/70 transition-all duration-200 cursor-pointer group shadow-sm flex items-center gap-2.5"
-                >
-                  <span className="p-1.5 rounded-lg bg-brand-green-50 text-brand-green-800 group-hover:bg-brand-gold-500/10 group-hover:text-brand-gold-700 transition-colors">
-                    <UserIcon className="w-3.5 h-3.5" />
-                  </span>
-                  <div className="min-w-0">
-                    <span className="block text-xs font-bold text-brand-green-900 group-hover:text-brand-gold-700 transition-colors">Vipin Choudhary</span>
-                    <span className="block text-[10px] text-brand-green-700/70 font-mono truncate">vkchoudhary050607@gmail.com</span>
-                  </div>
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthEmail('iamvivekbaliyan07@gmail.com');
-                    setAuthPassword('123123123');
-                    setOtpLoginIdentifier('7451050607');
-                    setLoginError('');
-                    setLoginSuccess('');
-                  }}
-                  className="p-2.5 text-left border border-brand-gold-300/50 hover:border-brand-green-800 hover:bg-white rounded-xl bg-white transition-all duration-200 cursor-pointer group shadow-sm flex items-center gap-2.5"
-                >
-                  <span className="p-1.5 rounded-lg bg-brand-gold-500/10 text-brand-gold-700 group-hover:bg-brand-gold-500/20 transition-colors">
-                    <UserIcon className="w-3.5 h-3.5" />
-                  </span>
-                  <div className="min-w-0">
-                    <span className="block text-xs font-bold text-brand-green-900 group-hover:text-brand-gold-700 transition-colors">Vivek Baliyan (Admin)</span>
-                    <span className="block text-[10px] text-brand-green-700/70 font-mono truncate">iamvivekbaliyan07@gmail.com (7451050607)</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthEmail('vkchoudhary050607@gmail.com');
-                    setAuthPassword('password123');
-                    setOtpLoginIdentifier('9425011088');
-                    setLoginError('');
-                    setLoginSuccess('');
-                  }}
-                  className="p-2.5 text-left border border-brand-gold-300/30 hover:border-brand-green-800 hover:bg-white rounded-xl bg-white/70 transition-all duration-200 cursor-pointer group shadow-sm flex items-center gap-2.5"
-                >
-                  <span className="p-1.5 rounded-lg bg-brand-green-50 text-brand-green-800 group-hover:bg-brand-gold-500/10 group-hover:text-brand-gold-700 transition-colors">
-                    <UserIcon className="w-3.5 h-3.5" />
-                  </span>
-                  <div className="min-w-0">
-                    <span className="block text-xs font-bold text-brand-green-900 group-hover:text-brand-gold-700 transition-colors">Vipin Choudhary</span>
-                    <span className="block text-[10px] text-brand-green-700/70 font-mono truncate">vkchoudhary050607@gmail.com (9425011088)</span>
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
         )}
 
       </div>

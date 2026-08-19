@@ -9,7 +9,8 @@ import {
   Tag, Plus, Trash2, Edit2, ShieldAlert, Sparkles, Check, CheckCircle2, Shield, Activity,
   Printer, FileText, X, Download, Settings, Lock, Mail, Phone, ArrowRight, Eye, EyeOff, RotateCw,
   Search, Clock, Truck, AlertCircle, RefreshCw, Filter, ArrowUpDown, Layers, Radio, Copy,
-  ExternalLink, SlidersHorizontal, BarChart3, TrendingUp, DollarSign, PackageCheck, AlertTriangle, CreditCard
+  ExternalLink, SlidersHorizontal, BarChart3, TrendingUp, DollarSign, PackageCheck, AlertTriangle, CreditCard,
+  Building2
 } from 'lucide-react';
 import { User as UserType, Order, Address, Product, Coupon, WebsiteSettings } from '../types';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
@@ -322,7 +323,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [prodImg4, setProdImg4] = useState('');
   const [prodBenefits, setProdBenefits] = useState('');
   const [prodDosage, setProdDosage] = useState('');
-  const [prodBrand, setProdBrand] = useState('Bv Life');
+  const [prodBrand, setProdBrand] = useState('Grams Life');
   const [prodSubcategory, setProdSubcategory] = useState('');
   const [prodUsageInstructions, setProdUsageInstructions] = useState('As directed');
   const [prodFeatured, setProdFeatured] = useState(false);
@@ -535,7 +536,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg4(prod.images?.[2] || '');
     setProdBenefits(prod.benefits.join(', '));
     setProdDosage(prod.dosage);
-    setProdBrand(prod.brand || 'Bv Life');
+    setProdBrand(prod.brand || 'Grams Life');
     setProdSubcategory(prod.subcategory || '');
     setProdUsageInstructions(prod.usageInstructions || 'As directed');
     setProdFeatured(prod.featured || false);
@@ -563,7 +564,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg4('');
     setProdBenefits('');
     setProdDosage('');
-    setProdBrand('Bv Life');
+    setProdBrand('Grams Life');
     setProdSubcategory('');
     setProdUsageInstructions('As directed');
     setProdFeatured(false);
@@ -848,24 +849,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }
 
   return (
-    <div id="dashboard-page" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div id="dashboard-page" className={`w-full ${isAdmin ? 'bg-gradient-to-br from-green-50/60 via-slate-50 to-blue-50/50 min-h-[90vh] font-sans text-slate-900' : ''}`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
       
       {/* Admin Title & Security Control Banner */}
       {isAdmin && (
-        <div className="bg-brand-green-950 text-brand-cream-50 rounded-3xl p-6 mb-8 border border-brand-gold-500/20 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4 relative overflow-hidden">
-          {/* Subtle gold accent border glow */}
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-gold-500 via-brand-gold-300 to-brand-gold-600" />
+        <div className="bg-white rounded-3xl p-6 sm:p-7 mb-8 border border-green-100 shadow-xl shadow-green-100/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
+          {/* Top Vibrant Color Header Accent */}
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-green-600 to-violet-600" />
           
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-brand-green-900 rounded-2xl border border-brand-gold-500/20 shadow-inner">
-              <Shield className="w-6 h-6 text-brand-gold-400" />
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-green-600 flex items-center justify-center shadow-md shadow-green-500/25 text-white shrink-0">
+              <Shield className="w-7 h-7" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand-gold-400 bg-brand-gold-500/10 border border-brand-gold-500/20 px-2 py-0.5 rounded-full">Administrative Node</span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs font-bold uppercase tracking-wider mb-1">
+                <Building2 className="w-3.5 h-3.5 text-green-600" />
+                <span>Admin Management Gateway</span>
               </div>
-              <h1 className="font-serif text-2xl font-bold tracking-tight mt-1 text-brand-cream-50">Bv Life Admin Panel</h1>
-              <p className="text-xs text-brand-cream-300/80 mt-0.5">Apothecary Director: <span className="font-semibold text-brand-cream-50">{user.fullName}</span> ({user.email})</p>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Grams Life Admin Panel</h1>
+              <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
+                Director: <span className="font-semibold text-slate-900">{user.fullName}</span> ({user.email})
+              </p>
             </div>
           </div>
           
@@ -873,7 +878,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {onLogout && (
               <button
                 onClick={onLogout}
-                className="w-full sm:w-auto px-4 py-2.5 bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer border border-brand-gold-400 shadow-md text-center"
+                className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-blue-600 via-green-600 to-green-700 hover:from-blue-700 hover:to-green-800 text-white text-xs font-bold uppercase tracking-wider rounded-2xl transition-all cursor-pointer shadow-md shadow-green-500/20 text-center"
               >
                 Secure Sign Out
               </button>
@@ -903,17 +908,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
         {/* Navigation Sidebar Drawer */}
-        <div className="lg:col-span-1 bg-white border border-brand-green-600/5 p-4 rounded-2xl h-fit lg:sticky lg:top-24 flex flex-col gap-3 min-w-0 shadow-2xs z-10">
+        <div className={`lg:col-span-1 bg-white border ${isAdmin ? 'border-green-100 shadow-xl shadow-green-100/40' : 'border-brand-green-600/5 shadow-2xs'} p-4 rounded-3xl h-fit lg:sticky lg:top-24 flex flex-col gap-3 min-w-0 z-10`}>
           
           {/* Quick Sandbox Role Switcher */}
           {isAdmin && (
-            <div className="p-3.5 border border-brand-gold-500/20 rounded-xl bg-brand-cream-100/30 text-xs space-y-2 shrink-0">
+            <div className="p-3.5 border border-green-100/80 rounded-2xl bg-green-50/40 text-xs space-y-2 shrink-0">
               <div className="flex items-center gap-1.5 justify-center">
-                <Shield className="w-3.5 h-3.5 text-brand-gold-600 animate-pulse" />
-                <span className="text-[10px] uppercase tracking-widest text-brand-gold-700 font-bold">Apothecary Sandbox Role</span>
+                <Shield className="w-3.5 h-3.5 text-green-600" />
+                <span className="text-[10px] uppercase tracking-widest text-slate-800 font-bold">Portal Role Clearance</span>
               </div>
-              <p className="text-[10px] text-brand-green-700/80 text-center leading-relaxed">
-                Dynamically switch user capabilities between Buyer & Manager.
+              <p className="text-[10px] text-slate-600 text-center leading-relaxed">
+                Switch user capability between Buyer & Administrator.
               </p>
               <div className="grid grid-cols-2 gap-1.5 pt-1">
                 <button
@@ -931,10 +936,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       console.error(err);
                     }
                   }}
-                  className={`py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer text-center ${
+                  className={`py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer text-center ${
                     !isAdmin 
-                      ? 'bg-brand-green-700 text-brand-cream-50 shadow-sm' 
-                      : 'bg-white text-brand-green-700 border border-brand-green-600/10 hover:bg-brand-green-50'
+                      ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-xs' 
+                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
                   }`}
                 >
                   Customer
@@ -954,10 +959,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       console.error(err);
                     }
                   }}
-                  className={`py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer text-center ${
+                  className={`py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer text-center ${
                     isAdmin 
-                      ? 'bg-brand-green-700 text-brand-cream-50 shadow-sm' 
-                      : 'bg-white text-brand-green-700 border border-brand-green-600/10 hover:bg-brand-green-50'
+                      ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-xs' 
+                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
                   }`}
                 >
                   Admin
@@ -967,7 +972,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
 
           {/* Navigation Tabs Area */}
-          <div className="flex flex-row lg:flex-col overflow-x-auto lg:overflow-visible gap-2 pb-2 lg:pb-0 whitespace-nowrap scrollbar-none snap-x w-full">
+          <div className="flex flex-row lg:flex-col overflow-x-auto lg:overflow-visible gap-1.5 pb-2 lg:pb-0 whitespace-nowrap scrollbar-none snap-x w-full">
             {/* CUSTOMER TABS */}
             {!isAdmin ? (
               <>
@@ -1011,11 +1016,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
             ) : (
               /* ADMIN TABS */
               <>
-                <span className="hidden lg:block px-4 py-1 text-[9px] uppercase tracking-wider text-brand-gold-700 font-bold shrink-0">Admin Controls</span>
+                <span className="hidden lg:block px-3 py-1 text-[10px] uppercase tracking-wider text-slate-400 font-bold shrink-0">Admin Controls</span>
                 <button
                   onClick={() => setActiveTab('admin-stats')}
-                  className={`shrink-0 snap-start lg:w-full text-left px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer ${
-                    activeTab === 'admin-stats' ? 'bg-brand-green-700 text-brand-cream-50' : 'text-brand-green-700 hover:bg-brand-green-50'
+                  className={`shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                    activeTab === 'admin-stats' 
+                      ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-sm font-bold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
                   <LayoutDashboard className="w-4 h-4 shrink-0" />
@@ -1023,8 +1030,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('admin-catalog')}
-                  className={`shrink-0 snap-start lg:w-full text-left px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer ${
-                    activeTab === 'admin-catalog' ? 'bg-brand-green-700 text-brand-cream-50' : 'text-brand-green-700 hover:bg-brand-green-50'
+                  className={`shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                    activeTab === 'admin-catalog' 
+                      ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-sm font-bold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
                   <Leaf className="w-4 h-4 shrink-0" />
@@ -1032,8 +1041,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('admin-orders')}
-                  className={`shrink-0 snap-start lg:w-full text-left px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer ${
-                    activeTab === 'admin-orders' ? 'bg-brand-green-700 text-brand-cream-50' : 'text-brand-green-700 hover:bg-brand-green-50'
+                  className={`shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                    activeTab === 'admin-orders' 
+                      ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-sm font-bold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
                   <ShoppingBag className="w-4 h-4 shrink-0" />
@@ -1041,8 +1052,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('admin-payments')}
-                  className={`shrink-0 snap-start lg:w-full text-left px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer ${
-                    activeTab === 'admin-payments' ? 'bg-brand-green-700 text-brand-cream-50' : 'text-brand-green-700 hover:bg-brand-green-50'
+                  className={`shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                    activeTab === 'admin-payments' 
+                      ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-sm font-bold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
                   <FileText className="w-4 h-4 shrink-0" />
@@ -1050,8 +1063,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('admin-coupons')}
-                  className={`shrink-0 snap-start lg:w-full text-left px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer ${
-                    activeTab === 'admin-coupons' ? 'bg-brand-green-700 text-brand-cream-50' : 'text-brand-green-700 hover:bg-brand-green-50'
+                  className={`shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                    activeTab === 'admin-coupons' 
+                      ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-sm font-bold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
                   <Tag className="w-4 h-4 shrink-0" />
@@ -1059,8 +1074,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('admin-logs')}
-                  className={`shrink-0 snap-start lg:w-full text-left px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer ${
-                    activeTab === 'admin-logs' ? 'bg-brand-green-700 text-brand-cream-50' : 'text-brand-green-700 hover:bg-brand-green-50'
+                  className={`shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                    activeTab === 'admin-logs' 
+                      ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-sm font-bold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
                   <Activity className="w-4 h-4 shrink-0" />
@@ -1068,8 +1085,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('admin-settings')}
-                  className={`shrink-0 snap-start lg:w-full text-left px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer ${
-                    activeTab === 'admin-settings' ? 'bg-brand-green-700 text-brand-cream-50' : 'text-brand-green-700 hover:bg-brand-green-50'
+                  className={`shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                    activeTab === 'admin-settings' 
+                      ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-sm font-bold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
                   <Settings className="w-4 h-4 shrink-0" />
@@ -1082,7 +1101,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Content Panel Area */}
-        <div className="lg:col-span-3 bg-white border border-brand-green-600/5 p-6 rounded-2xl min-h-[450px]">
+        <div className={`lg:col-span-3 bg-white border ${isAdmin ? 'border-green-100 shadow-xl shadow-green-100/40' : 'border-brand-green-600/5'} p-6 sm:p-8 rounded-3xl min-h-[450px]`}>
           
           {/* TAB: MY PROFILE & ACCOUNT (CUSTOMER) */}
           {activeTab === 'account' && user && (
@@ -1631,7 +1650,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <SecureOtpWidget
                       identifier={verifyTargetIdentifier || user.phone || user.email}
                       purpose={verifyPurpose}
-                      widgetName="SecureOTPWidgetM7DX"
+                      widgetName="Security Verification"
                       onVerified={(params) => {
                         setVerifySuccessNotice(`Verification confirmed via ${verifyPurpose} for ${verifyTargetIdentifier || user.phone || user.email}! Token: ${params.accessToken?.slice(0, 12) || 'VERIFIED'}...`);
                         setShowSecurityVerify(false);
@@ -1717,55 +1736,63 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {/* TAB: OVERVIEW STATS (ADMIN) */}
           {activeTab === 'admin-stats' && (
             <div className="space-y-6 animate-in fade-in duration-300">
-              <h3 className="font-serif text-lg font-bold text-brand-green-900 border-b border-brand-green-600/5 pb-2">
-                Store Operations Statistics Overview
-              </h3>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div className="bg-brand-cream-100/40 border border-brand-green-600/10 p-4 rounded-xl">
-                  <span className="text-[10px] uppercase font-bold text-brand-green-600/70">Expected Sales</span>
-                  <p className="font-serif text-xl font-bold text-brand-green-900 mt-1">₹{adminStats.salesTotal}</p>
-                </div>
-                <div className="bg-brand-cream-100/40 border border-brand-green-600/10 p-4 rounded-xl">
-                  <span className="text-[10px] uppercase font-bold text-brand-green-600/70">Total Orders</span>
-                  <p className="font-serif text-xl font-bold text-brand-green-900 mt-1">{adminStats.ordersCount}</p>
-                </div>
-                <div className="bg-brand-cream-100/40 border border-brand-green-600/10 p-4 rounded-xl">
-                  <span className="text-[10px] uppercase font-bold text-brand-green-600/70">Average Cart</span>
-                  <p className="font-serif text-xl font-bold text-brand-green-900 mt-1">₹{adminStats.avgOrder}</p>
-                </div>
-                <div className="bg-brand-cream-100/40 border border-brand-green-600/10 p-4 rounded-xl">
-                  <span className="text-[10px] uppercase font-bold text-brand-green-600/70">Active Catalog</span>
-                  <p className="font-serif text-xl font-bold text-brand-green-900 mt-1">{adminStats.productsCount}</p>
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <LayoutDashboard className="w-5 h-5 text-green-600" />
+                    <span>Store Operations & Financial Overview</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Real-time operational metrics and live inventory data.
+                  </p>
                 </div>
               </div>
 
-              <div className="mt-8 border border-brand-gold-500/10 rounded-2xl bg-brand-cream-50/20 p-5 space-y-4">
-                <h4 className="font-serif font-bold text-brand-green-950 text-sm flex items-center gap-1.5 border-b pb-2">
-                  <Shield className="w-4 h-4 text-brand-gold-600 animate-pulse" />
-                  <span>Real-time Live Financial Integrity (MySQL DB Backed)</span>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div className="bg-gradient-to-br from-green-50/80 to-blue-50/50 border border-green-100 p-5 rounded-2xl shadow-xs">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-green-700">Expected Sales</span>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">₹{adminStats.salesTotal}</p>
+                </div>
+                <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/50 border border-blue-100 p-5 rounded-2xl shadow-xs">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-blue-700">Total Orders</span>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">{adminStats.ordersCount}</p>
+                </div>
+                <div className="bg-gradient-to-br from-amber-50/80 to-orange-50/50 border border-amber-100 p-5 rounded-2xl shadow-xs">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-amber-700">Average Cart</span>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">₹{adminStats.avgOrder}</p>
+                </div>
+                <div className="bg-gradient-to-br from-emerald-50/80 to-teal-50/50 border border-emerald-100 p-5 rounded-2xl shadow-xs">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-700">Active Catalog</span>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">{adminStats.productsCount}</p>
+                </div>
+              </div>
+
+              <div className="mt-8 border border-green-100 rounded-3xl bg-green-50/30 p-6 space-y-4 shadow-xs">
+                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2 border-b border-green-100/80 pb-3">
+                  <Shield className="w-4 h-4 text-green-600" />
+                  <span>Real-time Live Financial Integrity (Database Backed)</span>
                 </h4>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center pt-2">
-                  <div className="p-4 border border-brand-green-100 rounded-xl bg-white space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-brand-green-600">Captured / Settled</span>
-                    <p className="font-serif text-lg font-bold text-brand-green-900">₹{adminStats.capturedPaymentsTotal}</p>
-                    <p className="text-[9px] text-brand-green-600/60 font-mono">Completed transactions</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center pt-1">
+                  <div className="p-4 border border-green-100 rounded-2xl bg-white space-y-1 shadow-xs">
+                    <span className="text-[10px] uppercase font-bold text-green-700 tracking-wider">Captured / Settled</span>
+                    <p className="text-xl font-bold text-green-900">₹{adminStats.capturedPaymentsTotal}</p>
+                    <p className="text-[10px] text-slate-500 font-mono">Completed transactions</p>
                   </div>
-                  <div className="p-4 border border-brand-green-100 rounded-xl bg-white space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-brand-gold-700">Awaiting Settlement</span>
-                    <p className="font-serif text-lg font-bold text-brand-gold-800">₹{adminStats.pendingPaymentsTotal}</p>
-                    <p className="text-[9px] text-brand-gold-700/60 font-mono">COD / pending audits</p>
+                  <div className="p-4 border border-amber-100 rounded-2xl bg-white space-y-1 shadow-xs">
+                    <span className="text-[10px] uppercase font-bold text-amber-700 tracking-wider">Awaiting Settlement</span>
+                    <p className="text-xl font-bold text-amber-900">₹{adminStats.pendingPaymentsTotal}</p>
+                    <p className="text-[10px] text-slate-500 font-mono">COD / pending audits</p>
                   </div>
-                  <div className="p-4 border border-brand-green-100 rounded-xl bg-white space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-red-600">Failed or Voided</span>
-                    <p className="font-serif text-lg font-bold text-red-700">₹{adminStats.failedPaymentsTotal}</p>
-                    <p className="text-[9px] text-red-500/60 font-mono">Cancelled or declined</p>
+                  <div className="p-4 border border-rose-100 rounded-2xl bg-white space-y-1 shadow-xs">
+                    <span className="text-[10px] uppercase font-bold text-rose-600 tracking-wider">Failed or Voided</span>
+                    <p className="text-xl font-bold text-rose-700">₹{adminStats.failedPaymentsTotal}</p>
+                    <p className="text-[10px] text-slate-500 font-mono">Cancelled or declined</p>
                   </div>
                 </div>
 
-                <div className="text-[10px] text-center text-brand-green-600/50 pt-2 font-mono">
-                  Syncing with {adminStats.paymentsCount} payments in active MySQL database.
+                <div className="text-[11px] text-center text-slate-500 pt-1 font-mono">
+                  Syncing with {adminStats.paymentsCount} transactions in active database ledger.
                 </div>
               </div>
             </div>
@@ -1800,13 +1827,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             return (
               <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-brand-green-600/10 pb-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
                   <div>
-                    <h3 className="font-serif text-xl font-bold text-brand-green-900 flex items-center gap-2">
-                      <CreditCard className="w-5 h-5 text-brand-gold-600" />
+                    <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-green-600" />
                       <span>Payments Transaction Audit Ledger</span>
                     </h3>
-                    <p className="text-xs text-brand-green-600/70 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       Audit database-backed settlement events, reconcile gateway references, and verify manual transfers.
                     </p>
                   </div>
@@ -1814,53 +1841,53 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <button
                       onClick={handleTriggerLiveRefresh}
                       disabled={isRefreshingData}
-                      className="px-3.5 py-1.5 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                      className="px-4 py-2 bg-gradient-to-r from-blue-600 via-green-600 to-green-700 hover:from-blue-700 hover:to-green-800 text-white rounded-2xl text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-green-500/20 cursor-pointer disabled:opacity-50"
                     >
-                      <RotateCw className={`w-3.5 h-3.5 text-brand-gold-400 ${isRefreshingData ? 'animate-spin' : ''}`} />
+                      <RotateCw className={`w-3.5 h-3.5 ${isRefreshingData ? 'animate-spin' : ''}`} />
                       <span>{isRefreshingData ? 'Syncing...' : 'Sync Payments'}</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Filter and Search Bar */}
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-brand-green-600/10 shadow-xs">
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80 shadow-xs">
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
                     <button
                       onClick={() => { setAdminPaymentFilter('all'); setAdminPaymentPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                         adminPaymentFilter === 'all'
-                          ? 'bg-brand-green-900 text-white shadow-xs'
-                          : 'bg-brand-green-50 text-brand-green-800 hover:bg-brand-green-100'
+                          ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-xs'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                       }`}
                     >
                       All ({payments.length})
                     </button>
                     <button
                       onClick={() => { setAdminPaymentFilter('paid'); setAdminPaymentPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                         adminPaymentFilter === 'paid'
-                          ? 'bg-emerald-700 text-white shadow-xs'
-                          : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50'
                       }`}
                     >
                       Paid ({paidCount})
                     </button>
                     <button
                       onClick={() => { setAdminPaymentFilter('pending'); setAdminPaymentPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                         adminPaymentFilter === 'pending'
                           ? 'bg-amber-600 text-white shadow-xs'
-                          : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
+                          : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-50'
                       }`}
                     >
                       Pending ({pendingCount})
                     </button>
                     <button
                       onClick={() => { setAdminPaymentFilter('failed'); setAdminPaymentPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                         adminPaymentFilter === 'failed'
                           ? 'bg-rose-600 text-white shadow-xs'
-                          : 'bg-rose-50 text-rose-900 hover:bg-rose-100'
+                          : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
                       }`}
                     >
                       Failed ({failedCount})
@@ -1868,18 +1895,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
 
                   <div className="relative min-w-[220px]">
-                    <Search className="w-3.5 h-3.5 text-brand-green-600/50 absolute left-3 top-2.5" />
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
                     <input
                       type="text"
                       placeholder="Search TXID, Order, Email, Ref..."
                       value={adminPaymentSearch}
                       onChange={(e) => { setAdminPaymentSearch(e.target.value); setAdminPaymentPage(1); }}
-                      className="w-full bg-brand-green-50/50 border border-brand-green-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-brand-green-900 focus:outline-none focus:border-brand-green-600"
+                      className="w-full bg-white border border-slate-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
                     />
                     {adminPaymentSearch && (
                       <button
                         onClick={() => setAdminPaymentSearch('')}
-                        className="absolute right-2.5 top-1.5 text-xs text-brand-green-600 hover:text-brand-green-900 font-bold"
+                        className="absolute right-2.5 top-1.5 text-xs text-slate-400 hover:text-slate-700 font-bold"
                       >
                         ✕
                       </button>
@@ -1888,19 +1915,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
 
                 {loadingPayments ? (
-                  <div className="text-center py-12 text-xs text-brand-green-600 animate-pulse bg-white rounded-2xl border border-brand-green-600/10 p-6">
+                  <div className="text-center py-12 text-xs text-green-700 animate-pulse bg-white rounded-2xl border border-green-100 p-6 shadow-xs">
                     Querying live database-backed payment transactions...
                   </div>
                 ) : filteredPayments.length === 0 ? (
-                  <div className="text-center py-10 bg-white rounded-2xl border border-brand-green-600/10 p-6 space-y-2">
-                    <p className="text-sm font-bold text-brand-green-900">No payment records found.</p>
-                    <p className="text-xs text-brand-green-600/70">
+                  <div className="text-center py-10 bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
+                    <p className="text-sm font-bold text-slate-900">No payment records found.</p>
+                    <p className="text-xs text-slate-500">
                       {adminPaymentSearch ? `No records match "${adminPaymentSearch}"` : 'No transactions recorded under this filter.'}
                     </p>
                     {adminPaymentSearch && (
                       <button
                         onClick={() => { setAdminPaymentSearch(''); setAdminPaymentFilter('all'); }}
-                        className="text-xs font-bold text-brand-gold-700 underline cursor-pointer"
+                        className="text-xs font-bold text-green-600 underline cursor-pointer"
                       >
                         Clear Filters
                       </button>
@@ -1915,36 +1942,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       {paginatedPayments.map((p) => {
                         const isEditing = editingPaymentId === p.id;
                         return (
-                          <div key={p.id} className="border border-brand-green-600/10 bg-white p-4.5 rounded-2xl space-y-3 text-xs shadow-xs hover:border-brand-green-600/30 transition-all">
+                          <div key={p.id} className="border border-green-100 hover:border-green-300 bg-white p-5 rounded-2xl space-y-3 text-xs shadow-xs hover:shadow-md transition-all">
                             
-                            <div className="flex justify-between items-start border-b border-brand-green-600/5 pb-2.5">
+                            <div className="flex justify-between items-start border-b border-slate-100 pb-2.5">
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="font-mono font-bold text-brand-green-950 text-sm">{p.id}</span>
-                                  <span className="text-[10px] text-brand-gold-700 font-bold uppercase bg-brand-gold-50 px-2 py-0.5 rounded border border-brand-gold-200">
+                                  <span className="font-mono font-bold text-slate-900 text-sm">{p.id}</span>
+                                  <span className="text-[10px] text-green-700 font-bold uppercase bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
                                     {p.paymentMethod}
                                   </span>
                                 </div>
-                                <p className="text-[11px] text-brand-green-600/70 font-mono mt-0.5">Order Reference: {p.orderId}</p>
+                                <p className="text-[11px] text-slate-500 font-mono mt-0.5">Order Reference: {p.orderId}</p>
                               </div>
-                              <span className={`px-3 py-1 rounded-full font-bold uppercase text-[10px] shadow-2xs ${
-                                p.status === 'Paid' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                                p.status === 'Failed' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
-                                'bg-amber-100 text-amber-800 border border-amber-300'
+                              <span className={`px-3 py-1 rounded-full font-bold uppercase text-[10px] ${
+                                p.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                p.status === 'Failed' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                                'bg-amber-50 text-amber-700 border border-amber-200'
                               }`}>
                                 {p.status}
                               </span>
                             </div>
 
                             {isEditing ? (
-                              <form onSubmit={(e) => handleUpdatePaymentSubmit(e, p.id)} className="space-y-3 pt-1 bg-brand-cream-50/50 p-3 rounded-xl border border-brand-green-600/10">
+                              <form onSubmit={(e) => handleUpdatePaymentSubmit(e, p.id)} className="space-y-3 pt-1 bg-slate-50 p-4 rounded-2xl border border-slate-200">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   <div className="space-y-1">
-                                    <label className="font-bold text-brand-green-800">Payment Status</label>
+                                    <label className="font-bold text-slate-700">Payment Status</label>
                                     <select
                                       value={editPayStatus}
                                       onChange={(e) => setEditPayStatus(e.target.value as any)}
-                                      className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs font-bold"
+                                      className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
                                     >
                                       <option value="Pending">Pending</option>
                                       <option value="Paid">Paid</option>
@@ -1952,44 +1979,44 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                     </select>
                                   </div>
                                   <div className="space-y-1">
-                                    <label className="font-bold text-brand-green-800">Transaction Reference Code</label>
+                                    <label className="font-bold text-slate-700">Transaction Reference Code</label>
                                     <input
                                       type="text"
                                       value={editTxnRef}
                                       onChange={(e) => setEditTxnRef(e.target.value)}
-                                      className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs font-mono"
+                                      className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
                                       placeholder="TXN-ID / UTR / Reference"
                                     />
                                   </div>
                                 </div>
                                 <div className="flex gap-2 justify-end pt-1">
-                                  <button type="button" onClick={() => setEditingPaymentId(null)} className="px-3.5 py-1.5 border border-brand-green-300 rounded-xl text-xs font-bold hover:bg-brand-green-50">Cancel</button>
-                                  <button type="submit" className="px-4 py-1.5 bg-brand-green-800 text-brand-cream-100 font-bold rounded-xl text-xs shadow-xs">Save Audit</button>
+                                  <button type="button" onClick={() => setEditingPaymentId(null)} className="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-100 text-slate-700 cursor-pointer">Cancel</button>
+                                  <button type="submit" className="px-4 py-1.5 bg-gradient-to-r from-blue-600 to-green-600 text-white font-bold rounded-xl text-xs shadow-xs cursor-pointer">Save Audit</button>
                                 </div>
                               </form>
                             ) : (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-brand-cream-50/30 p-3 rounded-xl">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
                                 <div className="space-y-1">
-                                  <p className="text-brand-green-600/70">Client Email: <span className="font-bold text-brand-green-900">{p.userEmail}</span></p>
-                                  <p className="text-brand-green-600/70">Secured Amount: <span className="font-bold text-brand-green-900 font-serif text-sm">₹{p.amount}</span></p>
+                                  <p className="text-slate-500">Client Email: <span className="font-bold text-slate-900">{p.userEmail}</span></p>
+                                  <p className="text-slate-500">Secured Amount: <span className="font-bold text-slate-900 text-sm">₹{p.amount}</span></p>
                                 </div>
                                 <div className="space-y-1 sm:text-right">
-                                  <p className="text-brand-green-600/70">Channel: <span className="font-bold text-brand-green-900 uppercase">{p.paymentMethod}</span></p>
-                                  <p className="text-brand-green-600/70">Gateway Ref: <span className="font-mono text-brand-green-900 font-bold">{p.transactionReference || 'N/A'}</span></p>
+                                  <p className="text-slate-500">Channel: <span className="font-bold text-slate-900 uppercase">{p.paymentMethod}</span></p>
+                                  <p className="text-slate-500">Gateway Ref: <span className="font-mono text-slate-900 font-bold">{p.transactionReference || 'N/A'}</span></p>
                                 </div>
                               </div>
                             )}
 
                             {!isEditing && (
-                              <div className="flex justify-between items-center pt-2.5 border-t border-brand-green-600/5">
-                                <span className="text-[10px] text-brand-green-600/50 font-mono">Timestamp: {new Date(p.createdAt).toLocaleString()}</span>
+                              <div className="flex justify-between items-center pt-2.5 border-t border-slate-100">
+                                <span className="text-[10px] text-slate-400 font-mono">Timestamp: {new Date(p.createdAt).toLocaleString()}</span>
                                 <button
                                   onClick={() => {
                                     setEditingPaymentId(p.id);
                                     setEditTxnRef(p.transactionReference || '');
                                     setEditPayStatus(p.status);
                                   }}
-                                  className="px-3 py-1.5 rounded-xl border border-brand-green-600/30 hover:bg-brand-green-50 text-brand-green-800 text-xs font-bold cursor-pointer transition-colors shadow-2xs"
+                                  className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold cursor-pointer transition-colors shadow-2xs"
                                 >
                                   Edit Audit Status
                                 </button>
@@ -2060,66 +2087,66 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             return (
               <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-brand-green-600/10 pb-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-3">
                   <div>
-                    <h3 className="font-serif text-xl font-bold text-brand-green-900 flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-brand-gold-600" />
+                    <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-green-600" />
                       <span>Remedies Catalog & Formulation Registry</span>
                     </h3>
-                    <p className="text-xs text-brand-green-600/70 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       Configure botanical ingredients, pricing, image galleries, dosha benefits, and inventory levels.
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <button 
                       onClick={() => setShowAddProd(!showAddProd)}
-                      className="bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
+                      className="bg-gradient-to-r from-blue-600 via-green-600 to-green-700 hover:from-blue-700 hover:to-green-800 text-white font-bold px-4 py-2.5 rounded-2xl text-xs flex items-center gap-2 shadow-md shadow-green-500/20 cursor-pointer transition-all uppercase tracking-wider"
                     >
-                      <Plus className="w-4 h-4 text-brand-gold-400" />
+                      <Plus className="w-4 h-4 text-white" />
                       <span>{showAddProd ? 'Close Editor' : 'Add New Compound'}</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Filter and Search Toolbar */}
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-brand-green-600/10 shadow-xs">
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80 shadow-xs">
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
                     <button
                       onClick={() => { setAdminCatalogStockFilter('all'); setAdminCatalogPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                         adminCatalogStockFilter === 'all'
-                          ? 'bg-brand-green-900 text-white shadow-xs'
-                          : 'bg-brand-green-50 text-brand-green-800 hover:bg-brand-green-100'
+                          ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-xs'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                       }`}
                     >
                       All Products ({products.length})
                     </button>
                     <button
                       onClick={() => { setAdminCatalogStockFilter('in-stock'); setAdminCatalogPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                         adminCatalogStockFilter === 'in-stock'
-                          ? 'bg-emerald-700 text-white shadow-xs'
-                          : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50'
                       }`}
                     >
                       In Stock ({products.filter(p => p.stock > (p.lowStockAlertLimit || 10)).length})
                     </button>
                     <button
                       onClick={() => { setAdminCatalogStockFilter('low-stock'); setAdminCatalogPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                         adminCatalogStockFilter === 'low-stock'
                           ? 'bg-amber-600 text-white shadow-xs'
-                          : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
+                          : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-50'
                       }`}
                     >
                       Low Stock ({lowStockCount})
                     </button>
                     <button
                       onClick={() => { setAdminCatalogStockFilter('out-of-stock'); setAdminCatalogPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                         adminCatalogStockFilter === 'out-of-stock'
                           ? 'bg-rose-600 text-white shadow-xs'
-                          : 'bg-rose-50 text-rose-900 hover:bg-rose-100'
+                          : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
                       }`}
                     >
                       Out of Stock ({outOfStockCount})
@@ -2130,7 +2157,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <select
                       value={adminCatalogCategory}
                       onChange={(e) => { setAdminCatalogCategory(e.target.value); setAdminCatalogPage(1); }}
-                      className="bg-brand-green-50/50 border border-brand-green-200 px-2.5 py-1.5 rounded-xl text-xs text-brand-green-900 font-bold focus:outline-none focus:border-brand-green-600"
+                      className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
                     >
                       <option value="">All Categories</option>
                       <option value="Immunity">Immunity</option>
@@ -2150,18 +2177,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </select>
 
                     <div className="relative min-w-[200px]">
-                      <Search className="w-3.5 h-3.5 text-brand-green-600/50 absolute left-3 top-2.5" />
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
                       <input
                         type="text"
                         placeholder="Search name, SKU, brand..."
                         value={adminCatalogSearch}
                         onChange={(e) => { setAdminCatalogSearch(e.target.value); setAdminCatalogPage(1); }}
-                        className="w-full bg-brand-green-50/50 border border-brand-green-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-brand-green-900 focus:outline-none focus:border-brand-green-600"
+                        className="w-full bg-white border border-slate-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
                       />
                       {adminCatalogSearch && (
                         <button
                           onClick={() => setAdminCatalogSearch('')}
-                          className="absolute right-2.5 top-1.5 text-xs text-brand-green-600 hover:text-brand-green-900 font-bold"
+                          className="absolute right-2.5 top-1.5 text-xs text-slate-400 hover:text-slate-700 font-bold"
                         >
                           ✕
                         </button>
@@ -2172,13 +2199,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                 {/* Add/Edit Product Inline Form */}
                 {showAddProd && (
-                  <form onSubmit={handleSaveProduct} className="bg-brand-cream-50/50 border border-brand-green-600/20 p-6 rounded-2xl space-y-4 text-xs shadow-md">
-                    <div className="flex justify-between items-center border-b border-brand-green-600/10 pb-3">
-                      <h4 className="font-serif text-base font-bold text-brand-green-900">{editProdId ? 'Edit Product Details' : 'Add New Remedy Compound'}</h4>
+                  <form onSubmit={handleSaveProduct} className="bg-slate-50/90 border border-green-200 p-6 rounded-3xl space-y-4 text-xs shadow-md">
+                    <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                      <h4 className="text-base font-bold text-slate-900">{editProdId ? 'Edit Product Details' : 'Add New Remedy Compound'}</h4>
                       <button
                         type="button"
                         onClick={handleResetProductForm}
-                        className="text-xs text-brand-green-600 hover:text-brand-green-900 font-bold underline"
+                        className="text-xs text-slate-500 hover:text-slate-800 font-bold underline cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -2186,16 +2213,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1 sm:col-span-1">
-                        <label className="font-bold text-brand-green-900">Product Name</label>
-                        <input required type="text" value={prodName} onChange={e => setProdName(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                        <label className="font-bold text-slate-700">Product Name</label>
+                        <input required type="text" value={prodName} onChange={e => setProdName(e.target.value)} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                       </div>
                       <div className="space-y-1 sm:col-span-1">
-                        <label className="font-bold text-brand-green-900">SKU / Item Code</label>
-                        <input type="text" placeholder="E.g. GL-1001" value={prodSku} onChange={e => setProdSku(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl font-mono text-xs" />
+                        <label className="font-bold text-slate-700">SKU / Item Code</label>
+                        <input type="text" placeholder="E.g. GL-1001" value={prodSku} onChange={e => setProdSku(e.target.value)} className="w-full bg-white border border-slate-200 p-2 rounded-xl font-mono text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                       </div>
                       <div className="space-y-1 sm:col-span-1">
-                        <label className="font-bold text-brand-green-900">Category</label>
-                        <select value={prodCategory} onChange={e => setProdCategory(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs font-bold">
+                        <label className="font-bold text-slate-700">Category</label>
+                        <select value={prodCategory} onChange={e => setProdCategory(e.target.value)} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600">
                           <option value="Immunity">Immunity</option>
                           <option value="Skin Care">Skin Care</option>
                           <option value="Hair Care">Hair Care</option>
@@ -2216,106 +2243,106 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <label className="font-bold text-brand-green-900">Brand</label>
-                        <input required type="text" value={prodBrand} onChange={e => setProdBrand(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                        <label className="font-bold text-slate-700">Brand</label>
+                        <input required type="text" value={prodBrand} onChange={e => setProdBrand(e.target.value)} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                       </div>
                       <div className="space-y-1">
-                        <label className="font-bold text-brand-green-900">Subcategory (Optional)</label>
-                        <input type="text" placeholder="E.g. Herbal Drops, Oils" value={prodSubcategory} onChange={e => setProdSubcategory(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                        <label className="font-bold text-slate-700">Subcategory (Optional)</label>
+                        <input type="text" placeholder="E.g. Herbal Drops, Oils" value={prodSubcategory} onChange={e => setProdSubcategory(e.target.value)} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1">
-                        <label className="font-bold text-brand-green-900">Price (₹)</label>
-                        <input required type="number" value={prodPrice} onChange={e => setProdPrice(Number(e.target.value))} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                        <label className="font-bold text-slate-700">Price (₹)</label>
+                        <input required type="number" value={prodPrice} onChange={e => setProdPrice(Number(e.target.value))} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                       </div>
                       <div className="space-y-1">
-                        <label className="font-bold text-brand-green-900">Original Price (₹)</label>
-                        <input required type="number" value={prodOrigPrice} onChange={e => setProdOrigPrice(Number(e.target.value))} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                        <label className="font-bold text-slate-700">Original Price (₹)</label>
+                        <input required type="number" value={prodOrigPrice} onChange={e => setProdOrigPrice(Number(e.target.value))} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                       </div>
                       <div className="space-y-1">
-                        <label className="font-bold text-brand-green-900">Stock Count</label>
-                        <input required type="number" value={prodStock} onChange={e => setProdStock(Number(e.target.value))} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                        <label className="font-bold text-slate-700">Stock Count</label>
+                        <input required type="number" value={prodStock} onChange={e => setProdStock(Number(e.target.value))} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                       </div>
                     </div>
 
-                    <div className="bg-brand-green-50/30 border border-brand-green-600/5 p-3.5 rounded-xl space-y-3">
-                      <span className="block font-bold text-brand-green-950 text-[11px] uppercase tracking-wider">Product Visuals (Image Gallery)</span>
+                    <div className="bg-white border border-green-100 p-4 rounded-2xl space-y-3 shadow-2xs">
+                      <span className="block font-bold text-slate-900 text-xs uppercase tracking-wider">Product Visuals (Image Gallery)</span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div className="space-y-1">
-                          <label className="font-semibold text-brand-green-900">Primary Image URL</label>
-                          <input type="text" placeholder="https://..." value={prodImg} onChange={e => setProdImg(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                          <label className="font-semibold text-slate-700">Primary Image URL</label>
+                          <input type="text" placeholder="https://..." value={prodImg} onChange={e => setProdImg(e.target.value)} className="w-full bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                         </div>
                         <div className="space-y-1">
-                          <label className="font-semibold text-brand-green-900">Second Image URL (Optional)</label>
-                          <input type="text" placeholder="https://..." value={prodImg2} onChange={e => setProdImg2(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                          <label className="font-semibold text-slate-700">Second Image URL (Optional)</label>
+                          <input type="text" placeholder="https://..." value={prodImg2} onChange={e => setProdImg2(e.target.value)} className="w-full bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                         </div>
                         <div className="space-y-1">
-                          <label className="font-semibold text-brand-green-900">Third Image URL (Optional)</label>
-                          <input type="text" placeholder="https://..." value={prodImg3} onChange={e => setProdImg3(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                          <label className="font-semibold text-slate-700">Third Image URL (Optional)</label>
+                          <input type="text" placeholder="https://..." value={prodImg3} onChange={e => setProdImg3(e.target.value)} className="w-full bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                         </div>
                         <div className="space-y-1">
-                          <label className="font-semibold text-brand-green-900">Fourth Image URL (Optional)</label>
-                          <input type="text" placeholder="https://..." value={prodImg4} onChange={e => setProdImg4(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                          <label className="font-semibold text-slate-700">Fourth Image URL (Optional)</label>
+                          <input type="text" placeholder="https://..." value={prodImg4} onChange={e => setProdImg4(e.target.value)} className="w-full bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                         </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-1">
-                        <label className="font-bold text-brand-green-900">Dosage</label>
-                        <input type="text" placeholder="E.g. Take 1 capsule daily" value={prodDosage} onChange={e => setProdDosage(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                        <label className="font-bold text-slate-700">Dosage</label>
+                        <input type="text" placeholder="E.g. Take 1 capsule daily" value={prodDosage} onChange={e => setProdDosage(e.target.value)} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                       </div>
                       <div className="space-y-1">
-                        <label className="font-bold text-brand-green-900">Usage Instructions</label>
-                        <input type="text" placeholder="E.g. With warm water after meal" value={prodUsageInstructions} onChange={e => setProdUsageInstructions(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                        <label className="font-bold text-slate-700">Usage Instructions</label>
+                        <input type="text" placeholder="E.g. With warm water after meal" value={prodUsageInstructions} onChange={e => setProdUsageInstructions(e.target.value)} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                       </div>
                       <div className="space-y-1">
-                        <label className="font-bold text-brand-green-900">Low Stock Limit Alert</label>
-                        <input type="number" value={prodLowStockAlertLimit} onChange={e => setProdLowStockAlertLimit(Number(e.target.value))} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                        <label className="font-bold text-slate-700">Low Stock Limit Alert</label>
+                        <input type="number" value={prodLowStockAlertLimit} onChange={e => setProdLowStockAlertLimit(Number(e.target.value))} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                       </div>
                     </div>
 
-                    <div className="flex gap-6 items-center bg-brand-green-50/20 p-3 rounded-xl border border-brand-green-600/5">
-                      <label className="flex items-center gap-2 font-bold text-brand-green-900 cursor-pointer select-none">
-                        <input type="checkbox" checked={prodFeatured} onChange={e => setProdFeatured(e.target.checked)} className="w-4 h-4 rounded text-brand-green-700" />
+                    <div className="flex gap-6 items-center bg-white p-3.5 rounded-2xl border border-slate-200">
+                      <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer select-none">
+                        <input type="checkbox" checked={prodFeatured} onChange={e => setProdFeatured(e.target.checked)} className="w-4 h-4 rounded text-green-600 focus:ring-green-500" />
                         <span>Featured Remedy</span>
                       </label>
-                      <label className="flex items-center gap-2 font-bold text-brand-green-900 cursor-pointer select-none">
-                        <input type="checkbox" checked={prodBestSeller} onChange={e => setProdBestSeller(e.target.checked)} className="w-4 h-4 rounded text-brand-green-700" />
+                      <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer select-none">
+                        <input type="checkbox" checked={prodBestSeller} onChange={e => setProdBestSeller(e.target.checked)} className="w-4 h-4 rounded text-green-600 focus:ring-green-500" />
                         <span>Best Seller Tag</span>
                       </label>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-brand-green-900">Health Benefits (Comma separated)</label>
-                      <input type="text" placeholder="Boosts immunity, Relieves fatigue, Rejuvenates cells" value={prodBenefits} onChange={e => setProdBenefits(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                      <label className="font-bold text-slate-700">Health Benefits (Comma separated)</label>
+                      <input type="text" placeholder="Boosts immunity, Relieves fatigue, Rejuvenates cells" value={prodBenefits} onChange={e => setProdBenefits(e.target.value)} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="font-bold text-brand-green-900">Description</label>
-                      <textarea required rows={3} value={prodDesc} onChange={e => setProdDesc(e.target.value)} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs" />
+                      <label className="font-bold text-slate-700">Description</label>
+                      <textarea required rows={3} value={prodDesc} onChange={e => setProdDesc(e.target.value)} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                     </div>
 
                     {/* Botanical Ingredients Section */}
-                    <div className="bg-brand-cream-50/60 border border-brand-green-600/5 p-4 rounded-xl space-y-3.5">
-                      <div className="flex justify-between items-center border-b border-brand-green-600/5 pb-1.5">
-                        <span className="font-serif font-bold text-brand-green-950 text-xs">Vedic Botanical Ingredients ({prodIngredients.length})</span>
+                    <div className="bg-white border border-green-100 p-4 rounded-2xl space-y-3.5 shadow-2xs">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-900 text-xs">Vedic Botanical Ingredients ({prodIngredients.length})</span>
                       </div>
 
                       {prodIngredients.length > 0 && (
                         <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                           {prodIngredients.map((ing, index) => (
-                            <div key={index} className="flex justify-between items-start gap-3 bg-white p-2.5 rounded-lg border border-brand-green-100 shadow-2xs">
+                            <div key={index} className="flex justify-between items-start gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                               <div className="space-y-0.5">
-                                <span className="font-bold text-brand-green-900 block">{ing.name}</span>
-                                <span className="text-[11px] text-brand-green-700/80 block">{ing.description}</span>
+                                <span className="font-bold text-slate-900 block">{ing.name}</span>
+                                <span className="text-[11px] text-slate-500 block">{ing.description}</span>
                               </div>
                               <button 
                                 type="button" 
                                 onClick={() => handleRemoveIngredient(index)}
-                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
+                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50 cursor-pointer"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -2324,28 +2351,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         </div>
                       )}
 
-                      <div className="bg-white p-3 rounded-lg border border-brand-green-600/5 space-y-3">
-                        <span className="block font-semibold text-brand-green-900 text-[11px]">Add Botanical Ingredient</span>
+                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                        <span className="block font-semibold text-slate-800 text-[11px]">Add Botanical Ingredient</span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           <input 
                             type="text" 
                             placeholder="Ingredient Name (e.g. Ashwagandha)" 
                             value={ingName} 
                             onChange={e => setIngName(e.target.value)} 
-                            className="bg-white border border-brand-green-200 rounded-lg px-2.5 py-2 text-xs" 
+                            className="bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" 
                           />
                           <input 
                             type="text" 
                             placeholder="Description / Benefit (e.g. Adapts to stress)" 
                             value={ingDesc} 
                             onChange={e => setIngDesc(e.target.value)} 
-                            className="bg-white border border-brand-green-200 rounded-lg px-2.5 py-2 text-xs" 
+                            className="bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" 
                           />
                         </div>
                         <button 
                           type="button" 
                           onClick={handleAddIngredient}
-                          className="bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 ml-auto cursor-pointer"
+                          className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1.5 ml-auto cursor-pointer shadow-xs"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           <span>Add Ingredient</span>
@@ -2354,23 +2381,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </div>
 
                     {/* Product FAQs Section */}
-                    <div className="bg-brand-cream-50/60 border border-brand-green-600/5 p-4 rounded-xl space-y-3.5">
-                      <div className="flex justify-between items-center border-b border-brand-green-600/5 pb-1.5">
-                        <span className="font-serif font-bold text-brand-green-950 text-xs">Product FAQs ({prodFaqs.length})</span>
+                    <div className="bg-white border border-green-100 p-4 rounded-2xl space-y-3.5 shadow-2xs">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <span className="font-bold text-slate-900 text-xs">Product FAQs ({prodFaqs.length})</span>
                       </div>
 
                       {prodFaqs.length > 0 && (
                         <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                           {prodFaqs.map((faq, index) => (
-                            <div key={index} className="flex justify-between items-start gap-3 bg-white p-2.5 rounded-lg border border-brand-green-100 shadow-2xs">
+                            <div key={index} className="flex justify-between items-start gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                               <div className="space-y-0.5">
-                                <span className="font-bold text-brand-green-900 block">Q: {faq.question}</span>
-                                <span className="text-[11px] text-brand-green-700/80 block">A: {faq.answer}</span>
+                                <span className="font-bold text-slate-900 block">Q: {faq.question}</span>
+                                <span className="text-[11px] text-slate-500 block">A: {faq.answer}</span>
                               </div>
                               <button 
                                 type="button" 
                                 onClick={() => handleRemoveFaq(index)}
-                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50"
+                                className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50 cursor-pointer"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -2379,28 +2406,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         </div>
                       )}
 
-                      <div className="bg-white p-3 rounded-lg border border-brand-green-600/5 space-y-3">
-                        <span className="block font-semibold text-brand-green-900 text-[11px]">Add FAQ Item</span>
+                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                        <span className="block font-semibold text-slate-800 text-[11px]">Add FAQ Item</span>
                         <div className="space-y-2.5">
                           <input 
                             type="text" 
                             placeholder="Question (e.g. Can I take this with milk?)" 
                             value={faqQ} 
                             onChange={e => setFaqQ(e.target.value)} 
-                            className="w-full bg-white border border-brand-green-200 rounded-lg px-2.5 py-2 text-xs" 
+                            className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" 
                           />
                           <textarea 
                             rows={2} 
                             placeholder="Answer (e.g. Yes, warm milk is highly recommended.)" 
                             value={faqA} 
                             onChange={e => setFaqA(e.target.value)} 
-                            className="w-full bg-white border border-brand-green-200 rounded-lg px-2.5 py-2 text-xs" 
+                            className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" 
                           />
                         </div>
                         <button 
                           type="button" 
                           onClick={handleAddFaq}
-                          className="bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 ml-auto cursor-pointer"
+                          className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1.5 ml-auto cursor-pointer shadow-xs"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           <span>Add FAQ</span>
@@ -2408,22 +2435,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex gap-2 justify-end pt-2 border-t border-brand-green-600/5">
-                      <button type="button" onClick={handleResetProductForm} className="px-4 py-2 border rounded-xl font-bold hover:bg-brand-cream-50">Cancel</button>
-                      <button type="submit" className="px-5 py-2 bg-brand-green-700 hover:bg-brand-green-800 text-brand-cream-100 font-bold rounded-xl cursor-pointer shadow-xs">Save Compound</button>
+                    <div className="flex gap-2 justify-end pt-2 border-t border-slate-200">
+                      <button type="button" onClick={handleResetProductForm} className="px-4 py-2 border border-slate-200 rounded-xl font-bold hover:bg-slate-100 text-slate-700 cursor-pointer">Cancel</button>
+                      <button type="submit" className="px-5 py-2.5 bg-gradient-to-r from-blue-600 via-green-600 to-green-700 hover:from-blue-700 hover:to-green-800 text-white font-bold rounded-xl cursor-pointer shadow-md shadow-green-500/20">Save Compound</button>
                     </div>
                   </form>
                 )}
 
                 {/* Products Catalog list */}
                 {filteredCatalog.length === 0 ? (
-                  <div className="text-center py-10 bg-white rounded-2xl border border-brand-green-600/10 p-6 space-y-2">
-                    <p className="text-sm font-bold text-brand-green-900">No remedies match the filter.</p>
-                    <p className="text-xs text-brand-green-600/70">Try selecting a different category or clearing search.</p>
+                  <div className="text-center py-10 bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
+                    <p className="text-sm font-bold text-slate-900">No remedies match the filter.</p>
+                    <p className="text-xs text-slate-500">Try selecting a different category or clearing search.</p>
                     {(adminCatalogSearch || adminCatalogCategory || adminCatalogStockFilter !== 'all') && (
                       <button
                         onClick={() => { setAdminCatalogSearch(''); setAdminCatalogCategory(''); setAdminCatalogStockFilter('all'); }}
-                        className="text-xs font-bold text-brand-gold-700 underline cursor-pointer"
+                        className="text-xs font-bold text-green-600 underline cursor-pointer"
                       >
                         Reset Filters
                       </button>
@@ -2440,40 +2467,40 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         const isOutOfStock = prod.stock <= 0;
 
                         return (
-                          <div key={prod.id} className="border border-brand-green-600/10 bg-white hover:border-brand-green-600/30 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs shadow-xs transition-all">
+                          <div key={prod.id} className="border border-green-100 bg-white hover:border-green-300 hover:shadow-md p-4.5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs shadow-xs transition-all">
                             <div className="flex items-center gap-3.5 min-w-0">
-                              <img src={prod.mainImage} alt={prod.name} className="w-14 h-14 rounded-xl object-cover flex-shrink-0 border border-brand-green-600/10 bg-brand-cream-50" />
+                              <img src={prod.mainImage} alt={prod.name} className="w-14 h-14 rounded-2xl object-cover flex-shrink-0 border border-slate-100 bg-slate-50 shadow-2xs" />
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <h5 className="font-serif font-bold text-brand-green-900 text-sm">{prod.name}</h5>
+                                  <h5 className="font-bold text-slate-900 text-sm">{prod.name}</h5>
                                   {prod.sku && (
-                                    <span className="text-[10px] font-mono bg-brand-gold-500/10 text-brand-gold-700 font-bold px-2 py-0.5 rounded border border-brand-gold-500/20">
+                                    <span className="text-[10px] font-mono bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full border border-blue-200">
                                       SKU: {prod.sku}
                                     </span>
                                   )}
                                   {prod.featured && (
-                                    <span className="text-[10px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
+                                    <span className="text-[10px] font-bold bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full border border-violet-200">
                                       Featured
                                     </span>
                                   )}
                                   {prod.bestSeller && (
-                                    <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
+                                    <span className="text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
                                       Best Seller
                                     </span>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-3 text-brand-green-700 mt-1 flex-wrap">
-                                  <span className="font-semibold">{prod.category}</span>
+                                <div className="flex items-center gap-3 text-slate-600 mt-1 flex-wrap">
+                                  <span className="font-semibold text-green-700">{prod.category}</span>
                                   <span>•</span>
-                                  <span className="font-serif font-bold text-brand-green-950 text-sm">₹{prod.price}</span>
+                                  <span className="font-bold text-slate-900 text-sm">₹{prod.price}</span>
                                   {prod.originalPrice > prod.price && (
-                                    <span className="text-brand-green-600/50 line-through text-[11px]">₹{prod.originalPrice}</span>
+                                    <span className="text-slate-400 line-through text-[11px]">₹{prod.originalPrice}</span>
                                   )}
                                   <span>•</span>
-                                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                                    isOutOfStock ? 'bg-rose-100 text-rose-800' :
-                                    isLowStock ? 'bg-amber-100 text-amber-800 animate-pulse' :
-                                    'bg-emerald-100 text-emerald-800'
+                                  <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                                    isOutOfStock ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                                    isLowStock ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse' :
+                                    'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                   }`}>
                                     {isOutOfStock ? 'Out of Stock (0)' : isLowStock ? `Low Stock (${prod.stock})` : `Stock: ${prod.stock}`}
                                   </span>
@@ -2483,15 +2510,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                               <button 
                                 onClick={() => handleEditProductOpen(prod)}
-                                className="px-3 py-1.5 rounded-xl border border-brand-green-200 hover:bg-brand-green-50 text-brand-green-800 font-bold text-xs flex items-center gap-1 cursor-pointer transition-all"
+                                className="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
                                 title="Edit Details"
                               >
-                                <Edit2 className="w-3.5 h-3.5 text-brand-green-700" />
+                                <Edit2 className="w-3.5 h-3.5 text-green-600" />
                                 <span>Edit</span>
                               </button>
                               <button 
                                 onClick={() => onDeleteProduct(prod.id)}
-                                className="px-3 py-1.5 rounded-xl border border-red-200 hover:bg-red-50 text-red-600 font-bold text-xs flex items-center gap-1 cursor-pointer transition-all"
+                                className="px-3.5 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-600 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
                                 title="Delete Compound"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -2561,20 +2588,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             return (
               <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-brand-green-600/10 pb-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-brand-gold-600 bg-brand-gold-500/10 px-2 py-0.5 rounded-full border border-brand-gold-500/20">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-green-700 bg-green-50 px-2.5 py-0.5 rounded-full border border-green-200">
                       👑 Platform Owner Command
                     </span>
-                    <h3 className="font-serif text-xl font-bold text-brand-green-900 mt-1 flex items-center gap-2">
+                    <h3 className="text-xl font-bold text-slate-900 mt-1.5 flex items-center gap-2">
                       <span>Live Customer Orders Dispatch Registry</span>
                       {isRefreshingData && (
-                        <span className="text-[11px] font-sans font-normal text-brand-gold-700 bg-brand-gold-50 px-2 py-0.5 rounded-full animate-pulse border border-brand-gold-200">
+                        <span className="text-[11px] font-sans font-normal text-green-700 bg-green-50 px-2.5 py-0.5 rounded-full animate-pulse border border-green-200">
                           Updating Live...
                         </span>
                       )}
                     </h3>
-                    <p className="text-xs text-brand-green-600/70">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       Manage order fulfillment, verify payments, track pending dispatches, and mark completed deliveries.
                     </p>
                   </div>
@@ -2583,9 +2610,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <button
                       onClick={handleTriggerLiveRefresh}
                       disabled={isRefreshingData}
-                      className="px-3.5 py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                      className="px-4 py-2 bg-gradient-to-r from-blue-600 via-green-600 to-green-700 hover:from-blue-700 hover:to-green-800 text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-green-500/20 transition-all cursor-pointer shrink-0 disabled:opacity-50"
                     >
-                      <RotateCw className={`w-3.5 h-3.5 text-brand-gold-400 ${isRefreshingData ? 'animate-spin' : ''}`} />
+                      <RotateCw className={`w-3.5 h-3.5 ${isRefreshingData ? 'animate-spin' : ''}`} />
                       <span>{isRefreshingData ? 'Refreshing Live...' : 'Refresh Orders'}</span>
                     </button>
                   </div>
@@ -2595,26 +2622,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <button
                     onClick={() => { setAdminOrderFilter('all'); setAdminOrderPage(1); }}
-                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                       adminOrderFilter === 'all'
-                        ? 'bg-brand-green-900 text-brand-cream-50 border-brand-gold-500/30 shadow-md ring-2 ring-brand-green-800'
-                        : 'bg-white text-brand-green-900 border-brand-green-600/10 hover:border-brand-green-600/30'
+                        ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white border-transparent shadow-md ring-2 ring-green-400'
+                        : 'bg-white text-slate-900 border-slate-200 hover:border-green-300 shadow-2xs'
                     }`}
                   >
-                    <p className="text-[10px] uppercase font-bold tracking-wider text-brand-gold-400">Total Orders</p>
-                    <p className="font-serif text-2xl font-bold mt-1">{orders.length}</p>
+                    <p className={`text-[10px] uppercase font-bold tracking-wider ${adminOrderFilter === 'all' ? 'text-green-100' : 'text-slate-500'}`}>Total Orders</p>
+                    <p className="text-2xl font-bold mt-1">{orders.length}</p>
                   </button>
 
                   <button
                     onClick={() => { setAdminOrderFilter('pending'); setAdminOrderPage(1); }}
-                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                       adminOrderFilter === 'pending'
                         ? 'bg-amber-600 text-white border-amber-500 shadow-md ring-2 ring-amber-400'
-                        : 'bg-amber-50 text-amber-900 border-amber-200 hover:border-amber-400'
+                        : 'bg-amber-50/70 text-amber-900 border-amber-200 hover:border-amber-400 shadow-2xs'
                     }`}
                   >
-                    <p className="text-[10px] uppercase font-bold tracking-wider text-amber-800/80">Pending / Incomplete</p>
-                    <p className="font-serif text-2xl font-bold mt-1 flex items-center justify-between">
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-amber-700">Pending / Incomplete</p>
+                    <p className="text-2xl font-bold mt-1 flex items-center justify-between">
                       <span>{pendingOrdersCount}</span>
                       {pendingOrdersCount > 0 && (
                         <span className="text-[10px] bg-amber-800/30 px-2 py-0.5 rounded-full font-sans">Needs Dispatch</span>
@@ -2624,14 +2651,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                   <button
                     onClick={() => { setAdminOrderFilter('delivered'); setAdminOrderPage(1); }}
-                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                       adminOrderFilter === 'delivered'
-                        ? 'bg-emerald-700 text-white border-emerald-500 shadow-md ring-2 ring-emerald-500'
-                        : 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:border-emerald-400'
+                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-md ring-2 ring-emerald-500'
+                        : 'bg-emerald-50/70 text-emerald-900 border-emerald-200 hover:border-emerald-400 shadow-2xs'
                     }`}
                   >
-                    <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-800/80">Completed / Delivered</p>
-                    <p className="font-serif text-2xl font-bold mt-1 flex items-center justify-between">
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-700">Completed / Delivered</p>
+                    <p className="text-2xl font-bold mt-1 flex items-center justify-between">
                       <span>{deliveredOrdersCount}</span>
                       <span className="text-[10px] bg-emerald-800/30 px-2 py-0.5 rounded-full font-sans">✓ Fulfilled</span>
                     </p>
@@ -2639,37 +2666,37 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                   <button
                     onClick={() => { setAdminOrderFilter('cancelled'); setAdminOrderPage(1); }}
-                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                       adminOrderFilter === 'cancelled'
-                        ? 'bg-rose-700 text-white border-rose-500 shadow-md ring-2 ring-rose-400'
-                        : 'bg-rose-50 text-rose-900 border-rose-200 hover:border-rose-300'
+                        ? 'bg-rose-600 text-white border-rose-500 shadow-md ring-2 ring-rose-400'
+                        : 'bg-rose-50/70 text-rose-900 border-rose-200 hover:border-rose-300 shadow-2xs'
                     }`}
                   >
-                    <p className="text-[10px] uppercase font-bold tracking-wider text-rose-800/80">Cancelled</p>
-                    <p className="font-serif text-2xl font-bold mt-1">{cancelledOrdersCount}</p>
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-rose-700">Cancelled</p>
+                    <p className="text-2xl font-bold mt-1">{cancelledOrdersCount}</p>
                   </button>
                 </div>
 
                 {/* Filter Tabs Bar & Live Search Input */}
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-brand-green-600/10 shadow-sm">
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80 shadow-xs">
                   {/* Category Filter Pills */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
                     <button
                       onClick={() => { setAdminOrderFilter('all'); setAdminOrderPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                         adminOrderFilter === 'all'
-                          ? 'bg-brand-green-900 text-white shadow-sm'
-                          : 'bg-brand-green-50 text-brand-green-800 hover:bg-brand-green-100'
+                          ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-xs'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                       }`}
                     >
                       All Orders ({orders.length})
                     </button>
                     <button
                       onClick={() => { setAdminOrderFilter('pending'); setAdminOrderPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
                         adminOrderFilter === 'pending'
-                          ? 'bg-amber-600 text-white shadow-sm'
-                          : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'bg-white text-amber-700 border border-amber-200 hover:bg-amber-50'
                       }`}
                     >
                       <span>⏳ Incomplete / Pending</span>
@@ -2677,10 +2704,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </button>
                     <button
                       onClick={() => { setAdminOrderFilter('delivered'); setAdminOrderPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
                         adminOrderFilter === 'delivered'
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50'
                       }`}
                     >
                       <span>✓ Completed / Delivered</span>
@@ -2688,10 +2715,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </button>
                     <button
                       onClick={() => { setAdminOrderFilter('cancelled'); setAdminOrderPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                         adminOrderFilter === 'cancelled'
-                          ? 'bg-rose-600 text-white shadow-sm'
-                          : 'bg-rose-50 text-rose-900 hover:bg-rose-100'
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
                       }`}
                     >
                       Cancelled ({cancelledOrdersCount})
@@ -2700,18 +2727,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                   {/* Search box */}
                   <div className="relative min-w-[220px]">
-                    <Search className="w-3.5 h-3.5 text-brand-green-600/50 absolute left-3 top-3" />
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
                     <input
                       type="text"
                       placeholder="Search ID, name, phone, email..."
                       value={adminOrderSearch}
                       onChange={(e) => { setAdminOrderSearch(e.target.value); setAdminOrderPage(1); }}
-                      className="w-full bg-brand-green-50/50 border border-brand-green-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-brand-green-900 focus:outline-none focus:border-brand-green-600"
+                      className="w-full bg-white border border-slate-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
                     />
                     {adminOrderSearch && (
                       <button
                         onClick={() => { setAdminOrderSearch(''); setAdminOrderPage(1); }}
-                        className="absolute right-2.5 top-2 text-xs text-brand-green-600 hover:text-brand-green-900 font-bold"
+                        className="absolute right-2.5 top-2 text-xs text-slate-400 hover:text-slate-700 font-bold"
                       >
                         ✕
                       </button>
@@ -2721,10 +2748,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                 {/* Orders List */}
                 {filteredOrders.length === 0 ? (
-                  <div className="p-10 bg-white border border-brand-green-600/10 rounded-2xl text-center space-y-3">
-                    <ShoppingBag className="w-10 h-10 text-brand-green-600/30 mx-auto" />
-                    <p className="text-base font-bold text-brand-green-900">No matching orders found.</p>
-                    <p className="text-xs text-brand-green-600/70">
+                  <div className="p-10 bg-white border border-slate-200 rounded-3xl text-center space-y-3 shadow-xs">
+                    <ShoppingBag className="w-10 h-10 text-slate-300 mx-auto" />
+                    <p className="text-base font-bold text-slate-900">No matching orders found.</p>
+                    <p className="text-xs text-slate-500">
                       {adminOrderSearch
                         ? `No order records matched "${adminOrderSearch}". Try clearing search.`
                         : adminOrderFilter === 'pending'
@@ -2734,7 +2761,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     {(adminOrderSearch || adminOrderFilter !== 'all') && (
                       <button
                         onClick={() => { setAdminOrderFilter('all'); setAdminOrderSearch(''); setAdminOrderPage(1); }}
-                        className="px-4 py-2 bg-brand-green-800 text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-brand-green-900 transition-all"
+                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-xl text-xs font-bold cursor-pointer hover:from-blue-700 hover:to-green-700 transition-all shadow-xs"
                       >
                         Reset All Filters
                       </button>
@@ -2753,108 +2780,108 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       const isCancelled = ord.status === 'Cancelled';
 
                       // Container border and badge theme styling
-                      let cardBorderClass = 'border-brand-green-600/15 bg-white';
-                      let headerBgClass = 'bg-brand-green-50/50';
+                      let cardBorderClass = 'border-slate-200 bg-white shadow-xs';
+                      let headerBgClass = 'bg-slate-50/80 border-slate-200';
                       let statusBadge = (
-                        <span className="bg-amber-500 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                        <span className="bg-amber-500 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-2xs">
                           <Clock className="w-3 h-3" /> Pending Processing
                         </span>
                       );
 
                       if (isDelivered) {
-                        cardBorderClass = 'border-emerald-500/40 bg-emerald-50/10 shadow-sm';
-                        headerBgClass = 'bg-emerald-500/10 border-emerald-500/20';
+                        cardBorderClass = 'border-emerald-200 bg-white shadow-xs';
+                        headerBgClass = 'bg-emerald-50/70 border-emerald-100';
                         statusBadge = (
-                          <span className="bg-emerald-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                          <span className="bg-emerald-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-2xs">
                             <CheckCircle2 className="w-3.5 h-3.5" /> ✓ Delivered & Completed
                           </span>
                         );
                       } else if (isShipped) {
-                        cardBorderClass = 'border-blue-500/40 bg-blue-50/10';
-                        headerBgClass = 'bg-blue-500/10 border-blue-500/20';
+                        cardBorderClass = 'border-blue-200 bg-white shadow-xs';
+                        headerBgClass = 'bg-blue-50/70 border-blue-100';
                         statusBadge = (
-                          <span className="bg-blue-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                          <span className="bg-blue-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-2xs">
                             <Truck className="w-3.5 h-3.5" /> 🚚 Dispatched / In Transit
                           </span>
                         );
                       } else if (isCancelled) {
-                        cardBorderClass = 'border-rose-300 bg-rose-50/10';
-                        headerBgClass = 'bg-rose-100/50 border-rose-200';
+                        cardBorderClass = 'border-rose-200 bg-white shadow-xs';
+                        headerBgClass = 'bg-rose-50/70 border-rose-100';
                         statusBadge = (
-                          <span className="bg-rose-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                          <span className="bg-rose-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-2xs">
                             <AlertCircle className="w-3.5 h-3.5" /> ✕ Order Cancelled
                           </span>
                         );
                       } else {
                         // Pending
-                        cardBorderClass = 'border-amber-500/40 bg-amber-50/5 shadow-sm';
-                        headerBgClass = 'bg-amber-500/10 border-amber-500/20';
+                        cardBorderClass = 'border-amber-200 bg-white shadow-xs';
+                        headerBgClass = 'bg-amber-50/70 border-amber-100';
                         statusBadge = (
-                          <span className="bg-amber-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm animate-pulse">
+                          <span className="bg-amber-600 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-2xs animate-pulse">
                             <Clock className="w-3.5 h-3.5" /> ⏳ Pending Action (Incomplete)
                           </span>
                         );
                       }
 
                       return (
-                        <div key={ord.id} className={`border p-5 rounded-2xl space-y-4 text-xs transition-all ${cardBorderClass}`}>
+                        <div key={ord.id} className={`border p-5 rounded-3xl space-y-4 text-xs transition-all hover:shadow-md ${cardBorderClass}`}>
                           
                           {/* Banner Header with distinct background per status */}
-                          <div className={`p-3.5 -mx-5 -mt-5 rounded-t-2xl border-b flex flex-wrap justify-between items-center gap-3 ${headerBgClass}`}>
+                          <div className={`p-3.5 -mx-5 -mt-5 rounded-t-3xl border-b flex flex-wrap justify-between items-center gap-3 ${headerBgClass}`}>
                             <div className="flex items-center gap-2">
-                              <span className="font-mono font-bold text-brand-green-900 bg-white/80 px-2.5 py-1 rounded-lg border border-brand-green-200 shadow-2xs">
+                              <span className="font-mono font-bold text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
                                 ID: {ord.id}
                               </span>
-                              <span className="text-brand-green-800 text-[11px] font-semibold">{ord.orderDate}</span>
+                              <span className="text-slate-600 text-[11px] font-semibold">{ord.orderDate}</span>
                             </div>
 
                             <div className="flex items-center gap-2.5 flex-wrap">
                               {statusBadge}
-                              <span className="font-serif text-base font-bold text-brand-green-900 bg-white/80 px-3 py-0.5 rounded-lg border border-brand-green-200">
+                              <span className="text-base font-bold text-slate-900 bg-white px-3 py-0.5 rounded-lg border border-slate-200 shadow-2xs">
                                 Total: ₹{ord.finalTotal}
                               </span>
                             </div>
                           </div>
 
                           {/* Customer Details & Shipping Address Grid */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-brand-green-50/20 p-3.5 rounded-xl border border-brand-green-600/5">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-100">
                             <div className="space-y-1">
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800">👤 Customer Identity</p>
-                              <p className="font-bold text-brand-green-900 text-sm">{ord.userName}</p>
-                              <p className="text-brand-green-700">{ord.userEmail}</p>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">👤 Customer Identity</p>
+                              <p className="font-bold text-slate-900 text-sm">{ord.userName}</p>
+                              <p className="text-slate-600">{ord.userEmail}</p>
                               {ord.shippingAddress?.phone && (
-                                <p className="font-mono font-bold text-brand-green-900 mt-1 flex items-center gap-1">
+                                <p className="font-mono font-bold text-slate-900 mt-1 flex items-center gap-1">
                                   📞 Mob: {ord.shippingAddress.phone}
                                 </p>
                               )}
                             </div>
 
                             <div className="space-y-1">
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800">📍 Delivery Destination Address</p>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">📍 Delivery Destination Address</p>
                               {ord.shippingAddress ? (
-                                <div className="text-brand-green-900 space-y-0.5">
+                                <div className="text-slate-800 space-y-0.5">
                                   <p className="font-semibold">{ord.shippingAddress.fullName}</p>
                                   <p>{ord.shippingAddress.addressLine1} {ord.shippingAddress.addressLine2 ? `, ${ord.shippingAddress.addressLine2}` : ''}</p>
                                   <p>{ord.shippingAddress.city}, {ord.shippingAddress.state} - <span className="font-mono font-bold">{ord.shippingAddress.zipCode}</span></p>
                                 </div>
                               ) : (
-                                <p className="text-brand-green-600 italic">Address details included in profile</p>
+                                <p className="text-slate-400 italic">Address details included in profile</p>
                               )}
                             </div>
                           </div>
 
                           {/* Items Ordered List */}
                           <div className="space-y-2">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800">📦 Items Purchased ({ord.items?.length || 0})</p>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">📦 Items Purchased ({ord.items?.length || 0})</p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {ord.items?.map((item, idx) => (
-                                <div key={idx} className="flex items-center gap-3 p-2 border border-brand-green-100 rounded-xl bg-white shadow-2xs">
+                                <div key={idx} className="flex items-center gap-3 p-2.5 border border-slate-100 rounded-xl bg-white shadow-2xs">
                                   {item.mainImage && (
-                                    <img src={item.mainImage} alt={item.productName} className="w-10 h-10 object-cover rounded-lg shrink-0" />
+                                    <img src={item.mainImage} alt={item.productName} className="w-10 h-10 object-cover rounded-lg shrink-0 border border-slate-100" />
                                   )}
                                   <div className="min-w-0 text-xs">
-                                    <p className="font-bold text-brand-green-900 truncate">{item.productName}</p>
-                                    <p className="text-brand-green-700 font-mono text-[11px]">Qty: {item.quantity} × ₹{item.price}</p>
+                                    <p className="font-bold text-slate-900 truncate">{item.productName}</p>
+                                    <p className="text-green-700 font-mono text-[11px]">Qty: {item.quantity} × ₹{item.price}</p>
                                   </div>
                                 </div>
                               ))}
@@ -2862,14 +2889,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           </div>
 
                           {/* Interactive Controls & Status Selectors */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-brand-green-600/10">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
                             {/* Order delivery status selection */}
                             <div className="space-y-1">
-                              <label className="font-bold text-brand-green-800 text-[11px]">Dispatch Tracking Status</label>
+                              <label className="font-bold text-slate-700 text-[11px]">Dispatch Tracking Status</label>
                               <select
                                 value={ord.status}
                                 onChange={(e) => onUpdateStatus(ord.id, e.target.value as any, ord.paymentStatus)}
-                                className="w-full bg-white border border-brand-green-300 p-2 rounded-xl text-xs font-bold text-brand-green-900 focus:ring-2 focus:ring-brand-green-600"
+                                className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-green-500/20 focus:border-green-600 focus:outline-none"
                               >
                                 <option value="Pending">Pending Processing</option>
                                 <option value="Processing">Processing / Handcrafted</option>
@@ -2881,11 +2908,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                             {/* Payment status selection */}
                             <div className="space-y-1">
-                              <label className="font-bold text-brand-green-800 text-[11px]">Payment Audit Status</label>
+                              <label className="font-bold text-slate-700 text-[11px]">Payment Audit Status</label>
                               <select
                                 value={ord.paymentStatus}
                                 onChange={(e) => onUpdateStatus(ord.id, ord.status, e.target.value as any)}
-                                className="w-full bg-white border border-brand-green-300 p-2 rounded-xl text-xs font-bold text-brand-green-900 focus:ring-2 focus:ring-brand-green-600"
+                                className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-green-500/20 focus:border-green-600 focus:outline-none"
                               >
                                 <option value="Pending">Pending Payment</option>
                                 <option value="Paid">Paid Successfully (Audit Verified)</option>
@@ -2895,12 +2922,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           </div>
 
                           {/* One-Click Quick Action Bar */}
-                          <div className="flex flex-wrap justify-between items-center gap-2 pt-3 border-t border-brand-green-600/10">
+                          <div className="flex flex-wrap justify-between items-center gap-2 pt-3 border-t border-slate-100">
                             <div className="flex items-center gap-2 flex-wrap">
                               {!isDelivered && (
                                 <button
                                   onClick={() => onUpdateStatus(ord.id, 'Delivered', 'Paid')}
-                                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                                 >
                                   <CheckCircle2 className="w-3.5 h-3.5" />
                                   <span>Quick Fulfill: Mark Delivered & Paid</span>
@@ -2910,7 +2937,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               {!isShipped && !isDelivered && (
                                 <button
                                   onClick={() => onUpdateStatus(ord.id, 'Shipped', ord.paymentStatus)}
-                                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                                 >
                                   <Truck className="w-3.5 h-3.5" />
                                   <span>Mark Shipped</span>
@@ -2921,16 +2948,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             <div className="flex items-center gap-2 flex-wrap ml-auto">
                               <button
                                 onClick={() => setInvoiceOrder(ord)}
-                                className="px-3.5 py-1.5 rounded-xl border border-brand-gold-500/30 hover:border-brand-gold-500 text-brand-gold-800 bg-brand-gold-500/10 hover:bg-brand-gold-500/20 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                                className="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 bg-slate-50 hover:bg-slate-100 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                               >
-                                <FileText className="w-3.5 h-3.5 text-brand-gold-600" />
+                                <FileText className="w-3.5 h-3.5 text-blue-600" />
                                 <span>Print Bill Invoice</span>
                               </button>
                               <button
                                 onClick={() => setShippingLabelOrder(ord)}
-                                className="px-3.5 py-1.5 rounded-xl border border-brand-green-700/30 hover:border-brand-green-700 text-brand-green-900 bg-brand-green-100/50 hover:bg-brand-green-100 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                                className="px-3.5 py-1.5 rounded-xl border border-green-200 hover:border-green-300 text-green-800 bg-green-50 hover:bg-green-100 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                               >
-                                <Tag className="w-3.5 h-3.5 text-brand-green-800" />
+                                <Tag className="w-3.5 h-3.5 text-green-700" />
                                 <span>Print Courier Shipping Label</span>
                               </button>
                             </div>
@@ -2943,7 +2970,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                     {/* Orders Pagination */}
                     {filteredOrders.length > 0 && (
-                      <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 px-1 z-10 border-t border-brand-green-600/10 rounded-b-xl">
+                      <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 px-1 z-10 border-t border-slate-100 rounded-b-xl">
                         <Pagination
                           currentPage={validPage}
                           totalItems={filteredOrders.length}
@@ -2988,13 +3015,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             return (
               <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-brand-green-600/10 pb-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
                   <div>
-                    <h3 className="font-serif text-xl font-bold text-brand-green-900 flex items-center gap-2">
-                      <Tag className="w-5 h-5 text-brand-gold-600" />
+                    <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                      <Tag className="w-5 h-5 text-green-600" />
                       <span>Promotional Coupons & Discounts</span>
                     </h3>
-                    <p className="text-xs text-brand-green-600/70">
+                    <p className="text-xs text-slate-500 mt-1">
                       Configure custom promo codes, discount percentages, and minimum order requirements.
                     </p>
                   </div>
@@ -3003,17 +3030,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <button
                       onClick={handleTriggerLiveRefresh}
                       disabled={isRefreshingData}
-                      className="px-3.5 py-2 bg-brand-green-50 hover:bg-brand-green-100 text-brand-green-900 border border-brand-green-200 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                      className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-2xs transition-all cursor-pointer shrink-0 disabled:opacity-50"
                     >
-                      <RotateCw className={`w-3.5 h-3.5 text-brand-green-700 ${isRefreshingData ? 'animate-spin' : ''}`} />
+                      <RotateCw className={`w-3.5 h-3.5 text-slate-500 ${isRefreshingData ? 'animate-spin' : ''}`} />
                       <span>{isRefreshingData ? 'Refreshing...' : 'Refresh'}</span>
                     </button>
 
                     <button 
                       onClick={() => setShowAddCpn(!showAddCpn)}
-                      className="bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                      className="bg-gradient-to-r from-blue-600 via-green-600 to-green-700 hover:from-blue-700 hover:to-green-800 text-white font-bold px-4 py-2 rounded-2xl text-xs flex items-center gap-1.5 shadow-md shadow-green-500/20 transition-all cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5 text-brand-gold-400" />
+                      <Plus className="w-3.5 h-3.5" />
                       <span>Create Coupon</span>
                     </button>
                   </div>
@@ -3021,58 +3048,58 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                 {/* Add Coupon form inline */}
                 {showAddCpn && (
-                  <form onSubmit={handleAddCouponSubmit} className="bg-brand-cream-100/40 border border-brand-gold-500/30 p-5 rounded-2xl space-y-4 text-xs shadow-sm animate-in fade-in">
-                    <h4 className="font-serif font-bold text-brand-green-900 text-sm">Create New Promo Code</h4>
+                  <form onSubmit={handleAddCouponSubmit} className="bg-slate-50/80 border border-slate-200 p-5 rounded-3xl space-y-4 text-xs shadow-xs animate-in fade-in">
+                    <h4 className="font-bold text-slate-900 text-sm">Create New Promo Code</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="space-y-1">
-                        <label className="font-bold text-brand-green-900">Coupon Code (Uppercase)</label>
-                        <input required type="text" placeholder="E.g. AYUR20" value={cpnCode} onChange={e => setCpnCode(e.target.value.toUpperCase())} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-brand-green-600 focus:outline-none" />
+                        <label className="font-bold text-slate-700">Coupon Code (Uppercase)</label>
+                        <input required type="text" placeholder="E.g. AYUR20" value={cpnCode} onChange={e => setCpnCode(e.target.value.toUpperCase())} className="w-full bg-white border border-slate-200 p-2.5 rounded-xl text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-green-500/20 focus:border-green-600 focus:outline-none" />
                       </div>
                       <div className="space-y-1">
-                        <label className="font-bold text-brand-green-900">Discount Rate (%)</label>
-                        <input required type="number" min="1" max="90" value={cpnVal} onChange={e => setCpnVal(Number(e.target.value))} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-green-600 focus:outline-none" />
+                        <label className="font-bold text-slate-700">Discount Rate (%)</label>
+                        <input required type="number" min="1" max="90" value={cpnVal} onChange={e => setCpnVal(Number(e.target.value))} className="w-full bg-white border border-slate-200 p-2.5 rounded-xl text-xs font-bold focus:ring-2 focus:ring-green-500/20 focus:border-green-600 focus:outline-none" />
                       </div>
                       <div className="space-y-1">
-                        <label className="font-bold text-brand-green-900">Minimum Order Subtotal (₹)</label>
-                        <input required type="number" min="0" value={cpnMin} onChange={e => setCpnMin(Number(e.target.value))} className="w-full bg-white border border-brand-green-200 p-2 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-green-600 focus:outline-none" />
+                        <label className="font-bold text-slate-700">Minimum Order Subtotal (₹)</label>
+                        <input required type="number" min="0" value={cpnMin} onChange={e => setCpnMin(Number(e.target.value))} className="w-full bg-white border border-slate-200 p-2.5 rounded-xl text-xs font-bold focus:ring-2 focus:ring-green-500/20 focus:border-green-600 focus:outline-none" />
                       </div>
                     </div>
                     <div className="flex gap-2 justify-end pt-2">
-                      <button type="button" onClick={() => setShowAddCpn(false)} className="px-4 py-2 border border-brand-green-200 text-brand-green-800 rounded-xl font-bold cursor-pointer hover:bg-white transition-all">Cancel</button>
-                      <button type="submit" className="px-5 py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-xl shadow-sm cursor-pointer transition-all">Save & Deploy Coupon</button>
+                      <button type="button" onClick={() => setShowAddCpn(false)} className="px-4 py-2 border border-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer hover:bg-white transition-all">Cancel</button>
+                      <button type="submit" className="px-5 py-2 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white font-bold rounded-xl shadow-xs cursor-pointer transition-all">Save & Deploy Coupon</button>
                     </div>
                   </form>
                 )}
 
                 {/* Filter and Search Bar */}
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-brand-green-600/10 shadow-xs">
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80 shadow-xs">
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => { setAdminCouponStatus('all'); setAdminCouponPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         adminCouponStatus === 'all'
-                          ? 'bg-brand-green-900 text-white shadow-xs'
-                          : 'bg-brand-green-50 text-brand-green-800 hover:bg-brand-green-100'
+                          ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-xs'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                       }`}
                     >
                       All ({coupons.length})
                     </button>
                     <button
                       onClick={() => { setAdminCouponStatus('active'); setAdminCouponPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         adminCouponStatus === 'active'
                           ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                          : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50'
                       }`}
                     >
                       Active ({coupons.filter(c => c.active).length})
                     </button>
                     <button
                       onClick={() => { setAdminCouponStatus('archived'); setAdminCouponPage(1); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         adminCouponStatus === 'archived'
                           ? 'bg-rose-600 text-white shadow-xs'
-                          : 'bg-rose-50 text-rose-900 hover:bg-rose-100'
+                          : 'bg-white text-rose-700 border border-rose-200 hover:bg-rose-50'
                       }`}
                     >
                       Archived ({coupons.filter(c => !c.active).length})
@@ -3080,18 +3107,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
 
                   <div className="relative min-w-[200px]">
-                    <Search className="w-3.5 h-3.5 text-brand-green-600/50 absolute left-3 top-3" />
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
                     <input
                       type="text"
                       placeholder="Search code or value..."
                       value={adminCouponSearch}
                       onChange={(e) => { setAdminCouponSearch(e.target.value); setAdminCouponPage(1); }}
-                      className="w-full bg-brand-green-50/50 border border-brand-green-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-brand-green-900 focus:outline-none focus:border-brand-green-600"
+                      className="w-full bg-white border border-slate-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
                     />
                     {adminCouponSearch && (
                       <button
                         onClick={() => { setAdminCouponSearch(''); setAdminCouponPage(1); }}
-                        className="absolute right-2.5 top-2 text-xs text-brand-green-600 hover:text-brand-green-900 font-bold"
+                        className="absolute right-2.5 top-2 text-xs text-slate-400 hover:text-slate-700 font-bold"
                       >
                         ✕
                       </button>
@@ -3101,9 +3128,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                 {/* Coupons list */}
                 {filteredCoupons.length === 0 ? (
-                  <div className="p-8 bg-white border border-brand-green-600/10 rounded-2xl text-center space-y-2">
-                    <p className="text-sm font-bold text-brand-green-900">No coupons match your criteria.</p>
-                    <p className="text-xs text-brand-green-600/70">Create a coupon or adjust your active search filters.</p>
+                  <div className="p-8 bg-white border border-slate-200 rounded-3xl text-center space-y-2 shadow-xs">
+                    <p className="text-sm font-bold text-slate-900">No coupons match your criteria.</p>
+                    <p className="text-xs text-slate-500">Create a coupon or adjust your active search filters.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -3112,22 +3139,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       className="max-h-[600px] overflow-y-auto pr-1.5 space-y-3 custom-scrollbar rounded-xl scroll-smooth"
                     >
                       {paginatedCoupons.map((cpn, i) => (
-                        <div key={i} className="border border-brand-green-600/10 bg-white hover:border-brand-green-600/30 p-4 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-3 text-xs shadow-xs transition-all">
+                        <div key={i} className="border border-slate-200 bg-white hover:border-green-300 p-4 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-3 text-xs shadow-xs transition-all">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-mono font-bold text-brand-green-950 bg-brand-gold-500/15 border border-brand-gold-500/30 px-3 py-1 rounded-lg text-xs uppercase tracking-wider">
+                              <span className="font-mono font-bold text-green-900 bg-green-50 border border-green-200 px-3 py-1 rounded-lg text-xs uppercase tracking-wider">
                                 {cpn.code}
                               </span>
-                              <span className="text-brand-green-900 font-bold text-xs">
+                              <span className="text-slate-900 font-bold text-xs">
                                 {cpn.value}% OFF
                               </span>
                             </div>
-                            <p className="text-brand-green-600/70 mt-1">
-                              Applies on orders with minimum subtotal of <span className="font-bold text-brand-green-900">₹{cpn.minOrderValue}</span>
+                            <p className="text-slate-500 mt-1">
+                              Applies on orders with minimum subtotal of <span className="font-bold text-slate-900">₹{cpn.minOrderValue}</span>
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={`px-2.5 py-1 rounded-full font-bold uppercase text-[10px] ${cpn.active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                            <span className={`px-2.5 py-1 rounded-full font-bold uppercase text-[10px] ${cpn.active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
                               {cpn.active ? '✓ Active in Store' : 'Archived'}
                             </span>
                           </div>
@@ -3137,7 +3164,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                     {/* Pagination */}
                     {filteredCoupons.length > 0 && (
-                      <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 px-1 z-10 border-t border-brand-green-600/10 rounded-b-xl">
+                      <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 px-1 z-10 border-t border-slate-100 rounded-b-xl">
                         <Pagination
                           currentPage={validPage}
                           totalItems={filteredCoupons.length}
@@ -3183,13 +3210,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             return (
               <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="border-b border-brand-green-600/10 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h3 className="font-serif text-xl font-bold text-brand-green-900 flex items-center gap-2">
-                      <ShieldAlert className="w-5 h-5 text-brand-gold-600" />
+                    <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                      <ShieldAlert className="w-5 h-5 text-blue-600" />
                       <span>Security Ledger & System Audit Trails</span>
                     </h3>
-                    <p className="text-xs text-brand-green-600/70 mt-1">
+                    <p className="text-xs text-slate-500 mt-1">
                       Real-time cryptographic monitoring of user sessions, password updates, and order activity logs.
                     </p>
                   </div>
@@ -3203,9 +3230,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           .catch(() => setLoadingLogs(false));
                       }}
                       disabled={loadingLogs}
-                      className="px-3.5 py-2 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                      className="px-4 py-2 bg-gradient-to-r from-blue-600 via-green-600 to-green-700 hover:from-blue-700 hover:to-green-800 text-white rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md shadow-green-500/20 transition-all cursor-pointer shrink-0 disabled:opacity-50"
                     >
-                      <RotateCw className={`w-3.5 h-3.5 text-brand-gold-400 ${loadingLogs ? 'animate-spin' : ''}`} />
+                      <RotateCw className={`w-3.5 h-3.5 ${loadingLogs ? 'animate-spin' : ''}`} />
                       <span>{loadingLogs ? 'Refreshing...' : 'Refresh Logs'}</span>
                     </button>
                     <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs font-bold shrink-0">
@@ -3217,42 +3244,42 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                 {/* Security Status Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="p-4 rounded-2xl border border-brand-green-600/10 bg-white space-y-1 shadow-xs">
-                    <div className="flex items-center justify-between text-xs text-brand-green-700 font-bold">
+                  <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-1 shadow-xs">
+                    <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
                       <span>Account Security</span>
                       <Lock className="w-3.5 h-3.5 text-emerald-600" />
                     </div>
-                    <p className="text-sm font-bold text-brand-green-950">Password Encrypted</p>
-                    <p className="text-[10px] text-brand-green-600/70">Bcrypt Salt 10 Rounds</p>
+                    <p className="text-sm font-bold text-slate-900">Password Encrypted</p>
+                    <p className="text-[10px] text-slate-500">Bcrypt Salt 10 Rounds</p>
                   </div>
 
-                  <div className="p-4 rounded-2xl border border-brand-green-600/10 bg-white space-y-1 shadow-xs">
-                    <div className="flex items-center justify-between text-xs text-brand-green-700 font-bold">
+                  <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-1 shadow-xs">
+                    <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
                       <span>JWT Auth Token</span>
                       <Shield className="w-3.5 h-3.5 text-emerald-600" />
                     </div>
-                    <p className="text-sm font-bold text-brand-green-950">Active & Valid</p>
-                    <p className="text-[10px] text-brand-green-600/70">Automatic Expiry Control</p>
+                    <p className="text-sm font-bold text-slate-900">Active & Valid</p>
+                    <p className="text-[10px] text-slate-500">Automatic Expiry Control</p>
                   </div>
 
-                  <div className="p-4 rounded-2xl border border-brand-green-600/10 bg-white space-y-1 shadow-xs">
-                    <div className="flex items-center justify-between text-xs text-brand-green-700 font-bold">
+                  <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-1 shadow-xs">
+                    <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
                       <span>Active Session</span>
-                      <Activity className="w-3.5 h-3.5 text-emerald-600" />
+                      <Activity className="w-3.5 h-3.5 text-blue-600" />
                     </div>
-                    <p className="text-sm font-bold text-brand-green-950">{user?.email || 'Current User'}</p>
-                    <p className="text-[10px] text-brand-green-600/70">IP Verified Access</p>
+                    <p className="text-sm font-bold text-slate-900">{user?.email || 'Current User'}</p>
+                    <p className="text-[10px] text-slate-500">IP Verified Access</p>
                   </div>
                 </div>
 
                 {/* Search & Filter Controls */}
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-brand-green-600/10 shadow-xs">
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80 shadow-xs">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-brand-green-800">Action:</span>
+                    <span className="text-xs font-bold text-slate-700">Action:</span>
                     <select
                       value={adminLogActionFilter}
                       onChange={(e) => { setAdminLogActionFilter(e.target.value); setAdminLogPage(1); }}
-                      className="bg-brand-green-50/70 border border-brand-green-200 px-3 py-1.5 rounded-xl text-xs text-brand-green-900 font-bold focus:outline-none focus:border-brand-green-600 cursor-pointer"
+                      className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 cursor-pointer"
                     >
                       <option value="">All Action Types ({logs.length})</option>
                       {uniqueActions.map(act => (
@@ -3262,18 +3289,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
 
                   <div className="relative min-w-[220px]">
-                    <Search className="w-3.5 h-3.5 text-brand-green-600/50 absolute left-3 top-3" />
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
                     <input
                       type="text"
                       placeholder="Search email, action, details..."
                       value={adminLogSearch}
                       onChange={(e) => { setAdminLogSearch(e.target.value); setAdminLogPage(1); }}
-                      className="w-full bg-brand-green-50/50 border border-brand-green-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-brand-green-900 focus:outline-none focus:border-brand-green-600"
+                      className="w-full bg-white border border-slate-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
                     />
                     {adminLogSearch && (
                       <button
                         onClick={() => { setAdminLogSearch(''); setAdminLogPage(1); }}
-                        className="absolute right-2.5 top-2 text-xs text-brand-green-600 hover:text-brand-green-900 font-bold"
+                        className="absolute right-2.5 top-2 text-xs text-slate-400 hover:text-slate-700 font-bold"
                       >
                         ✕
                       </button>
@@ -3283,13 +3310,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                 {/* Activity Logs Listing */}
                 {loadingLogs ? (
-                  <div className="text-center py-12 text-xs text-brand-green-600 animate-pulse bg-white rounded-2xl border border-brand-green-600/10">
-                    Unrolling secure logs from the temple ledger...
+                  <div className="text-center py-12 text-xs text-slate-500 animate-pulse bg-white rounded-3xl border border-slate-200 shadow-xs">
+                    Loading secure audit logs...
                   </div>
                 ) : filteredLogs.length === 0 ? (
-                  <div className="text-center py-12 text-xs text-brand-green-600/60 bg-white rounded-2xl border border-brand-green-600/10 p-6">
-                    <p className="font-bold text-brand-green-900 mb-1">No activity log entries found</p>
-                    <p className="text-[11px] text-brand-green-600/70">
+                  <div className="text-center py-12 text-xs text-slate-500 bg-white rounded-3xl border border-slate-200 p-6 shadow-xs">
+                    <p className="font-bold text-slate-900 mb-1">No activity log entries found</p>
+                    <p className="text-[11px] text-slate-500">
                       {adminLogSearch || adminLogActionFilter ? 'No logs match your filter criteria.' : 'Your session and account activities are completely clean and secure.'}
                     </p>
                   </div>
@@ -3300,21 +3327,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       className="max-h-[600px] overflow-y-auto pr-1.5 space-y-2.5 custom-scrollbar rounded-xl scroll-smooth"
                     >
                       {paginatedLogs.map((lg) => (
-                        <div key={lg.id} className="border border-brand-green-600/10 bg-white hover:bg-brand-cream-50/50 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs transition-colors">
+                        <div key={lg.id} className="border border-slate-200 bg-white hover:border-green-300 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs transition-all">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-brand-green-900 bg-brand-green-100/70 text-brand-green-800 px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider">
+                              <span className="font-bold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider">
                                 {lg.action}
                               </span>
-                              <span className="text-[11px] text-brand-green-700 font-mono font-medium">
+                              <span className="text-[11px] text-slate-500 font-mono font-medium">
                                 {lg.userEmail}
                               </span>
                             </div>
-                            <p className="text-brand-green-900 font-medium text-xs leading-relaxed mt-1">
+                            <p className="text-slate-800 font-medium text-xs leading-relaxed mt-1">
                               {lg.details}
                             </p>
                           </div>
-                          <div className="text-[10px] text-brand-green-600/60 font-mono text-right shrink-0 bg-brand-cream-100/40 px-2.5 py-1 rounded-xl">
+                          <div className="text-[10px] text-slate-400 font-mono text-right shrink-0 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-100">
                             {new Date(lg.timestamp).toLocaleString()}
                           </div>
                         </div>
@@ -3323,7 +3350,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                     {/* Pagination */}
                     {filteredLogs.length > 0 && (
-                      <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 px-1 z-10 border-t border-brand-green-600/10 rounded-b-xl">
+                      <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-1 px-1 z-10 border-t border-slate-100 rounded-b-xl">
                         <Pagination
                           currentPage={validPage}
                           totalItems={filteredLogs.length}
@@ -3351,19 +3378,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {/* TAB: WEBSITE SETTINGS (ADMIN) */}
           {activeTab === 'admin-settings' && (
             <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="border-b border-brand-green-600/5 pb-2">
-                <h3 className="font-serif text-lg font-bold text-brand-green-900">
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="text-xl font-bold text-slate-900">
                   Global Website Settings
                 </h3>
-                <p className="text-xs text-brand-green-600/70 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   Configure your brand logo, name, taxes, shipping, and store details.
                 </p>
               </div>
 
               {settingsSaved && (
-                <div className="p-3 bg-brand-green-100 border border-brand-green-200 text-brand-green-800 text-xs font-bold rounded-xl flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-green-700" />
-                  <span>Ayurvedic settings aligned and saved securely.</span>
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2 shadow-2xs">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Settings updated and saved securely.</span>
                 </div>
               )}
 
@@ -3371,7 +3398,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
                 const updatedSettings: WebsiteSettings = {
-                  logoName: fd.get('logoName') as string || 'Bv Life',
+                  logoName: fd.get('logoName') as string || 'Grams Life',
                   logoUrl: fd.get('logoUrl') as string || '',
                   contactEmail: fd.get('contactEmail') as string || '',
                   contactPhone: fd.get('contactPhone') as string || '',
@@ -3388,132 +3415,132 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   setSettingsSaved(true);
                   setTimeout(() => setSettingsSaved(false), 3000);
                 }
-              }} className="space-y-4 max-w-xl">
+              }} className="space-y-4 max-w-xl bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
                 <div>
-                  <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Store Name (Logo Text)</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Store Name (Logo Text)</label>
                   <input
                     type="text"
                     name="logoName"
                     defaultValue={settings.logoName}
                     required
-                    className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 bg-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Logo Image URL</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Logo Image URL</label>
                   <input
                     type="text"
                     name="logoUrl"
                     defaultValue={settings.logoUrl || ''}
                     placeholder="https://example.com/logo.png"
-                    className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 bg-white"
                   />
-                  <p className="text-[10px] text-brand-green-600/60 mt-1">
+                  <p className="text-[10px] text-slate-500 mt-1">
                     Provide a public image link or a base64 encoded image to display your brand logo.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Contact Email</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Contact Email</label>
                     <input
                       type="email"
                       name="contactEmail"
                       defaultValue={settings.contactEmail}
                       required
-                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Contact Phone</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Contact Phone</label>
                     <input
                       type="text"
                       name="contactPhone"
                       defaultValue={settings.contactPhone}
                       required
-                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 bg-white"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Address</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Address</label>
                   <input
                     type="text"
                     name="address"
                     defaultValue={settings.address}
                     required
-                    className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 bg-white"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Tax Percentage (%)</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Tax Percentage (%)</label>
                     <input
                       type="number"
                       name="defaultTaxPercentage"
                       defaultValue={settings.defaultTaxPercentage}
                       required
-                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Shipping Charge (₹)</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Shipping Charge (₹)</label>
                     <input
                       type="number"
                       name="baseShippingCharge"
                       defaultValue={settings.baseShippingCharge}
                       required
-                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Free Shipping Min (₹)</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Free Shipping Min (₹)</label>
                     <input
                       type="number"
                       name="freeShippingThreshold"
                       defaultValue={settings.freeShippingThreshold}
                       required
-                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 bg-white"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Facebook URL</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Facebook URL</label>
                     <input
                       type="text"
                       name="facebook"
                       defaultValue={settings.facebook || ''}
-                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Instagram URL</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Instagram URL</label>
                     <input
                       type="text"
                       name="instagram"
                       defaultValue={settings.instagram || ''}
-                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-brand-green-800 uppercase mb-1">Twitter URL</label>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Twitter URL</label>
                     <input
                       type="text"
                       name="twitter"
                       defaultValue={settings.twitter || ''}
-                      className="w-full px-3 py-2 rounded-xl border border-brand-green-200 text-sm focus:outline-none focus:border-brand-green-700 bg-brand-cream-50/30"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 bg-white"
                     />
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wide transition-all shadow-md cursor-pointer mt-2"
+                  className="w-full bg-gradient-to-r from-blue-600 via-green-600 to-green-700 hover:from-blue-700 hover:to-green-800 text-white font-bold py-3 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-md shadow-green-500/20 cursor-pointer mt-2"
                 >
                   Save Settings
                 </button>
@@ -3604,7 +3631,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     G
                   </div>
                   <div>
-                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Bv Life</h2>
+                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Grams Life</h2>
                     <span className="text-[10px] uppercase tracking-widest text-brand-gold-700 font-extrabold mt-1 block">Ayurvedic Sanctuary</span>
                   </div>
                 </div>
@@ -3705,7 +3732,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </p>
                 <div className="space-y-0.5">
                   <p className="text-[10px] font-bold text-brand-gold-700 uppercase tracking-widest">Aacharya Dhanvantari</p>
-                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Bv Life Sanctuary</p>
+                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Grams Life Sanctuary</p>
                 </div>
               </div>
 
@@ -3865,7 +3892,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       RETURN ADDRESS (SHIPPER / SELLER)
                     </p>
                     <div className="text-[11px] font-bold leading-tight text-gray-800">
-                      <p className="font-black">Bv Life Ayurvedic Sanctuary</p>
+                      <p className="font-black">Grams Life Ayurvedic Sanctuary</p>
                       <p>Plot 42, Veda Heritage Enclave, Mansarovar</p>
                       <p>Jaipur, Rajasthan - 302020</p>
                       <p className="font-mono text-[10px] pt-0.5">Seller Care: +91 98765 43210 | care@gramslife.com</p>
@@ -3933,6 +3960,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         }}
       />
 
+      </div>
     </div>
   );
 };

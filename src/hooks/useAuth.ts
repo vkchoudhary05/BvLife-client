@@ -83,6 +83,15 @@ export function useAuth() {
 
     api.getUserMe(authToken).then((user) => {
       if (user) {
+        const lowerEmail = (user.email || '').toLowerCase();
+        const cleanPhone = (user.phone || '').replace(/\D/g, '').slice(-10);
+        if (
+          user.role === 'admin' ||
+          ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes(lowerEmail) ||
+          ['7451050607', '9425011088'].includes(cleanPhone)
+        ) {
+          user.role = 'admin';
+        }
         setCurrentUser(user);
       } else {
         sessionStorage.removeItem('grams_auth_token');

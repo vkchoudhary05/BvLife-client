@@ -453,7 +453,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
           key: finalKey,
           amount: data.amount,
           currency: data.currency || 'INR',
-          name: 'Bv Life',
+          name: 'Grams Life',
           description: 'Wellness & Herbal Remedies Order',
           image: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
           order_id: data.orderId,
@@ -807,65 +807,13 @@ export const Checkout: React.FC<CheckoutProps> = ({
             </div>
           )}
 
-          {/* Quick Sandbox Profiles */}
-          {!otpStep && (
-            <div className="bg-brand-cream-100/60 border border-brand-gold-300/30 p-4 rounded-2xl space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-brand-green-800/80 flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-brand-gold-600 animate-pulse" />
-                  <span>Sandbox Quick Access Accounts</span>
-                </span>
-                <span className="text-[9px] text-brand-gold-700 font-extrabold bg-brand-gold-300/10 px-2 py-0.5 rounded-full border border-brand-gold-400/20">One-Click</span>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthEmail('vkchoudhary050607@gmail.com');
-                    setAuthPassword('password123');
-                    setAuthName('Vipin Choudhary');
-                    setAuthPhone('9425011088');
-                    setLoginError('');
-                  }}
-                  className="p-2.5 text-left border border-brand-gold-300/20 hover:border-brand-green-800 hover:bg-white rounded-xl bg-white/50 transition-all text-xs font-semibold text-brand-green-900 flex items-center gap-2"
-                >
-                  <UserIcon className="w-3.5 h-3.5 text-brand-gold-600 shrink-0" />
-                  <div className="truncate text-left">
-                    <p className="font-bold">Vipin Choudhary</p>
-                    <p className="text-[9px] text-brand-green-600/70 font-mono">vkchoudhary050607@gmail.com</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthEmail('customer@example.com');
-                    setAuthPassword('password123');
-                    setAuthName('Demo Client');
-                    setAuthPhone('9876543210');
-                    setLoginError('');
-                  }}
-                  className="p-2.5 text-left border border-brand-gold-300/20 hover:border-brand-green-800 hover:bg-white rounded-xl bg-white/50 transition-all text-xs font-semibold text-brand-green-900 flex items-center gap-2"
-                >
-                  <UserIcon className="w-3.5 h-3.5 text-brand-gold-600 shrink-0" />
-                  <div className="truncate text-left">
-                    <p className="font-bold">Demo Client</p>
-                    <p className="text-[9px] text-brand-green-600/70 font-mono">customer@example.com</p>
-                  </div>
-                </button>
-              </div>
-            </div>
-          )}
-
           {isRegistering && otpStep ? (
             <div className="animate-in slide-in-from-bottom duration-300">
               <SecureOtpWidget
                 identifier={formattedPhone || authPhone}
                 purpose="Registration"
-                widgetName="SecureOTPWidgetM7DX"
+                widgetName="Verification"
                 smsOnly={true}
-                allowedChannels={['SMS']}
                 initialReqId={activeReqId}
                 onVerified={async (params) => {
                   setAuthLoading(true);
@@ -1265,7 +1213,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
                     </label>
 
                     {/* Info helper for UPI */}
-                    {/* {paymentMethod === 'UPI' && pay.id === 'UPI' && (
+                    {paymentMethod === 'UPI' && pay.id === 'UPI' && (
                       <div className="ml-7 p-3.5 bg-brand-green-50/80 rounded-xl border border-brand-green-200/80 space-y-2 text-xs">
                         <div className="flex items-center justify-between text-[11px] font-bold text-brand-green-950">
                           <span>Razorpay API Key ID (Optional if set in .env)</span>
@@ -1286,7 +1234,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
                           ⚡ Clicking <strong className="text-brand-green-950 font-bold">Pay via Razorpay & Place Order</strong> directly opens Razorpay's official checkout screen.
                         </p>
                       </div>
-                    )} */}
+                    )}
                   </div>
                 ))}
               </div>
@@ -1415,7 +1363,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
               <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center gap-2 text-xs text-amber-900 font-semibold animate-bounce shadow-inner">
                 <Sparkles className="w-4 h-4 text-brand-gold-600 animate-pulse shrink-0" />
                 <div className="flex-1 text-left">
-                  <span className="text-[9px] font-bold uppercase text-brand-gold-800 font-mono">SMS Sandbox Simulator:</span>{' '}
+                  <span className="text-[9px] font-bold uppercase text-brand-gold-800 font-mono">Bank SMS Verification:</span>{' '}
                   Your secure banking OTP is <span className="font-mono font-bold tracking-widest text-brand-green-950 bg-brand-gold-500/30 px-1.5 py-0.5 rounded border border-brand-gold-500/20">{simulatedGatewayOtp}</span>
                 </div>
               </div>

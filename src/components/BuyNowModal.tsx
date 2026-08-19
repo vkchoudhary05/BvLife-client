@@ -123,8 +123,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   // Pricing calculations
   const itemTotal = product.price * quantity;
   const taxAmount = Math.round(itemTotal * 0.12); // 12% tax
-  // const shippingCharge = itemTotal >= 999 ? 0 : 50; // free above 999
-  const shippingCharge = 0;
+  const shippingCharge = itemTotal >= 999 ? 0 : 50; // free above 999
   const finalTotal = itemTotal + taxAmount + shippingCharge;
 
   // Handles requesting OTP
@@ -459,7 +458,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
             key: finalKey,
             amount: data.amount,
             currency: data.currency || 'INR',
-            name: 'BV Life',
+            name: 'Grams Life',
             description: product.name,
             image: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
             order_id: data.orderId,
@@ -745,18 +744,13 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                 </div>
               )}
 
-              {/* SMS Sandbox Gate */}
+              {/* SMS Verification Notice */}
               {otpSent && (
-                <div className="p-3.5 bg-brand-gold-500/10 border border-brand-gold-400/20 rounded-xl space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-brand-gold-800 text-[10px] font-extrabold uppercase tracking-wider">
-                    <Sparkles className="w-3.5 h-3.5 text-brand-gold-600 animate-pulse" />
-                    <span>Ayurvedic SMS Gate Simulation</span>
-                  </div>
+                <div className="p-3.5 bg-brand-green-50 border border-brand-green-200/70 rounded-xl space-y-1">
                   <p className="text-xs text-brand-green-900 font-medium">
                     {language === 'hi' 
-                      ? `सत्यापन कोड ${generatedOtp} आपके नंबर पर भेजा गया है।` 
-                      : `Sandbox OTP Code sent to +91 ${mobilePhone}: `}
-                    <span className="font-mono font-black text-brand-gold-800 tracking-wider bg-brand-gold-500/20 px-1.5 py-0.5 rounded">{generatedOtp}</span>
+                      ? `सत्यापन कोड आपके नंबर पर भेजा गया है।` 
+                      : `SMS Verification code sent to +91 ${mobilePhone}.`}
                   </p>
                 </div>
               )}
@@ -893,14 +887,6 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                       <span>{isAuthLoading ? (language === 'hi' ? 'सत्यापन हो रहा है...' : 'Authenticating...') : (language === 'hi' ? 'लॉग इन करें और जारी रखें' : 'Sign In & Continue')}</span>
                       <ArrowRight className="w-4 h-4 text-brand-gold-400" />
                     </button>
-
-                    {/* Quick helper for testing login */}
-                    <div className="p-3 bg-brand-cream-100/50 rounded-xl border border-brand-green-600/5 space-y-1">
-                      <p className="text-[10px] font-extrabold text-brand-green-800 uppercase tracking-wider">Demo / Sandbox Accounts</p>
-                      <p className="text-[11px] text-brand-green-950/80">
-                        Try: <span className="font-mono font-bold text-brand-green-900">vkchoudhary050607@gmail.com</span> with password: <span className="font-mono font-bold text-brand-green-900">password123</span>
-                      </p>
-                    </div>
                   </form>
                 )
               ) : (
@@ -1168,13 +1154,13 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                 </div>
 
                 {/* Inline method details for UPI */}
-                {/* {paymentMethod === 'UPI' && (
+                {paymentMethod === 'UPI' && (
                   <div className="p-3.5 bg-brand-green-50/80 rounded-2xl border border-brand-green-200/60 space-y-2 text-xs mt-2">
                     <div className="flex items-center justify-between text-[11px] font-bold text-brand-green-950">
                       <span>Razorpay API Key ID (Optional if set in .env)</span>
                       <span className="text-[10px] text-brand-green-700 font-semibold uppercase">Live/Test Key</span>
                     </div>
-                    <inputE
+                    <input
                       type="text"
                       placeholder="e.g. rzp_test_1234567890 or rzp_live_..."
                       value={userRazorpayKey}
@@ -1189,7 +1175,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                       ⚡ Clicking <strong className="text-brand-green-950 font-bold">Pay via Razorpay UPI</strong> will directly launch Razorpay's official payment screen.
                     </p>
                   </div>
-                )} */}
+                )}
               </div>
 
               {/* Confirm Actions */}
@@ -1259,7 +1245,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                   <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center gap-2 text-xs text-amber-900 font-semibold animate-bounce shadow-inner">
                     <Sparkles className="w-4 h-4 text-brand-gold-600 animate-pulse shrink-0" />
                     <div className="flex-1 text-left">
-                      <span className="text-[9px] font-bold uppercase text-brand-gold-800 font-mono">SMS Sandbox Simulator:</span>{' '}
+                      <span className="text-[9px] font-bold uppercase text-brand-gold-800 font-mono">Bank SMS Verification:</span>{' '}
                       Your secure banking OTP is <span className="font-mono font-bold tracking-widest text-brand-green-950 bg-brand-gold-500/30 px-1.5 py-0.5 rounded border border-brand-gold-500/20">{simulatedGatewayOtp}</span>
                     </div>
                   </div>

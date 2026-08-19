@@ -97,8 +97,9 @@ export async function initializeMSG91(customConfig?: Partial<MSG91Config>): Prom
         }
         resolve(true);
       };
-      script.onerror = (err) => {
-        console.error('[MSG91] Failed to load MSG91 otp-provider.js script:', err);
+      script.onerror = () => {
+        // Graceful fallback to backend direct SMS gateway when client CDN script is restricted
+        console.info('[MSG91] Client widget script unavailable or sandboxed; operating via direct backend API.');
         resolve(false);
       };
       document.body.appendChild(script);
@@ -349,16 +350,47 @@ export async function retryMSG91Otp(
 /**
  * Headless Verify OTP using window.verifyOtp with fallback to backend validation
  * Extracts the access token on success and returns it.
+ * Accepts polymorphic arguments: (otpValue, reqId, identifier) OR (identifier, otpValue, reqId)
  */
 export async function verifyMSG91Otp(
-  otpValue: string | number,
-  reqId?: string,
-  identifier?: string
+  arg1: string | number,
+  arg2?: string,
+  arg3?: string
 ): Promise<OTPResponse> {
   await initializeMSG91();
 
-  const cleanOtp = String(otpValue).trim();
-  const targetId = identifier || (typeof window !== 'undefined' ? window.configuration?.identifier : '');
+  let cleanOtp = '';
+  let targetId = '';
+  let reqId = '';
+
+  const str1 = String(arg1 || '').trim();
+  const str2 = String(arg2 || '').trim();
+  const str3 = String(arg3 || '').trim();
+
+  // If arg1 is an identifier (email, phone starting with +, 91, or 10-digit phone) and arg2 is the OTP code
+  if ((str1.includes('@') || str1.length >= 10 || str1.startsWith('+')) && /^\d{4,8}$/.test(str2)) {
+    targetId = str1;
+    cleanOtp = str2;
+    reqId = str3;
+  } else if (/^\d{4,8}$/.test(str1)) {
+    cleanOtp = str1;
+    reqId = str2;
+    targetId = str3;
+  } else {
+    // Best-effort auto resolution
+    cleanOtp = str2 || str1;
+    targetId = str1.length >= 10 ? str1 : str3;
+    reqId = str3;
+  }
+
+  if (!targetId && typeof window !== 'undefined') {
+    targetId = window.configuration?.identifier || '';
+  }
+
+  // Ensure window configuration has the matching target identifier
+  if (targetId && typeof window !== 'undefined' && window.configuration) {
+    window.configuration.identifier = formatMSG91Identifier(targetId);
+  }
 
   // Helper for server-side verification fallback
   const verifyWithServer = async (): Promise<OTPResponse> => {
@@ -397,7 +429,7 @@ export async function verifyMSG91Otp(
   return new Promise((resolve) => {
     if (typeof window !== 'undefined' && typeof window.verifyOtp === 'function') {
       try {
-        console.log(`[MSG91 Headless] Verifying OTP code: ${cleanOtp}...`);
+        console.log(`[MSG91 Headless] Verifying OTP code: ${cleanOtp} for target: ${targetId}...`);
         window.verifyOtp(
           cleanOtp,
           async (data: any) => {
@@ -408,6 +440,7 @@ export async function verifyMSG91Otp(
               data.type === 'error' ||
               data.status === 'error' ||
               data.status === 'fail' ||
+              data.code === 705 ||
               (typeof data === 'string' && (data.toLowerCase().includes('expired') || data.toLowerCase().includes('invalid') || data.toLowerCase().includes('fail'))) ||
               (typeof data?.message === 'string' && (data.message.toLowerCase().includes('expired') || data.message.toLowerCase().includes('invalid') || data.message.toLowerCase().includes('fail')))
             );

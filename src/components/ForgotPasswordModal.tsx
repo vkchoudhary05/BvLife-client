@@ -204,8 +204,8 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           {step === 'otp' && (
             <SecureOtpWidget
               identifier={userPhone || userEmail || accountQuery}
-              purpose="ForgotPassword"
-              widgetName="SecureOTPWidgetM7DX"
+              purpose="Password Reset"
+              widgetName="Verification"
               onVerified={handleOtpVerified}
               onCancel={() => setStep('request')}
               submitButtonText="Verify Code & Proceed"

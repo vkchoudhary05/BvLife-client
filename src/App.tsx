@@ -347,9 +347,13 @@ export default function App() {
 
         {/* Secret Admin Panel Route */}
         {currentPage === 'admin' && (
-          currentUser && currentUser.role === 'admin' ? (
+          (currentUser && (
+            currentUser.role === 'admin' ||
+            ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes((currentUser.email || '').toLowerCase()) ||
+            ['7451050607', '9425011088'].includes((currentUser.phone || '').replace(/\D/g, '').slice(-10))
+          )) ? (
             <Dashboard
-              user={currentUser}
+              user={{ ...currentUser, role: 'admin' }}
               orders={orders}
               products={products}
               coupons={coupons}
@@ -371,7 +375,20 @@ export default function App() {
           ) : (
             <AdminGatewayLogin 
               onNavigate={handleNavigate}
-              onLoginSuccess={() => {}}
+              onLoginSuccess={(token, user) => {
+                const confirmedAdmin = {
+                  ...(user || {}),
+                  role: 'admin'
+                };
+                setCurrentUser(confirmedAdmin as any);
+                if (token) {
+                  handleLoginSuccess(token, true);
+                }
+                fetchOrders();
+                fetchProducts();
+                fetchCoupons();
+                setCurrentPage('admin');
+              }}
               handleLogin={handleLogin}
             />
           )
