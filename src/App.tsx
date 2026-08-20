@@ -250,8 +250,11 @@ export default function App() {
             productId={pageParams?.id || ''}
             products={products}
             reviews={reviews}
+            orders={orders}
+            currentUser={currentUser}
             onNavigate={handleNavigate}
             onAddToCart={handleAddToCart}
+            onQuickView={(p) => setQuickViewProduct(p)}
             onBuyNow={(prod, qty) => {
               setBuyNowProduct(prod);
               setBuyNowQty(qty);
@@ -305,6 +308,7 @@ export default function App() {
             appliedCoupon={appliedCoupon}
             settings={activeSettings}
             onPlaceOrder={onPlaceOrder}
+            onPostReview={handlePostReview}
             language={language}
             currentUser={currentUser}
             onLoginSuccess={handleLoginSuccess}
@@ -320,6 +324,7 @@ export default function App() {
             language={language}
             currentUser={currentUser}
             authToken={authToken}
+            onPostReview={handlePostReview}
           />
         )}
 
@@ -342,6 +347,8 @@ export default function App() {
             isAdminPanel={false}
             onUpdateSettings={handleUpdateSettings}
             onLoginSuccess={handleLoginSuccess}
+            onPostReview={handlePostReview}
+            initialTab={pageParams?.tab}
           />
         )}
 
@@ -464,6 +471,7 @@ export default function App() {
             setBuyNowQty(1);
           }}
           onPlaceOrder={onPlaceOrder}
+          onPostReview={handlePostReview}
           onNavigate={handleNavigate}
           language={language}
           currentUser={currentUser}

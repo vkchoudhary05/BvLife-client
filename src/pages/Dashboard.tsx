@@ -10,11 +10,12 @@ import {
   Printer, FileText, X, Download, Settings, Lock, Mail, Phone, ArrowRight, Eye, EyeOff, RotateCw,
   Search, Clock, Truck, AlertCircle, RefreshCw, Filter, ArrowUpDown, Layers, Radio, Copy,
   ExternalLink, SlidersHorizontal, BarChart3, TrendingUp, DollarSign, PackageCheck, AlertTriangle, CreditCard,
-  Building2
+  Building2, Star, MessageSquare
 } from 'lucide-react';
 import { User as UserType, Order, Address, Product, Coupon, WebsiteSettings } from '../types';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 import { SecureOtpWidget } from '../components/secureOtpWidget';
+import { WriteReviewModal } from '../components/WriteReviewModel';
 import { sendMSG91Otp, formatMSG91Identifier } from '../services/msg91OtpService';
 import { Pagination } from '../components/Pagination';
 
@@ -35,9 +36,11 @@ interface DashboardProps {
   isAdminPanel?: boolean;
   onUpdateSettings?: (settings: WebsiteSettings) => void;
   onLoginSuccess?: (token: string) => void;
+  onPostReview?: (reviewData: { productId: string; rating: number; comment: string; userName?: string; userEmail?: string }) => Promise<void> | void;
   onFetchCoupons?: () => void;
   onRefreshOrders?: () => void;
   onRefreshProducts?: () => void;
+  initialTab?: string;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -57,14 +60,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
   isAdminPanel = false,
   onUpdateSettings,
   onLoginSuccess,
+  onPostReview,
   onFetchCoupons,
   onRefreshOrders,
-  onRefreshProducts
+  onRefreshProducts,
+  initialTab
 }) => {
   const isAdmin = (user?.role === 'admin' && isAdminPanel) || false;
-  const [activeTab, setActiveTab] = useState<string>(isAdmin ? 'admin-stats' : 'account');
+  const [activeTab, setActiveTab] = useState<string>(initialTab || (isAdmin ? 'admin-stats' : 'account'));
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
   const [shippingLabelOrder, setShippingLabelOrder] = useState<Order | null>(null);
+  const [reviewModalProduct, setReviewModalProduct] = useState<{ id: string; name: string; image?: string; defaultRating?: number } | null>(null);
+  const [reviewedProductIds, setReviewedProductIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('grams_reviewed_products');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [settingsSaved, setSettingsSaved] = useState(false);
 
   // Payments Ledger state
@@ -1466,19 +1486,73 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             })}
                           </div>
 
-                          {/* Items row */}
-                          <div className="space-y-2 pt-2 border-t border-brand-green-600/5 text-xs text-brand-green-800 font-medium">
-                            {order.items.map((item, i) => (
-                              <div key={i} className="flex justify-between items-center bg-brand-cream-50/50 p-2 rounded-xl">
-                                <div className="flex items-center gap-2">
-                                  {item.mainImage && (
-                                    <img src={item.mainImage} alt={item.productName} className="w-8 h-8 rounded object-cover" />
-                                  )}
-                                  <span>{item.productName} <span className="text-brand-green-600 font-bold">× {item.quantity}</span></span>
-                                </div>
-                                <span className="font-serif font-bold text-brand-green-900">₹{item.price * item.quantity}</span>
+                          {/* Post-Delivery Review Callout Banner */}
+                          {order.status === 'Delivered' && (
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs">
+                              <div className="flex items-center gap-2 text-emerald-900">
+                                <PackageCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                                <span className="font-semibold text-[11px]">
+                                  Order delivered! Rate your remedies below — your review will be featured live on the product page.
+                                </span>
                               </div>
-                            ))}
+                            </div>
+                          )}
+
+                          {/* Items row with review button & product links */}
+                          <div className="space-y-2 pt-2 border-t border-brand-green-600/5 text-xs text-brand-green-800 font-medium">
+                            {order.items.map((item, i) => {
+                              const isReviewed = reviewedProductIds.includes(item.productId);
+                              return (
+                                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between bg-brand-cream-50/70 p-2.5 rounded-xl gap-2 border border-brand-green-600/5">
+                                  <button
+                                    type="button"
+                                    onClick={() => onNavigate('product', { id: item.productId })}
+                                    className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-80 transition-opacity cursor-pointer group"
+                                  >
+                                    {item.mainImage && (
+                                      <img src={item.mainImage} alt={item.productName} className="w-10 h-10 rounded-lg object-contain bg-white border border-brand-green-100 p-0.5 shrink-0 group-hover:border-brand-green-600 transition-colors" referrerPolicy="no-referrer" />
+                                    )}
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-brand-green-950 truncate group-hover:text-brand-green-700 transition-colors flex items-center gap-1">
+                                        <span>{item.productName}</span>
+                                        <ExternalLink className="w-3 h-3 text-brand-green-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                      </p>
+                                      <p className="text-[10px] text-brand-green-600">Qty: {item.quantity} • ₹{item.price * item.quantity}</p>
+                                    </div>
+                                  </button>
+
+                                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                                    {isReviewed ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => onNavigate('product', { id: item.productId })}
+                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 cursor-pointer transition-colors"
+                                        title="View published review on Product Page"
+                                      >
+                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                        <span>Reviewed ✓ (View on Product)</span>
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setReviewModalProduct({
+                                            id: item.productId,
+                                            name: item.productName,
+                                            image: item.mainImage,
+                                            defaultRating: 5
+                                          });
+                                        }}
+                                        className="inline-flex items-center gap-1 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold px-3 py-1.5 rounded-lg text-xs transition-all shadow-xs cursor-pointer active:scale-95"
+                                      >
+                                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                        <span>Rate & Review</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
 
                           <div className="flex flex-wrap justify-between items-center gap-2 pt-3.5 border-t border-brand-green-600/5">
@@ -3959,6 +4033,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
           }
         }}
       />
+
+      {/* Write Review Modal for Customer Orders */}
+      {reviewModalProduct && (
+        <WriteReviewModal
+          productId={reviewModalProduct.id}
+          productName={reviewModalProduct.name}
+          productImage={reviewModalProduct.image}
+          defaultRating={reviewModalProduct.defaultRating || 5}
+          language="en"
+          currentUser={user}
+          onClose={() => setReviewModalProduct(null)}
+          onSubmitReview={async (rev) => {
+            if (onPostReview) {
+              await onPostReview(rev);
+            }
+            const updated = [...reviewedProductIds, reviewModalProduct.id];
+            setReviewedProductIds(updated);
+            try {
+              localStorage.setItem('grams_reviewed_products', JSON.stringify(updated));
+            } catch {}
+          }}
+        />
+      )}
 
       </div>
     </div>

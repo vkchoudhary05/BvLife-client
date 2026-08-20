@@ -7,28 +7,40 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Search, ArrowLeft, Check, Package, Truck, Calendar, 
   MapPin, AlertCircle, Clock, ShoppingBag, ArrowRight,
-  FileText, Tag, Printer, X, RefreshCw
+  FileText, Tag, Printer, X, RefreshCw, Star, CheckCircle2, ShieldCheck
 } from 'lucide-react';
 import { Order, User as UserType } from '../types';
 import { Language, t } from '../lib/translations';
+import { WriteReviewModal } from '../components/WriteReviewModel';
 
 interface TrackOrderProps {
   onNavigate: (page: string, params?: any) => void;
   language: Language;
   currentUser: UserType | null;
   authToken: string | null;
+  onPostReview?: (reviewData: any) => Promise<void> | void;
 }
 
 export const TrackOrder: React.FC<TrackOrderProps> = ({
   onNavigate,
   language,
   currentUser,
-  authToken
+  authToken,
+  onPostReview
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [reviewModalProduct, setReviewModalProduct] = useState<{ id: string; name: string; image?: string; defaultRating?: number } | null>(null);
+  const [reviewedProductIds, setReviewedProductIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('grams_reviewed_products');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [order, setOrder] = useState<Order | null>(() => {
     try {
       const userEmail = currentUser?.email?.toLowerCase();
@@ -363,7 +375,7 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
                 </span>
                 {order.trackingNumber && (
                   <span className="text-[10px] font-extrabold uppercase tracking-widest bg-brand-gold-500/10 text-brand-gold-700 px-2.5 py-0.5 rounded-full border border-brand-gold-500/20">
-                    Carrier: Bv Express
+                    Carrier: Grams Express
                   </span>
                 )}
               </div>
@@ -526,17 +538,87 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
               </div>
             </div>
 
+            {/* Post-Delivery Review Banner when Order is Delivered */}
+            {order.status === 'Delivered' && (
+              <div className="sm:col-span-2 bg-gradient-to-r from-emerald-50 via-brand-cream-50 to-amber-50/50 border border-emerald-300/80 rounded-3xl p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 shadow-xs border border-emerald-200">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-serif text-sm sm:text-base font-bold text-brand-green-950">
+                        {language === 'hi' ? 'ऑर्डर सफलतापूर्वक डिलीवर हुआ!' : 'Package Delivered Successfully!'}
+                      </h4>
+                      <span className="bg-emerald-200 text-emerald-900 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        Verified Purchase
+                      </span>
+                    </div>
+                    <p className="text-xs text-brand-green-700/90 mt-0.5">
+                      {language === 'hi'
+                        ? 'अपने प्राप्त उपचारों के लिए अपनी स्टार रेटिंग और प्रामाणिक अनुभव साझा करें।'
+                        : 'Share your herbal healing experience and rate each formulation in your delivered order.'}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onNavigate('dashboard', { tab: 'orders' })}
+                  className="inline-flex items-center gap-1.5 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold px-4 py-2.5 rounded-xl text-xs shadow-xs transition-all cursor-pointer shrink-0"
+                >
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  <span>{language === 'hi' ? 'ऑर्डर हिस्ट्री देखें' : 'View in Order History'}</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-brand-gold-400" />
+                </button>
+              </div>
+            )}
+
             <div className="bg-white border border-brand-green-200 rounded-3xl p-6 shadow-sm space-y-3">
               <h4 className="font-serif text-xs font-bold text-brand-green-950 uppercase tracking-widest border-b pb-2 text-brand-gold-700">
                 Apothecary Compounds Sourced
               </h4>
-              <div className="text-xs space-y-2 text-brand-green-800 font-medium">
-                {(order.items || []).map((item, i) => (
-                  <div key={i} className="flex justify-between items-center">
-                    <span>{item.productName} <span className="text-brand-green-600/50 font-sans">x{item.quantity}</span></span>
-                    <span className="font-serif text-brand-green-950">₹{item.price * item.quantity}</span>
-                  </div>
-                ))}
+              <div className="text-xs space-y-3 text-brand-green-800 font-medium">
+                {(order.items || []).map((item, i) => {
+                  const isReviewed = reviewedProductIds.includes(item.productId);
+                  return (
+                    <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-brand-green-100/60 last:border-0 last:pb-0">
+                      <div className="space-y-0.5">
+                        <div className="font-bold text-brand-green-950">
+                          {item.productName} <span className="text-brand-green-600/60 font-normal">x{item.quantity}</span>
+                        </div>
+                        <span className="font-serif text-brand-green-900 text-xs">₹{item.price * item.quantity}</span>
+                      </div>
+
+                      {order.status === 'Delivered' && (
+                        <div className="flex items-center gap-2 pt-1 sm:pt-0">
+                          {isReviewed ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>{language === 'hi' ? 'समीक्षा दर्ज ✓' : 'Reviewed ✓'}</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReviewModalProduct({
+                                  id: item.productId,
+                                  name: item.productName,
+                                  image: item.mainImage,
+                                  defaultRating: 5
+                                });
+                              }}
+                              className="inline-flex items-center gap-1.5 bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 font-bold px-3 py-1.5 rounded-lg text-xs transition-all shadow-2xs cursor-pointer active:scale-95"
+                            >
+                              <Star className="w-3 h-3 fill-brand-green-950" />
+                              <span>{language === 'hi' ? 'समीक्षा लिखें' : 'Rate & Review'}</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
                 <div className="border-t border-brand-green-100 pt-2 flex justify-between items-center font-bold text-brand-green-950">
                   <span>Final Sourced Amount</span>
                   <span className="font-serif">₹{order.finalTotal}</span>
@@ -611,7 +693,7 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
               `}</style>
               <div className="flex justify-between items-center border-b border-brand-green-700/10 pb-6">
                 <div>
-                  <h2 className="font-serif text-2xl font-bold text-brand-green-900">Bv Life</h2>
+                  <h2 className="font-serif text-2xl font-bold text-brand-green-900">Grams Life</h2>
                   <span className="text-[10px] uppercase tracking-widest text-brand-gold-700 font-extrabold block">Ayurvedic Sanctuary Invoice</span>
                 </div>
                 <div className="text-right">
@@ -780,7 +862,7 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
                 </div>
 
                 <div className="text-[11px] font-bold border-b-4 border-black pb-3">
-                  <p className="font-black text-gray-800">RETURN TO: Bv Life Sanctuary, Plot 42, Veda Heritage, Jaipur, RJ - 302020</p>
+                  <p className="font-black text-gray-800">RETURN TO: Grams Life Sanctuary, Plot 42, Veda Heritage, Jaipur, RJ - 302020</p>
                 </div>
 
                 <div className="text-[10px] font-mono border-t border-black pt-1 flex justify-between">
@@ -791,6 +873,32 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Rate & Review Modal for Delivered Items */}
+      {reviewModalProduct && (
+        <WriteReviewModal
+          productId={reviewModalProduct.id}
+          productName={reviewModalProduct.name}
+          productImage={reviewModalProduct.image}
+          defaultRating={reviewModalProduct.defaultRating || 5}
+          onClose={() => setReviewModalProduct(null)}
+          onSubmitReview={async (reviewData) => {
+            if (onPostReview) {
+              await onPostReview(reviewData);
+            }
+            setReviewedProductIds(prev => {
+              const updated = [...prev, reviewData.productId];
+              try {
+                localStorage.setItem('grams_reviewed_products', JSON.stringify(updated));
+              } catch {}
+              return updated;
+            });
+            setReviewModalProduct(null);
+          }}
+          language={language}
+          currentUser={currentUser}
+        />
       )}
 
     </div>

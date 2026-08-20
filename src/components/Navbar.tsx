@@ -39,12 +39,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [searchVal, setSearchVal] = useState(searchQuery);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const profileMenuRef = React.useRef<HTMLDivElement>(null);
+  const mobileSearchRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false);
+      }
+      if (mobileSearchRef.current && !mobileSearchRef.current.contains(event.target as Node)) {
+        setIsMobileSearchOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -73,9 +78,11 @@ export const Navbar: React.FC<NavbarProps> = ({
       onSearch('');
       onNavigate('admin');
       setIsMobileMenuOpen(false);
+      setIsMobileSearchOpen(false);
       return;
     }
     onSearch(searchVal);
+    setIsMobileSearchOpen(false);
   };
 
   return (
@@ -84,9 +91,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div id="top-promo-banner" className="bg-brand-green-900 text-white text-[13px] sm:text-xs py-1.5 sm:py-2 px-0 overflow-hidden whitespace-nowrap border-b border-brand-gold-500/20 font-bold uppercase tracking-widest">
         <div className="flex animate-marquee select-none">
           <div className="flex shrink-0 items-center gap-10 sm:gap-16 px-4">
-            {/* <span className="text-brand-gold-400">✨ FREE SHIPPING ON ALL ORDERS OVER ₹999</span>
-            <span className="text-white">|</span> */}
-            {/* <span className="text-white">USE CODE: AYUR15 FOR 15% OFF</span> */}
             <span className="text-white">|</span>
             <span>100% Pure Natural Herbs</span>
             <span className="text-white">|</span>
@@ -101,9 +105,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>Daily Holistic Health Support</span>
           </div>
           <div className="flex shrink-0 items-center gap-10 sm:gap-16 px-4" aria-hidden="true">
-            {/* <span className="text-brand-gold-400">✨ FREE SHIPPING ON ALL ORDERS OVER ₹999</span> */}
-            <span className="text-white">|</span>
-            {/* <span className="text-brand-gold-400">USE CODE: AYUR15 FOR 15% OFF</span> */}
             <span className="text-white">|</span>
             <span>100% Pure Natural Herbs</span>
             <span className="text-white">|</span>
@@ -147,7 +148,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </form>
 
           {/* Primary Navigation Links */}
-            <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-base font-medium text-black">
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-base font-medium text-black">
             <button onClick={() => onNavigate('home')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navHome', language)}</button>
             <button onClick={() => onNavigate('shop')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">{t('navShop', language)}</button>
             <button onClick={() => onNavigate('track-order')} className="hover:text-brand-gold-600 transition-colors cursor-pointer">Track Order</button>
@@ -157,15 +158,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* User, Checkout & Mobile Menu Quick Icons - Aligned to right */}
-             <div className="flex items-center gap-1 sm:gap-2.5 md:gap-4">
+          <div className="flex items-center gap-1 sm:gap-2.5 md:gap-4">
             
-
             {/* AI consultant button removed from nav as requested */}
 
-            {/* Wishlist - Visible on all screens */}
+            {/* 🔥 CHANGED: Wishlist - Hidden on mobile, visible on tablet/desktop */}
             <button 
               onClick={() => onNavigate('wishlist')}
-              className="relative p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 flex"
+              className="relative p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 hidden sm:flex"
               aria-label="Wishlist"
             >
               <Heart className="w-6 h-6" strokeWidth={2} />
@@ -175,6 +175,36 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               )}
             </button>
+
+            {/* 🔥 NEW: Mobile Search Icon - Only icon, no input */}
+            <div ref={mobileSearchRef} className="relative flex sm:hidden">
+              <button 
+                onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                className="p-1.5 sm:p-2.5 text-black hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0"
+                aria-label="Search"
+              >
+                <Search className="w-6 h-6" strokeWidth={2} />
+              </button>
+
+              {/* Mobile Search Dropdown/Overlay */}
+              {isMobileSearchOpen && (
+                <div className="absolute right-0 top-full mt-2 w-[280px] sm:w-[320px] bg-white rounded-xl shadow-2xl border border-brand-green-600/10 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <form onSubmit={handleSearchSubmit} className="relative">
+                    <input
+                      type="text"
+                      placeholder={t('navSearchPlaceholder', language)}
+                      value={searchVal}
+                      onChange={(e) => setSearchVal(e.target.value)}
+                      className="w-full pl-4 pr-10 py-2.5 rounded-full bg-brand-green-50 border border-brand-green-200 focus:outline-none focus:border-brand-green-700 text-sm placeholder-brand-green-600/50"
+                      autoFocus
+                    />
+                    <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-green-700 hover:text-brand-gold-600 transition-colors cursor-pointer">
+                      <Search className="w-4.5 h-4.5" />
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
 
             {/* Cart - Visible on all screens */}
             <button 
@@ -289,23 +319,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Mobile Navigation Links */}
         {isMobileMenuOpen && (
           <div className="lg:hidden py-4 px-4 border-t border-brand-green-600/10 flex flex-col gap-4 bg-brand-cream-50 animate-in fade-in slide-in-from-top-2 duration-200">
-            {/* Mobile Search input */}
-            <form onSubmit={(e) => {
-              handleSearchSubmit(e);
-              setIsMobileMenuOpen(false);
-            }} className="relative">
-              <input
-                type="text"
-                placeholder={t('navSearchPlaceholder', language)}
-                value={searchVal}
-                onChange={(e) => setSearchVal(e.target.value)}
-                className="w-full pl-4 pr-10 py-2 rounded-full bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 text-sm placeholder-brand-green-600/50"
-              />
-              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-green-700 hover:text-brand-gold-600 transition-colors cursor-pointer">
-                <Search className="w-4 h-4" />
-              </button>
-            </form>
-
             <div className="flex flex-col gap-1">
               <button 
                 onClick={() => { onNavigate('home'); setIsMobileMenuOpen(false); }} 
@@ -325,6 +338,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 Track Order
               </button>
+              {/* 🔥 CHANGED: Wishlist moved inside mobile menu */}
               <button 
                 onClick={() => { onNavigate('wishlist'); setIsMobileMenuOpen(false); }} 
                 className="text-left px-4 py-2.5 text-base font-medium text-black hover:text-brand-gold-600 hover:bg-brand-green-50/50 rounded-xl transition-all cursor-pointer flex items-center justify-between"

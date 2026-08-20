@@ -1,49 +1,51 @@
+
 /**
- * English-Only Translation Dictionary and Helpers for Gram's Life
+ * Simple Indian Ayurvedic Translation Dictionary for Gram's Life
  */
 
 export type Language = 'en' | 'hi';
 
 export const translations: Record<Language, Record<string, string>> = {
   en: {
-    // Top banner & Navbar
-    "promoBanner": "✨ FREE SHIPPING ON AUTHENTIC AYURVEDA ORDERS OVER ₹999 | USE CODE: AYUR15 FOR 15% OFF",
+
+    // Top Banner & Navbar
+    "promoBanner": "✨ FREE SHIPPING ON AYURVEDIC ORDERS OVER ₹999 | USE CODE: AYUR15 FOR 15% OFF",
     "navHome": "Home",
-    "navShop": "Shop Ayurveda",
-    "navBlogs": "Blogs",
+    "navShop": "Shop Now",
+    "navBlogs": "Ayurveda Blogs",
     "navHeritage": "Our Heritage",
-    "navContact": "Contact",
-    "navAskAcharya": "Ask Acharya",
-    "navSearchPlaceholder": "Search Golden Chyawanprash, Ashwagandha...",
+    "navContact": "Contact Us",
+    "navAskAcharya": "Ask an Expert",
+    "navSearchPlaceholder": "Search Chyawanprash, Ashwagandha...",
     "navWishlist": "Wishlist",
     "navCart": "Cart",
-    "navProfile": "Profile",
+    "navProfile": "My Account",
     "navLogout": "Log Out",
-    "btnAskAcharya": "Ask AI Acharya ✦ Free Consult",
+    "btnAskAcharya": "Ask Ayurvedic Expert ✦ Free Consultation",
     "navLogin": "Sign In",
-    "navRegister": "Register",
-    "organicWellbeing": "Organic Wellbeing",
+    "navRegister": "Create Account",
+    "organicWellbeing": "Natural Wellbeing",
 
     // Hero Section / Slide 1
-    "hero_s1_subtitle": "Restoring Ayurvedic Purity",
-    "hero_s1_title": "Precious Remedies For Flawless Daily Vitality.",
-    "hero_s1_desc": "We handcraft small-batch, AYUSH certified organic formulations. Utilizing high-altitude Kashmiri Saffron, organic Ghee, and wild mountain forest honey according to sacred Vedic scripts.",
+    "hero_s1_subtitle": "Pure Ayurvedic Care",
+    "hero_s1_title": "Natural Care For Everyday Health.",
+    "hero_s1_desc": "We prepare small-batch Ayurvedic products using quality natural ingredients like Kashmiri Saffron, organic Ghee, and natural mountain honey, following traditional Ayurvedic practices.",
     "hero_s1_action": "Shop Now",
-    "hero_s1_prod_desc": "Highest-Rated Seasonal Immunity Tonic",
+    "hero_s1_prod_desc": "Seasonal Immunity Support",
 
     // Hero Section / Slide 2
-    "hero_s2_subtitle": "Ancient Wisdom, Peak Stamina",
-    "hero_s2_title": "BVLife Himalayan Shilajeet Gold Resin",
-    "hero_s2_desc": "100% pure BVLife Himalayan Shilajeet resin purified via classical Ayurvedic Shodhana methods. Infused with Swarna Bhasma (24K Gold) and Safed Musli for cellular energy and maximum physical vitality.",
+    "hero_s2_subtitle": "Traditional Strength & Energy",
+    "hero_s2_title": "BVLife Himalayan Shilajit Gold Resin",
+    "hero_s2_desc": "Pure Himalayan Shilajit resin prepared using traditional Ayurvedic purification methods. Enriched with Swarna Bhasma and Safed Musli to support energy, strength, and overall vitality.",
     "hero_s2_action": "Shop Now",
-    "hero_s2_prod_desc": "Purified High-Altitude Strength Tonic",
+    "hero_s2_prod_desc": "Pure Himalayan Shilajit Resin",
 
     // Hero Section / Slide 3
-    "hero_s3_subtitle": "Saffron Skin Alchemy",
-    "hero_s3_title": "Kumkumadi Radiance Face Elixir",
-    "hero_s3_desc": "A legendary night beauty oil infused with Kashmiri Saffron and goat milk. Preserved in micro-batches to restore youthfulness, heal pigmentation, and brighten dull skin complexions.",
+    "hero_s3_subtitle": "Natural Skin Care",
+    "hero_s3_title": "Kumkumadi Radiance Face Oil",
+    "hero_s3_desc": "A traditional Ayurvedic face oil made with Kashmiri Saffron and other natural ingredients. Helps nourish the skin and support a healthy, natural glow.",
     "hero_s3_action": "Shop Now",
-    "hero_s3_prod_desc": "Saffron & Sandalwood Brightening Oil",
+    "hero_s3_prod_desc": "Saffron & Sandalwood Face Oil",
 
     // Categories
     "cat_immunity": "Immunity",
@@ -53,52 +55,55 @@ export const translations: Record<Language, Record<string, string>> = {
     "cat_oils": "Oils",
     "cat_brain_memory": "Brain & Memory",
     "cat_sleep_stress": "Sleep & Stress",
-    "cat_sexual_wellness": "Sexual Wellness",
-    "cat_all": "All Remedies",
-    "formulations_suffix": "Formulations",
+    "cat_sexual_wellness": "Men's Wellness",
+    "cat_all": "All Products",
+    "formulations_suffix": "Products",
 
-    // Category Section Header
-    "section_cat_subtitle": "Organic Heritage",
-    "section_cat_title": "Shop Organic Remedies By Need",
-    "section_cat_desc": "Target biological imbalances using pure herbs extracted ethically.",
+    // Category Section
+    "section_cat_subtitle": "Traditional Ayurveda",
+    "section_cat_title": "Shop Ayurveda For Your Needs",
+    "section_cat_desc": "Explore natural Ayurvedic products made with carefully selected herbs and ingredients.",
 
-    // Featured Products Header
-    "section_feat_subtitle": "Ayurveda Curations",
-    "section_feat_title": "Our Premium Recommendations",
-    "section_feat_browse": "Browse Recommendations",
+    // Featured Products
+    "section_feat_subtitle": "Ayurvedic Favorites",
+    "section_feat_title": "Our Recommended Products",
+    "section_feat_browse": "View All Products",
 
-    // Top Selling Header
-    "section_top_subtitle": "Vedic Favorites",
-    "section_top_title": "Top Selling Products",
-    "section_top_browse": "Browse Best Sellers",
+    // Top Selling
+    "section_top_subtitle": "Customer Favorites",
+    "section_top_title": "Best Selling Products",
+    "section_top_browse": "View Best Sellers",
 
-    // Exclusive Offer Section
-    "exclusive_offer_tag": "Seasonal Compound Offer",
-    "exclusive_offer_title": "Aacharya Recharging Trio",
-    "exclusive_offer_subtitle": "Complete 30-Day Rejuvenation Kit",
-    "exclusive_offer_desc": "Consisting of Golden Saffron Chyawanprash (1 jar), stress-busting Pure Ashwagandha KSM-66 capsules (1 pack), and colon digestive-cleansing Triphala powder (1 box). Synergized together to optimize cellular recovery, digest stomach toxins (Ama), and eliminate brain fog.",
-    "exclusive_offer_save": "SAVE ₹440 INSTANTLY",
-    "exclusive_offer_btn": "Secure Seasonal Compound Offer",
+    // Exclusive Offer
+    "exclusive_offer_tag": "Special Ayurvedic Offer",
+    "exclusive_offer_title": "Ayurvedic Wellness Combo",
+    "exclusive_offer_subtitle": "Complete 30-Day Wellness Kit",
+    "exclusive_offer_desc": "A carefully selected combination of Golden Saffron Chyawanprash, Ashwagandha KSM-66 capsules, and Triphala powder to support immunity, energy, digestion, and everyday wellness.",
+    "exclusive_offer_save": "SAVE ₹440",
+    "exclusive_offer_btn": "Shop This Combo",
 
     // Testimonials
-    "section_test_subtitle": "Over 50,000 Lives Revitalized",
-    "section_test_title": "Verified logs of customers who integrated Vedic health into daily routines.",
-    "test_1_comment": "\"The Kumkumadi face elixir is pure gold! Yes, the pricing feels premium, but my dark circles and pigmentation marks have completely faded in less than a month. It smells of fresh saffron and leaves my skin deeply moisturized when I wake up. Pure bliss!\"",
+    "section_test_subtitle": "Trusted by 50,000+ Customers",
+    "section_test_title": "What Our Customers Say",
+
+    "test_1_comment": "\"The Kumkumadi face oil has become part of my daily skin care routine. My skin feels soft, nourished, and naturally brighter. I really enjoy the gentle saffron fragrance.\"",
     "test_1_author": "Aradhana Nair",
-    "test_1_role": "Verified Practitioner",
-    "test_2_comment": "\"As an software engineer, constant coding burnt out my energy. Ashwagandha root capsules KSM-66 changed my sleep entirely. I wake up completely rested. My daily anxiety has vanished. Truly the gold-standard adaptogen.\"",
+    "test_1_role": "Verified Customer",
+
+    "test_2_comment": "\"I started using Ashwagandha capsules for better sleep and everyday energy. After using them regularly, I feel more refreshed in the morning.\"",
     "test_2_author": "Kartik Sharma",
-    "test_2_role": "Verified Tech Lead",
-    "test_3_comment": "\"I suffered chronic bloating and constipation for 5 years. Tried countless digestion syrups. Bv Life Triphala powder cured my digestive agni in exactly 12 days. I take a teaspoon in warm water before bedtime. Felt lighter immediately!\"",
+    "test_2_role": "Verified Customer",
+
+    "test_3_comment": "\"I have been using Triphala powder as part of my daily routine. It has helped me maintain better digestion and I feel lighter and more comfortable.\"",
     "test_3_author": "Samyuktha Reddy",
-    "test_3_role": "Verified Yoga Acharya",
+    "test_3_role": "Verified Customer",
 
-    // Blogs Header
-    "section_blog_subtitle": "Vedic Chronicles",
-    "section_blog_title": "Ayurvedic Chronicles & Living",
-    "section_blog_browse": "Read All Chronicles",
+    // Blogs
+    "section_blog_subtitle": "Ayurveda Knowledge",
+    "section_blog_title": "Ayurveda & Healthy Living",
+    "section_blog_browse": "Read All Articles",
 
-    // Cart and Checkout Buttons
+    // Cart & Checkout Buttons
     "btn_add_to_cart": "Add to Cart",
     "btn_buy_now": "Buy Now",
     "btn_quick_view": "Quick View",
@@ -109,23 +114,23 @@ export const translations: Record<Language, Record<string, string>> = {
     "discount_applied": "Discount Applied",
 
     // Cart Page
-    "cart_title": "Your Healing Cart",
-    "cart_empty": "Your cart is currently empty of remedies.",
-    "cart_start_shopping": "Start Shopping Remedies",
+    "cart_title": "Your Cart",
+    "cart_empty": "Your cart is empty.",
+    "cart_start_shopping": "Start Shopping",
     "cart_summary": "Order Summary",
-    "cart_subtotal": "Remedies Subtotal",
-    "cart_shipping": "Vedic Shipping",
-    "cart_tax": "GST & Ayurvedic Cess",
-    "cart_discount": "Voucher Discount",
+    "cart_subtotal": "Subtotal",
+    "cart_shipping": "Shipping",
+    "cart_tax": "GST",
+    "cart_discount": "Discount",
     "cart_total": "Total Amount",
     "cart_checkout_btn": "Proceed to Checkout",
-    "cart_promo_label": "Apply Holy Coupon",
-    "cart_promo_placeholder": "e.g., AYUR15",
+    "cart_promo_label": "Have a Coupon Code?",
+    "cart_promo_placeholder": "e.g. AYUR15",
     "cart_promo_btn": "Apply",
 
     // Checkout Page
-    "checkout_title": "Ayurvedic Dispatch Desk",
-    "checkout_shipping_details": "Recipient & Shipping Address",
+    "checkout_title": "Checkout",
+    "checkout_shipping_details": "Shipping Details",
     "checkout_fullname": "Full Name",
     "checkout_address1": "Address Line 1",
     "checkout_address2": "Address Line 2 (Optional)",
@@ -133,77 +138,82 @@ export const translations: Record<Language, Record<string, string>> = {
     "checkout_state": "State",
     "checkout_zip": "PIN Code",
     "checkout_phone": "Phone Number",
-    "checkout_payment_method": "Vedic Payment Channel",
+
+    "checkout_payment_method": "Payment Method",
     "checkout_cod": "Cash on Delivery (COD)",
-    "checkout_cards": "Credit / Debit Cards",
-    "checkout_upi": "UPI Auto-pay (GPay/PhonePe)",
+    "checkout_cards": "Credit / Debit Card",
+    "checkout_upi": "UPI (GPay / PhonePe)",
     "checkout_netbanking": "Net Banking",
-    "checkout_place_order": "Authenticate & Ship Order",
-    "checkout_submitting": "Processing Dispatch...",
+    "checkout_place_order": "Place Order",
+    "checkout_submitting": "Processing Order...",
 
     // Product Detail Page
-    "prod_sku": "Formulation SKU",
-    "prod_benefits": "Therapeutic Benefits",
-    "prod_ingredients": "Sacred Botanical Ingredients",
-    "prod_dosage": "Prescribed Dosage",
-    "prod_instructions": "Usage Instructions",
-    "prod_reviews": "Aura Reviews & Ratings",
-    "prod_write_review": "Write a Formulation Review",
-    "review_placeholder": "How has this formulation impacted your biological vitality?",
+    "prod_sku": "Product Code",
+    "prod_benefits": "Benefits",
+    "prod_ingredients": "Ingredients",
+    "prod_dosage": "Dosage",
+    "prod_instructions": "How to Use",
+    "prod_reviews": "Customer Reviews",
+    "prod_write_review": "Write a Review",
+    "review_placeholder": "Tell us about your experience with this product.",
     "review_submit": "Submit Review",
-    "review_approved_alert": "Review submitted successfully! It will be shown once audited by our staff.",
+    "review_approved_alert": "Thank you! Your review has been submitted and will be published after approval.",
 
     // AI Consultant
-    "ai_consultant_title": "Consult Our AI Acharya",
-    "ai_consultant_subtitle": "Traditional diagnostic engine synchronized with sacred scripts.",
-    "ai_placeholder": "Ask about joint pain, digestion, stress, skin remedies...",
-    "ai_btn_ask": "Ask Acharya",
-    "ai_btn_thinking": "Acharya is meditating...",
-    "ai_greetings": "Pranam, seeker of health. I am Acharya, your digital guide to holistic Ayurvedic wellbeing. Tell me about your body constitution (Prakriti), seasonal distress, or symptoms, and I shall provide certified Vedic guidance.",
+    "ai_consultant_title": "Ask Our Ayurvedic Expert",
+    "ai_consultant_subtitle": "Get simple guidance based on traditional Ayurvedic knowledge.",
+    "ai_placeholder": "Ask about digestion, stress, skin care, joint care...",
+    "ai_btn_ask": "Ask Expert",
+    "ai_btn_thinking": "Thinking...",
+    "ai_greetings": "Namaste! I am your Ayurvedic wellness assistant. Ask me about Ayurveda, daily wellness, herbs, diet, or traditional Ayurvedic practices.",
 
     // Login Portal
-    "login_verify_title": "Verify Identity",
-    "login_otp_msg": "Enter the simulated OTP code sent to your mobile device.",
-    "login_passcode": "OTP Passcode",
+    "login_verify_title": "Verify Your Mobile Number",
+    "login_otp_msg": "Enter the OTP sent to your mobile number.",
+    "login_passcode": "OTP",
     "login_back": "Back",
-    "login_verify_submit": "Verify & Sign Up",
+    "login_verify_submit": "Verify & Continue",
     "login_name": "Full Name",
     "login_phone": "Phone Number",
     "login_email": "Email Address",
     "login_password": "Password",
     "login_confirm": "Confirm Password",
-    "login_req_verification": "Request Verification",
+    "login_req_verification": "Get OTP",
     "login_forgot": "Forgot Password?",
-    "login_registry_email": "Registry Email",
-    "login_registry_pass": "Registry Password",
+    "login_registry_email": "Email Address",
+    "login_registry_pass": "Password",
     "login_welcome_back": "Welcome Back",
-    "login_staff_access": "Access Healer / Staff Portal ➔",
-    "login_quick_autofill": "Sandbox Quick Profiles (Autofill)",
-    "login_one_tap": "One-Tap",
+    "login_staff_access": "Staff Login ➔",
+    "login_quick_autofill": "Quick Login",
+    "login_one_tap": "One-Tap Login",
 
     // Dashboard
-    "dash_my_profile": "My Wellness Profile",
-    "dash_history": "Order Dispatch History",
-    "dash_wishlist": "Saved Healing Wishlist",
-    "dash_address": "Saved Locations",
-    "dash_no_orders": "No historical orders found.",
-    "dash_status": "Status",
+    "dash_my_profile": "My Profile",
+    "dash_history": "My Orders",
+    "dash_wishlist": "My Wishlist",
+    "dash_address": "Saved Addresses",
+    "dash_no_orders": "No orders found.",
+    "dash_status": "Order Status",
     "dash_tracking": "Tracking Number",
-    "dash_action_shop": "Explore Formulations"
+    "dash_action_shop": "Shop Now"
   },
+
   hi: {} as Record<string, string>
 };
 
 /**
- * Returns translation for a key, always returning English.
+ * Returns English translation.
  */
 export const t = (key: string, lang: Language = 'en'): string => {
   return translations['en'][key] || key;
 };
 
 /**
- * Static translation map for Product / Ingredient names (always returns original english text)
+ * Product / Ingredient names remain unchanged.
  */
-export const translateProductAttr = (text: string, lang: Language): string => {
+export const translateProductAttr = (
+  text: string,
+  lang: Language
+): string => {
   return text;
 };

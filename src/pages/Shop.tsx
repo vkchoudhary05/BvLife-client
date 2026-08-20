@@ -125,15 +125,20 @@ export const Shop: React.FC<ShopProps> = ({
       {/* Title */}
       <div className="border-b border-brand-green-600/10 pb-4 mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">
-            {language === 'hi' ? 'आयुर्वेदिक औषधालय' : 'Apothecary Dispensary'}
-          </span>
-          <h2 className="font-serif text-3xl font-bold text-brand-green-900">
-            {language === 'hi' ? 'आयुर्वेदिक औषधालय स्टोर' : 'Ayurvedic Apothecary Shop'}
-          </h2>
-          <p className="text-xs text-brand-green-600/70 mt-1">
+          {/* <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">
+            {language === 'hi' ? 'आयुर्वेदिक औषधालय' : 'Ayurvedic Dispensary'}
+          </span> */}
+ <h2 className="font-sans text-2xl font-extrabold tracking-tight">
+  <span className="text-brand-green-900">
+    {language === 'hi' ? 'आयुर्वेदिक' : 'Ayurvedic'}
+  </span>{' '}
+  <span className="text-orange-500">
+    {language === 'hi' ? 'औषधालय स्टोर' : 'Shop'}
+  </span>
+</h2>
+          {/* <p className="text-xs text-brand-green-800 mt-2">
             {language === 'hi' ? 'हमारे नैदानिक ​​सूत्र, कल्याण टॉनिक और लक्जरी स्किनकेयर बॉटनिकल ब्राउज़ करें।' : 'Browse our clinical formulations, wellness tonics, and luxury skincare botanicals.'}
-          </p>
+          </p> */}
         </div>
         <div className="text-xs text-brand-green-600 font-medium">
           {language === 'hi' 

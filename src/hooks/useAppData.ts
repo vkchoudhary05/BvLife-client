@@ -7,7 +7,14 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<Review[]>(() => {
+    try {
+      const stored = localStorage.getItem('grams_local_reviews');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [settings, setSettings] = useState<WebsiteSettings | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
 
@@ -17,6 +24,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
       if (products.length > 0) setProducts(products);
       if (settings) setSettings(settings);
     });
+    fetchReviews();
   }, []);
 
   // Targeted fetchers
@@ -36,8 +44,30 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
   }, []);
 
   const fetchReviews = useCallback(async () => {
-    const data = await api.getReviews();
-    if (data.length > 0) setReviews(data);
+    try {
+      const data = await api.getReviews();
+      let localRevs: Review[] = [];
+      try {
+        const stored = localStorage.getItem('grams_local_reviews');
+        localRevs = stored ? JSON.parse(stored) : [];
+      } catch {}
+
+      const map = new Map<string, Review>();
+      // Put server reviews first
+      if (Array.isArray(data)) {
+        data.forEach(r => {
+          if (r && r.id) map.set(r.id, r);
+        });
+      }
+      // Put local reviews on top (highest priority)
+      localRevs.forEach(r => {
+        if (r && r.id) map.set(r.id, r);
+      });
+
+      setReviews(Array.from(map.values()));
+    } catch (e) {
+      console.warn('Error fetching reviews:', e);
+    }
   }, []);
 
   const fetchProducts = useCallback(async () => {
@@ -62,22 +92,41 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
   }, [authToken, fetchOrders]);
 
   // Review posting handler
-  const handlePostReview = async (reviewData: { productId: string; rating: number; comment: string }) => {
+  const handlePostReview = async (reviewData: { productId: string; rating: number; comment: string; userName?: string; userEmail?: string }) => {
     const product = products.find(p => p.id === reviewData.productId);
     const newReview: Review = {
-      id: `rev-${Date.now()}`,
+      id: `rev-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       productId: reviewData.productId,
       productName: product ? product.name : 'Ayurvedic Remedy',
-      userName: currentUser ? currentUser.fullName : 'Verified Healer',
-      userEmail: currentUser ? currentUser.email : 'anonymous@gramslife.com',
+      userName: reviewData.userName || (currentUser ? currentUser.fullName : 'Verified Buyer'),
+      userEmail: reviewData.userEmail || (currentUser ? currentUser.email : 'customer@gramslife.com'),
       rating: reviewData.rating,
       comment: reviewData.comment,
       date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
       isApproved: true
     };
 
-    setReviews(prev => [newReview, ...prev]);
-    await api.postReview(newReview);
+    setReviews(prev => [newReview, ...prev.filter(r => r.id !== newReview.id)]);
+    
+    // Save to local storage for persistence across reloads
+    try {
+      const stored = localStorage.getItem('grams_local_reviews');
+      const list: Review[] = stored ? JSON.parse(stored) : [];
+      localStorage.setItem('grams_local_reviews', JSON.stringify([newReview, ...list.filter(r => r.id !== newReview.id)]));
+      
+      // Also mark this product as reviewed
+      const storedReviewed = localStorage.getItem('grams_reviewed_products');
+      const revIds: string[] = storedReviewed ? JSON.parse(storedReviewed) : [];
+      if (!revIds.includes(reviewData.productId)) {
+        localStorage.setItem('grams_reviewed_products', JSON.stringify([...revIds, reviewData.productId]));
+      }
+    } catch {}
+
+    try {
+      await api.postReview(newReview);
+    } catch (err) {
+      console.warn('Review synced locally (backend fallback):', err);
+    }
   };
 
   // Address Handler
@@ -244,7 +293,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
   };
 
   const activeSettings: WebsiteSettings = settings || {
-    logoName: "Bv Life",
+    logoName: "Grams Life",
     logoUrl: "",
     contactEmail: "care@gramslife.com",
     contactPhone: "+91 98765 43210",

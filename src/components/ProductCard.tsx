@@ -61,11 +61,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Floating Badges */}
         <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1 z-10 pointer-events-none">
           {discountPercent > 0 && (
-            <span
-              className="relative inline-flex items-center gap-1 bg-brand-green-900 text-brand-gold-300 text-[9px] sm:text-[10px] font-bold pl-1.5 sm:pl-2 pr-2.5 sm:pr-3 py-0.5 sm:py-1 uppercase tracking-wider shadow-[0_2px_6px_rgba(6,40,20,0.35)] ring-1 ring-brand-gold-400/20"
-              style={{ clipPath: 'polygon(0 0, 100% 0, 88% 100%, 0% 100%)' }}
-            >
-              <Sparkle className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-brand-gold-400 text-brand-gold-400 shrink-0" />
+            <span className="inline-flex items-center gap-1 bg-brand-green-900 text-white text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide shadow-xs">
               {discountPercent}% OFF
             </span>
           )}
@@ -110,7 +106,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Title */}
           <h4
-            className="font-serif text-[11px] sm:text-sm font-bold text-brand-green-800 hover:text-brand-gold-600 cursor-pointer line-clamp-2 leading-tight sm:leading-snug min-h-[2.2rem] sm:min-h-[2.5rem]"
+            className="font-medium text-[11px] sm:text-sm text-brand-green-950 hover:text-brand-gold-600 cursor-pointer line-clamp-2 leading-tight sm:leading-snug min-h-[2.2rem] sm:min-h-[2.5rem]"
             onClick={() => onNavigate('product', { id: product.id })}
           >
             {product.name}
@@ -118,17 +114,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Rating */}
           <div className="flex items-center gap-1 pt-0.5">
-            <div className="flex text-brand-gold-500">
+            <div className="flex text-amber-400">
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
                   className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${
-                    i < Math.floor(product.rating) ? 'fill-current' : 'text-brand-green-100'
+                    i < Math.floor(product.rating) ? 'fill-current' : 'text-gray-200'
                   }`}
                 />
               ))}
             </div>
-            <span className="text-[9px] sm:text-[11px] font-bold text-brand-green-700">{product.rating}</span>
+            <span className="text-[9px] sm:text-[11px] font-medium text-brand-green-700">{product.rating}</span>
           </div>
         </div>
 
@@ -140,7 +136,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 ₹{product.originalPrice}
               </span>
             )}
-            <span className="font-serif font-bold text-xs sm:text-base text-brand-green-900">
+            <span className="font-semibold text-xs sm:text-base text-brand-green-950">
               ₹{product.price}
             </span>
           </div>

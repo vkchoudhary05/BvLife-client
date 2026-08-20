@@ -4,12 +4,13 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { ShieldCheck, Plus, ShoppingBag, ArrowLeft, ArrowRight, CheckCircle2, Ticket, Mail, Lock, Phone as PhoneIcon, Sparkles, User as UserIcon, Shield, RotateCw } from 'lucide-react';
+import { ShieldCheck, Plus, ShoppingBag, ArrowLeft, ArrowRight, CheckCircle2, Ticket, Mail, Lock, Phone as PhoneIcon, Sparkles, User as UserIcon, Shield, RotateCw, Star, MessageSquare } from 'lucide-react';
 import { CartItem, Address, Coupon, WebsiteSettings, Order } from '../types';
 import { validateAndFormatIndianPhone } from '../utils';
 import { loadRazorpayScript } from '../utils/razorpay';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 import { SecureOtpWidget } from '../components/secureOtpWidget';
+import { WriteReviewModal } from '../components/WriteReviewModel';
 import { sendMSG91Otp, verifyMSG91Otp, retryMSG91Otp, verifyServerAccessToken, formatMSG91Identifier } from '../services/msg91OtpService';
 
 interface CheckoutProps {
@@ -20,6 +21,7 @@ interface CheckoutProps {
   appliedCoupon: Coupon | null;
   settings: WebsiteSettings;
   onPlaceOrder: (orderData: Partial<Order>) => Promise<Order | null>;
+  onPostReview?: (reviewData: { productId: string; rating: number; comment: string; userName?: string; userEmail?: string }) => Promise<void> | void;
   language?: any;
   currentUser: any;
   onLoginSuccess?: (token: string) => void;
@@ -35,12 +37,22 @@ export const Checkout: React.FC<CheckoutProps> = ({
   appliedCoupon,
   settings,
   onPlaceOrder,
+  onPostReview,
   language,
   currentUser,
   onLoginSuccess,
   authToken,
   initialCompletedOrderId
 }) => {
+  const [reviewModalProduct, setReviewModalProduct] = useState<{ id: string; name: string; image?: string; defaultRating?: number } | null>(null);
+  const [reviewedProductIds, setReviewedProductIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('grams_reviewed_products');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [selectedAddressId, setSelectedAddressId] = useState<string>(
     userAddresses.find(a => a.isDefault)?.id || userAddresses[0]?.id || ''
   );
@@ -678,6 +690,77 @@ export const Checkout: React.FC<CheckoutProps> = ({
               🛡️ Payment status: {orderCompleted.paymentStatus} via {orderCompleted.paymentMethod}
             </div>
 
+          </div>
+
+          {/* Post-Purchase Verified Reviews Section */}
+          <div className="border border-emerald-200 bg-emerald-50/40 rounded-2xl p-5 text-left space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-brand-green-950">
+                    {language === 'hi' ? 'खरीदे गए उत्पादों की समीक्षा करें' : 'Rate & Review Your Purchased Products'}
+                  </h4>
+                  <p className="text-[10px] text-brand-green-700">
+                    {language === 'hi' ? 'सत्यापित खरीदार के रूप में अपनी राय साझा करें' : 'Help other wellness seekers by sharing your authentic feedback'}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-200">
+                Verified Buyer
+              </span>
+            </div>
+
+            <div className="space-y-2.5">
+              {orderCompleted.items.map((it, idx) => {
+                const isReviewed = reviewedProductIds.includes(it.productId);
+                return (
+                  <div key={idx} className="bg-white border border-brand-green-600/10 rounded-xl p-3 flex items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {it.mainImage && (
+                        <img 
+                          src={it.mainImage} 
+                          alt={it.productName} 
+                          className="w-10 h-10 object-contain rounded-lg border border-brand-green-100 bg-white shrink-0" 
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs text-brand-green-950 truncate">{it.productName}</p>
+                        <p className="text-[10px] text-brand-green-600 font-mono">₹{it.price} • Qty {it.quantity}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      {isReviewed ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>{language === 'hi' ? 'समीक्षित' : 'Reviewed ✓'}</span>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReviewModalProduct({
+                              id: it.productId,
+                              name: it.productName,
+                              image: it.mainImage,
+                              defaultRating: 5
+                            });
+                          }}
+                          className="inline-flex items-center gap-1.5 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold px-3.5 py-1.5 rounded-lg text-xs transition-all shadow-xs cursor-pointer"
+                        >
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          <span>{language === 'hi' ? 'समीक्षा दें' : 'Write Review'}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
@@ -1819,6 +1902,29 @@ export const Checkout: React.FC<CheckoutProps> = ({
           }
         }}
       />
+
+      {/* Post-Purchase Write Review Modal */}
+      {reviewModalProduct && (
+        <WriteReviewModal
+          productId={reviewModalProduct.id}
+          productName={reviewModalProduct.name}
+          productImage={reviewModalProduct.image}
+          defaultRating={reviewModalProduct.defaultRating || 5}
+          language={language}
+          currentUser={currentUser}
+          onClose={() => setReviewModalProduct(null)}
+          onSubmitReview={async (rev) => {
+            if (onPostReview) {
+              await onPostReview(rev);
+            }
+            const updated = [...reviewedProductIds, reviewModalProduct.id];
+            setReviewedProductIds(updated);
+            try {
+              localStorage.setItem('grams_reviewed_products', JSON.stringify(updated));
+            } catch {}
+          }}
+        />
+      )}
 
     </div>
   );

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ShieldCheck, CheckCircle2, ShoppingBag, Landmark, Sparkles, MapPin, Phone, User, ArrowRight, Lock, AlertCircle, Mail } from 'lucide-react';
+import { X, ShieldCheck, CheckCircle2, ShoppingBag, Landmark, Sparkles, MapPin, Phone, User, ArrowRight, Lock, AlertCircle, Mail, Star } from 'lucide-react';
 import { Product, Order, Address } from '../types';
 import { Language, t } from '../lib/translations';
 import { validateAndFormatIndianPhone } from '../utils';
@@ -17,6 +17,7 @@ interface BuyNowModalProps {
   quantity: number;
   onClose: () => void;
   onPlaceOrder: (orderData: Partial<Order>) => Promise<Order | null>;
+  onPostReview?: (reviewData: { productId: string; rating: number; comment: string; userName?: string; userEmail?: string }) => Promise<void> | void;
   onNavigate: (page: string, params?: any) => void;
   language: Language;
   currentUser?: any;
@@ -29,12 +30,18 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   quantity,
   onClose,
   onPlaceOrder,
+  onPostReview,
   onNavigate,
   language,
   currentUser,
   onLoginSuccess,
   onAddAddress
 }) => {
+  // Review states on success screen
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   // Checkout flow step: 'verify' -> 'address' -> 'payment' -> 'success'
   const [step, setStep] = useState<'verify' | 'address' | 'payment' | 'success'>('verify');
 
@@ -1576,6 +1583,86 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                   🛡️ Payment status: {placedOrder.paymentStatus || (paymentMethod === 'Cash on Delivery' ? 'Pending' : 'Paid')} via {placedOrder.paymentMethod || paymentMethod}
                 </div>
 
+              </div>
+
+              {/* Post-Purchase Verified Review Form */}
+              <div className="border border-emerald-200 bg-emerald-50/40 rounded-2xl p-4 text-left space-y-3 max-w-sm mx-auto shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    <h4 className="font-bold text-xs text-brand-green-950">
+                      {language === 'hi' ? 'अपनी समीक्षा दें' : 'Review This Remedy'}
+                    </h4>
+                  </div>
+                  <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Verified Buyer
+                  </span>
+                </div>
+
+                {reviewSubmitted ? (
+                  <div className="p-3 bg-emerald-100/70 border border-emerald-200 rounded-xl text-center text-xs text-emerald-900 font-bold flex items-center justify-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                    <span>{language === 'hi' ? 'आपकी समीक्षा दर्ज हो गई है!' : 'Review submitted successfully!'}</span>
+                  </div>
+                ) : (
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!reviewComment.trim()) return;
+                    setIsSubmittingReview(true);
+                    try {
+                      if (onPostReview) {
+                        await onPostReview({
+                          productId: product.id,
+                          rating: reviewRating,
+                          comment: reviewComment.trim(),
+                          userName: fullName || currentUser?.fullName || 'Verified Buyer',
+                          userEmail: email || currentUser?.email
+                        });
+                      }
+                      setReviewSubmitted(true);
+                    } catch (err) {
+                      console.error(err);
+                    } finally {
+                      setIsSubmittingReview(false);
+                    }
+                  }} className="space-y-2.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-brand-green-800">
+                        {language === 'hi' ? 'रेटिंग:' : 'Rating:'}
+                      </span>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((st) => (
+                          <button
+                            key={st}
+                            type="button"
+                            onClick={() => setReviewRating(st)}
+                            className="focus:outline-none cursor-pointer"
+                          >
+                            <Star className={`w-5 h-5 ${st <= reviewRating ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <textarea
+                      rows={2}
+                      required
+                      placeholder={language === 'hi' ? 'उत्पाद के बारे में अपनी राय लिखें...' : 'Write your review and experience...'}
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      className="w-full p-2.5 rounded-xl bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 text-xs"
+                    />
+
+                    <button
+                      type="submit"
+                      disabled={isSubmittingReview || !reviewComment.trim()}
+                      className="w-full py-2 bg-brand-green-800 hover:bg-brand-green-900 disabled:opacity-50 text-white font-bold rounded-xl text-xs uppercase tracking-wider cursor-pointer shadow-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-brand-gold-400" />
+                      <span>{isSubmittingReview ? 'Submitting...' : (language === 'hi' ? 'समीक्षा पोस्ट करें' : 'Post Verified Review')}</span>
+                    </button>
+                  </form>
+                )}
               </div>
 
               {/* Action buttons */}
