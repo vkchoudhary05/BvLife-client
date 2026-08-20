@@ -84,37 +84,37 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div id="top-promo-banner" className="bg-brand-green-900 text-white text-[13px] sm:text-xs py-1.5 sm:py-2 px-0 overflow-hidden whitespace-nowrap border-b border-brand-gold-500/20 font-bold uppercase tracking-widest">
         <div className="flex animate-marquee select-none">
           <div className="flex shrink-0 items-center gap-10 sm:gap-16 px-4">
-            <span className="text-brand-gold-400">✨ FREE SHIPPING ON ALL ORDERS OVER ₹999</span>
-            <span className="text-brand-gold-500/40">|</span>
-            <span className="text-brand-gold-400">USE CODE: AYUR15 FOR 15% OFF</span>
-            <span className="text-brand-gold-500/40">|</span>
+            {/* <span className="text-brand-gold-400">✨ FREE SHIPPING ON ALL ORDERS OVER ₹999</span>
+            <span className="text-white">|</span> */}
+            {/* <span className="text-white">USE CODE: AYUR15 FOR 15% OFF</span> */}
+            <span className="text-white">|</span>
             <span>100% Pure Natural Herbs</span>
-            <span className="text-brand-gold-500/40">|</span>
+            <span className="text-white">|</span>
             <span>Authentic Ayurvedic Wellness</span>
-            <span className="text-brand-gold-500/40">|</span>
+            <span className="text-white">|</span>
             <span>Rich in Herbal Extracts</span>
-            <span className="text-brand-gold-500/40">|</span>
+            <span className="text-white">|</span>
             <span>No Synthetic Additives</span>
-            <span className="text-brand-gold-500/40">|</span>
+            <span className="text-white">|</span>
             <span>Traditionally Crafted</span>
-            <span className="text-brand-gold-500/40">|</span>
+            <span className="text-white">|</span>
             <span>Daily Holistic Health Support</span>
           </div>
           <div className="flex shrink-0 items-center gap-10 sm:gap-16 px-4" aria-hidden="true">
-            <span className="text-brand-gold-400">✨ FREE SHIPPING ON ALL ORDERS OVER ₹999</span>
-            <span className="text-brand-gold-500/40">|</span>
-            <span className="text-brand-gold-400">USE CODE: AYUR15 FOR 15% OFF</span>
-            <span className="text-brand-gold-500/40">|</span>
+            {/* <span className="text-brand-gold-400">✨ FREE SHIPPING ON ALL ORDERS OVER ₹999</span> */}
+            <span className="text-white">|</span>
+            {/* <span className="text-brand-gold-400">USE CODE: AYUR15 FOR 15% OFF</span> */}
+            <span className="text-white">|</span>
             <span>100% Pure Natural Herbs</span>
-            <span className="text-brand-gold-500/40">|</span>
+            <span className="text-white">|</span>
             <span>Authentic Ayurvedic Wellness</span>
-            <span className="text-brand-gold-500/40">|</span>
+            <span className="text-white">|</span>
             <span>Rich in Herbal Extracts</span>
-            <span className="text-brand-gold-500/40">|</span>
+            <span className="text-white">|</span>
             <span>No Synthetic Additives</span>
-            <span className="text-brand-gold-500/40">|</span>
+            <span className="text-white">|</span>
             <span>Traditionally Crafted</span>
-            <span className="text-brand-gold-500/40">|</span>
+            <span className="text-white">|</span>
             <span>Daily Holistic Health Support</span>
           </div>
         </div>

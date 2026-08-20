@@ -106,7 +106,7 @@ body {
 .animate-marquee {
   display: flex;
   width: max-content;
-  animation: marquee 65s linear infinite;
+  animation: marquee 120s linear infinite;
 }
 .animate-marquee:hover {
   animation-play-state: paused;
