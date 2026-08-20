@@ -129,7 +129,7 @@ export const Shop: React.FC<ShopProps> = ({
             {language === 'hi' ? 'आयुर्वेदिक औषधालय' : 'Ayurvedic Dispensary'}
           </span> */}
  <h2 className="font-sans text-2xl font-extrabold tracking-tight">
-  <span className="text-brand-green-900">
+  <span className="text-brand-green-600">
     {language === 'hi' ? 'आयुर्वेदिक' : 'Ayurvedic'}
   </span>{' '}
   <span className="text-orange-500">

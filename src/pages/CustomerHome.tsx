@@ -219,20 +219,20 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
 
       {/* 2. CATEGORY BROWSE SECTION */}
       <section id="category-browse" className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-8">
-        <div className="w-full text-left mb-8">
-          <h3 className="text-2xl sm:text-xl font-semibold text-black">
-            Discover Ayurvedic Care
+        <div className="w-full text-left mb-5">
+          <h3 className="text-xl sm:text-xl font-semibold text-black">
+            Categories
           </h3>
         </div>
 
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-5">
+        <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-5 ">
           {categories.map((cat, i) => (
             <div
               key={i}
               onClick={() => onNavigate("shop", { category: cat.name })}
-              className="group bg-white border border-gray-100 hover:border-green-600/20 p-3 sm:p-5 rounded-xl sm:rounded-2xl text-center cursor-pointer hover:shadow-md transition-all duration-300"
+             className="group bg-gradient-to-br from-green-100 via-white to-sky-100 border border-green-200 hover:border-green-600/20 p-2 lg:p-3 sm:p-4 rounded-xl sm:rounded-2xl text-center cursor-pointer hover:shadow-md transition-all duration-300"
             >
-              <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden mx-auto mb-2 sm:mb-4 border-2 border-gray-100 group-hover:border-green-600 transition-colors">
+              <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden mx-auto mb-2 sm:mb-4 border-1 border-orange-400 group-hover:border-green-500 transition-colors">
                 <img
                   src={cat.img}
                   alt={cat.name}
@@ -240,23 +240,23 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
                 />
               </div>
 
-              <h4 className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-green-700 transition-colors line-clamp-2">
+              <h4 className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-green-600 transition-colors line-clamp-2">
                 {cat.name}
               </h4>
-
+{/* 
               <p className="hidden sm:block text-[10px] text-gray-500 mt-1">
                 {cat.count}+ Products
-              </p>
+              </p> */}
             </div>
           ))}
         </div>
       </section>
 
       {/* 3. FEATURED PRODUCTS GRID */}
-      <section id="featured-products" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="featured-products" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 mt-15 ">
         <div className="flex flex-col sm:flex-row justify-between items-baseline gap-4 mb-10 border-b border-brand-green-600/10 pb-5">
           <div>
-            <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">{t('section_feat_subtitle', language)}</span>
+           <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">{t('section_feat_subtitle', language)}</span>
             <h3 className="font-serif text-2xl sm:text-3xl font-bold text-brand-green-900">{t('section_feat_title', language)}</h3>
           </div>
           <button 
@@ -289,7 +289,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
       </section>
 
       {/* 3.5. TOP SELLING PRODUCTS SECTION */}
-      {/* <section id="top-selling-products" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="top-selling-products" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row justify-between items-baseline gap-4 mb-10 border-b border-brand-green-600/10 pb-5">
           <div>
             <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">{t('section_top_subtitle', language)}</span>
@@ -357,7 +357,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
             />
           </div>
         </div>
-      </section> */}
+      </section>
 
       {/* 5. USER TESTIMONIALS */}
       <section id="user-testimonials" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
