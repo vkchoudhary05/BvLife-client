@@ -1,4 +1,4 @@
-import { Product, Blog, FAQ, Coupon, Review, WebsiteSettings, User, Order, Address } from '../types';
+import { Product, ProductVariant, Blog, FAQ, Coupon, Review, WebsiteSettings, User, Order, Address, Doctor, DoctorAppointment } from '../types';
 
 export const api = {
   async getBaselineData(): Promise<{ products: Product[]; settings: WebsiteSettings | null }> {
@@ -21,6 +21,25 @@ export const api = {
     const res = await fetch('/api/products');
     const data = await res.json();
     return Array.isArray(data) ? data : [];
+  },
+
+  async getProductById(id: string, variantId?: string): Promise<any> {
+    const url = variantId ? `/api/products/${id}?variantId=${encodeURIComponent(variantId)}` : `/api/products/${id}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return await res.json();
+  },
+
+  async getProductVariant(productId: string, variantId: string): Promise<any> {
+    const res = await fetch(`/api/products/${productId}/variants/${encodeURIComponent(variantId)}`);
+    if (!res.ok) return null;
+    return await res.json();
+  },
+
+  async switchProductFormulation(productId: string, formType: string): Promise<any> {
+    const res = await fetch(`/api/products/${productId}/switch-formulation/${encodeURIComponent(formType)}`);
+    if (!res.ok) return null;
+    return await res.json();
   },
 
   async getBlogs(): Promise<Blog[]> {
@@ -158,6 +177,42 @@ export const api = {
     return res.ok;
   },
 
+  async updateProductVariant(productId: string, variantId: string, variantData: Partial<ProductVariant>, token: string): Promise<any> {
+    const res = await fetch(`/api/products/${productId}/variants/${encodeURIComponent(variantId)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(variantData)
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  },
+
+  async addProductVariant(productId: string, variantData: Partial<ProductVariant>, token: string): Promise<any> {
+    const res = await fetch(`/api/products/${productId}/variants`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(variantData)
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  },
+
+  async deleteProductVariant(productId: string, variantId: string, token: string): Promise<boolean> {
+    const res = await fetch(`/api/products/${productId}/variants/${encodeURIComponent(variantId)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return res.ok;
+  },
+
   async deleteProduct(id: string, token: string): Promise<boolean> {
     const res = await fetch(`/api/products/${id}`, {
       method: 'DELETE',
@@ -188,5 +243,78 @@ export const api = {
       body: JSON.stringify(settings)
     });
     return res.ok;
+  },
+
+  // Doctor Consultation Endpoints
+  async getDoctors(): Promise<Doctor[]> {
+    try {
+      const res = await fetch('/api/doctors');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch (err) {
+      console.error('Error fetching doctors:', err);
+      return [];
+    }
+  },
+
+  async getDoctorById(id: string): Promise<Doctor | null> {
+    try {
+      const res = await fetch(`/api/doctors/${id}`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (err) {
+      console.error('Error fetching doctor by id:', err);
+      return null;
+    }
+  },
+
+  async getDoctorAppointmentsByUser(email: string, token?: string): Promise<DoctorAppointment[]> {
+    try {
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/doctor-appointments/user/${encodeURIComponent(email)}`, { headers });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch (err) {
+      console.error('Error fetching doctor appointments:', err);
+      return [];
+    }
+  },
+
+  async bookDoctorAppointment(appointment: Partial<DoctorAppointment>, token?: string): Promise<{ success: boolean; appointment?: DoctorAppointment; error?: string }> {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch('/api/doctor-appointments', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(appointment)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Failed to book appointment' };
+      }
+      return { success: true, appointment: data.appointment };
+    } catch (err: any) {
+      console.error('Error booking doctor appointment:', err);
+      return { success: false, error: err?.message || 'Network error' };
+    }
+  },
+
+  async cancelDoctorAppointment(id: string, token?: string): Promise<boolean> {
+    try {
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/doctor-appointments/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+      return res.ok;
+    } catch (err) {
+      console.error('Error cancelling doctor appointment:', err);
+      return false;
+    }
   }
 };

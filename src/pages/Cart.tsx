@@ -9,8 +9,8 @@ import { CartItem, Coupon, WebsiteSettings } from '../types';
 
 interface CartProps {
   cart: CartItem[];
-  onUpdateQty: (productId: string, qty: number) => void;
-  onRemoveItem: (productId: string) => void;
+  onUpdateQty: (productId: string, qty: number, variantId?: string) => void;
+  onRemoveItem: (productId: string, variantId?: string) => void;
   onNavigate: (page: string, params?: any) => void;
   coupons: Coupon[];
   settings: WebsiteSettings;
@@ -35,7 +35,10 @@ export const Cart: React.FC<CartProps> = ({
 
   // Calculations
   const subtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    return cart.reduce((sum, item) => {
+      const price = item.selectedVariant ? item.selectedVariant.price : item.product.price;
+      return sum + price * item.quantity;
+    }, 0);
   }, [cart]);
 
   // Handle coupon validation
@@ -82,12 +85,10 @@ export const Cart: React.FC<CartProps> = ({
     return Math.round((taxableSub * settings.defaultTaxPercentage) / 100);
   }, [subtotal, discountAmount, settings]);
 
-  // const shippingCharge = useMemo(() => {
-  //   if (subtotal === 0 || subtotal >= settings.freeShippingThreshold) return 0;
-  //   return settings.baseShippingCharge;
-  // }, [subtotal, settings]);
-
-  const shippingCharge = 0;
+  const shippingCharge = useMemo(() => {
+    if (subtotal === 0 || subtotal >= settings.freeShippingThreshold) return 0;
+    return settings.baseShippingCharge;
+  }, [subtotal, settings]);
 
   const finalTotal = useMemo(() => {
     return Math.max(0, subtotal - discountAmount + taxAmount + shippingCharge);
@@ -125,67 +126,95 @@ export const Cart: React.FC<CartProps> = ({
         
         {/* Left Columns: Items List */}
         <div className="lg:col-span-2 space-y-4">
-          {cart.map(item => (
-            <div 
-              key={item.product.id} 
-              className="bg-white border border-brand-green-600/5 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between"
-            >
-              
-              {/* Image & Title */}
-              <div className="flex items-center gap-4 flex-1 w-full">
-                <img 
-                  src={item.product.mainImage} 
-                  alt={item.product.name} 
-                  className="w-16 h-16 rounded-lg object-cover border border-brand-green-600/10 flex-shrink-0"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="space-y-0.5 min-w-0 flex-1">
-                  <span className="text-[9px] uppercase tracking-wider text-brand-gold-700 font-bold">{item.product.category}</span>
-                  <h4 
-                    onClick={() => onNavigate('product', { id: item.product.id })}
-                    className="font-serif text-sm font-bold text-brand-green-800 hover:text-brand-gold-600 cursor-pointer line-clamp-1 text-left"
-                  >
-                    {item.product.name}
-                  </h4>
-                  <p className="text-[10px] text-brand-green-600/40 text-left">In Stock: {item.product.stock} units</p>
-                </div>
-              </div>
+          {cart.map(item => {
+            const currentItemPrice = item.selectedVariant ? item.selectedVariant.price : item.product.price;
+            const currentItemStock = item.selectedVariant ? item.selectedVariant.stock : item.product.stock;
+            const itemKey = `${item.product.id}-${item.selectedVariant?.id || 'base'}`;
 
-              {/* Adjust Quantity Controls */}
-              <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t border-brand-green-600/5 sm:border-t-0 pt-3 sm:pt-0 shrink-0">
-                <div className="flex items-center border border-brand-green-100 rounded-lg overflow-hidden bg-white">
+            return (
+              <div 
+                key={itemKey} 
+                className="bg-white border border-brand-green-600/5 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between shadow-xs"
+              >
+                
+                {/* Image & Title */}
+                <div className="flex items-center gap-4 flex-1 w-full">
+                  <img 
+                    src={item.selectedVariant?.image || item.product.mainImage} 
+                    alt={item.product.name} 
+                    className="w-16 h-16 rounded-xl object-cover border border-brand-green-600/10 flex-shrink-0 bg-brand-green-50/40"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <span className="text-[9px] uppercase tracking-wider text-brand-gold-700 font-bold">{item.product.category}</span>
+                    <h4 
+                      onClick={() => onNavigate('product', { id: item.product.id })}
+                      className="font-serif text-sm font-bold text-brand-green-800 hover:text-brand-gold-600 cursor-pointer line-clamp-1 text-left"
+                    >
+                      {item.product.name}
+                    </h4>
+                    
+                    {/* Variant Badge */}
+                    {item.selectedVariant && (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-flex items-center text-[10px] font-bold text-brand-green-900 bg-brand-green-100/70 border border-brand-green-300 px-2 py-0.5 rounded-md">
+                          {item.selectedVariant.name}
+                        </span>
+                        {item.selectedVariant.size && (
+                          <span className="inline-flex items-center text-[9px] font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
+                            {item.selectedVariant.size}
+                          </span>
+                        )}
+                        {item.selectedVariant.form && (
+                          <span className="text-[9px] text-brand-green-600/70 font-medium uppercase">
+                            ({item.selectedVariant.form})
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <p className="text-[10px] text-brand-green-600/50 text-left">
+                      In Stock: {currentItemStock} units • ₹{currentItemPrice} / unit
+                    </p>
+                  </div>
+                </div>
+
+                {/* Adjust Quantity Controls */}
+                <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t border-brand-green-600/5 sm:border-t-0 pt-3 sm:pt-0 shrink-0">
+                  <div className="flex items-center border border-brand-green-200 rounded-xl overflow-hidden bg-white shadow-xs">
+                    <button 
+                      onClick={() => onUpdateQty(item.product.id, Math.max(1, item.quantity - 1), item.selectedVariant?.id)}
+                      className="px-2.5 py-1 text-brand-green-800 font-bold hover:bg-brand-green-50 cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <span className="px-2.5 text-xs font-bold text-brand-green-900 tabular-nums">{item.quantity}</span>
+                    <button 
+                      onClick={() => onUpdateQty(item.product.id, Math.min(currentItemStock, item.quantity + 1), item.selectedVariant?.id)}
+                      className="px-2.5 py-1 text-brand-green-800 font-bold hover:bg-brand-green-50 cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {/* Pricing subtotal */}
+                  <div className="text-right w-24">
+                    <span className="font-serif font-bold text-sm text-brand-green-950">₹{currentItemPrice * item.quantity}</span>
+                  </div>
+
+                  {/* Delete */}
                   <button 
-                    onClick={() => onUpdateQty(item.product.id, Math.max(1, item.quantity - 1))}
-                    className="px-2.5 py-1 text-brand-green-800 font-bold hover:bg-brand-green-50 cursor-pointer"
+                    onClick={() => onRemoveItem(item.product.id, item.selectedVariant?.id)}
+                    className="p-2 text-brand-green-600/50 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                    title="Remove Item"
                   >
-                    -
-                  </button>
-                  <span className="px-2 text-xs font-semibold text-brand-green-900">{item.quantity}</span>
-                  <button 
-                    onClick={() => onUpdateQty(item.product.id, Math.min(item.product.stock, item.quantity + 1))}
-                    className="px-2.5 py-1 text-brand-green-800 font-bold hover:bg-brand-green-50 cursor-pointer"
-                  >
-                    +
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
 
-                {/* Pricing subtotal */}
-                <div className="text-right w-20">
-                  <span className="font-serif font-bold text-sm text-brand-green-900">₹{item.product.price * item.quantity}</span>
-                </div>
-
-                {/* Delete */}
-                <button 
-                  onClick={() => onRemoveItem(item.product.id)}
-                  className="p-2 text-brand-green-600/50 hover:text-red-500 transition-colors cursor-pointer"
-                  title="Remove Item"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
-
-            </div>
-          ))}
+            );
+          })}
 
           {/* Prompt banner to get free shipping */}
           {subtotal < settings.freeShippingThreshold && (

@@ -1,6 +1,6 @@
 
 /**
- * Simple Indian Ayurvedic Translation Dictionary for Gram's Life
+ * Simple Indian Ayurvedic Translation Dictionary for Bv's Life
  */
 
 export type Language = 'en' | 'hi';

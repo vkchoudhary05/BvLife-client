@@ -239,8 +239,9 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
   // Admin CRUDs
   const handleAdminUpdateOrderStatus = async (orderId: string, status: Order['status'], payStatus: Order['paymentStatus']) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, paymentStatus: payStatus } : o));
-    if (authToken) {
-      const updated = await api.updateOrderStatus(orderId, status, payStatus, authToken);
+    const token = authToken || localStorage.getItem('grams_auth_token') || '';
+    if (token) {
+      const updated = await api.updateOrderStatus(orderId, status, payStatus, token);
       if (updated) {
         setOrders(prev => prev.map(o => o.id === orderId ? updated : o));
       }
@@ -259,36 +260,41 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
     } as Product;
 
     setProducts(prev => [newP, ...prev]);
-    if (authToken) {
-      await api.addProduct(newP, authToken);
+    const token = authToken || localStorage.getItem('grams_auth_token') || '';
+    if (token) {
+      await api.addProduct(newP, token);
     }
   };
 
   const handleAdminEditProduct = async (id: string, prod: Partial<Product>) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, ...prod } : p));
-    if (authToken) {
-      await api.updateProduct(id, prod, authToken);
+    const token = authToken || localStorage.getItem('grams_auth_token') || '';
+    if (token) {
+      await api.updateProduct(id, prod, token);
     }
   };
 
   const handleAdminDeleteProduct = async (id: string) => {
     setProducts(prev => prev.filter(p => p.id !== id));
-    if (authToken) {
-      await api.deleteProduct(id, authToken);
+    const token = authToken || localStorage.getItem('grams_auth_token') || '';
+    if (token) {
+      await api.deleteProduct(id, token);
     }
   };
 
   const handleAdminAddCoupon = async (cpn: Coupon) => {
     setCoupons(prev => [cpn, ...prev]);
-    if (authToken) {
-      await api.addCoupon(cpn, authToken);
+    const token = authToken || localStorage.getItem('grams_auth_token') || '';
+    if (token) {
+      await api.addCoupon(cpn, token);
     }
   };
 
   const handleUpdateSettings = async (newSettings: WebsiteSettings) => {
     setSettings(newSettings);
-    if (authToken) {
-      await api.updateSettings(newSettings, authToken);
+    const token = authToken || localStorage.getItem('grams_auth_token') || '';
+    if (token) {
+      await api.updateSettings(newSettings, token);
     }
   };
 

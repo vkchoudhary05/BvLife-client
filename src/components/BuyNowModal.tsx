@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ShieldCheck, CheckCircle2, ShoppingBag, Landmark, Sparkles, MapPin, Phone, User, ArrowRight, Lock, AlertCircle, Mail, Star } from 'lucide-react';
-import { Product, Order, Address } from '../types';
+import { Product, Order, Address, ProductVariant } from '../types';
 import { Language, t } from '../lib/translations';
 import { validateAndFormatIndianPhone } from '../utils';
 import { loadRazorpayScript } from '../utils/razorpay';
@@ -14,6 +14,7 @@ import { ForgotPasswordModal } from './ForgotPasswordModal';
 
 interface BuyNowModalProps {
   product: Product;
+  selectedVariant?: ProductVariant;
   quantity: number;
   onClose: () => void;
   onPlaceOrder: (orderData: Partial<Order>) => Promise<Order | null>;
@@ -27,6 +28,7 @@ interface BuyNowModalProps {
 
 export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   product,
+  selectedVariant,
   quantity,
   onClose,
   onPlaceOrder,
@@ -128,7 +130,8 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   }, [currentUser, userAddresses]);
 
   // Pricing calculations
-  const itemTotal = product.price * quantity;
+  const activePrice = selectedVariant ? selectedVariant.price : product.price;
+  const itemTotal = activePrice * quantity;
   const taxAmount = Math.round(itemTotal * 0.12); // 12% tax
   const shippingCharge = itemTotal >= 999 ? 0 : 50; // free above 999
   const finalTotal = itemTotal + taxAmount + shippingCharge;
@@ -378,10 +381,14 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
       items: [
         {
           productId: product.id,
-          productName: product.name,
-          price: product.price,
+          productName: selectedVariant ? `${product.name} (${selectedVariant.name})` : product.name,
+          price: activePrice,
           quantity: quantity,
-          mainImage: product.mainImage
+          mainImage: selectedVariant?.image || product.mainImage,
+          variantId: selectedVariant?.id,
+          variantName: selectedVariant?.name,
+          variantSize: selectedVariant?.size,
+          sku: selectedVariant?.sku || product.sku
         }
       ],
       subtotal: itemTotal,
@@ -661,19 +668,30 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
           {/* Product Summary Mini Card */}
           {step !== 'success' && (
             <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-brand-cream-100/50 border border-brand-green-600/10">
-              <div className="w-16 h-16 bg-white border border-brand-green-100 rounded-xl p-1.5 shrink-0 flex items-center justify-center">
+              <div className="w-16 h-16 bg-white border border-brand-green-100 rounded-xl p-1.5 shrink-0 flex items-center justify-center overflow-hidden">
                 <img 
-                  src={product.mainImage} 
+                  src={selectedVariant?.image || product.mainImage} 
                   alt={product.name} 
                   className="w-full h-full object-contain" 
                   referrerPolicy="no-referrer"
                 />
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 text-left">
                 <h4 className="font-serif text-xs font-bold text-brand-green-950 truncate">{product.name}</h4>
-                <p className="text-[10px] text-brand-green-600 font-semibold uppercase tracking-wider">{product.brand}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs font-bold text-brand-green-950">₹{product.price} × {quantity}</span>
+                {selectedVariant ? (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="inline-block text-[10px] font-bold text-brand-green-900 bg-brand-green-100/80 border border-brand-green-300 px-1.5 py-0.2 rounded">
+                      {selectedVariant.name}
+                    </span>
+                    {selectedVariant.formType && (
+                      <span className="text-[9px] text-brand-green-600/70">({selectedVariant.formType})</span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-brand-green-600 font-semibold uppercase tracking-wider">{product.brand}</p>
+                )}
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-bold text-brand-green-950">₹{activePrice} × {quantity}</span>
                   <span className="text-[10px] bg-brand-gold-500/20 text-brand-gold-800 font-extrabold px-1.5 py-0.5 rounded">
                     {language === 'hi' ? 'सुरक्षित भुगतान' : 'Secure Express'}
                   </span>

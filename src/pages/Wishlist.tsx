@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Heart, ArrowLeft, ShoppingBag, Sparkles } from 'lucide-react';
-import { Product } from '../types';
+import { Product, ProductVariant } from '../types';
 import { ProductCard } from '../components/ProductCard';
 import { Language } from '../lib/translations';
 
@@ -13,11 +13,11 @@ interface WishlistProps {
   wishlist: string[];
   products: Product[];
   onNavigate: (page: string, params?: any) => void;
-  onAddToCart: (product: Product, qty: number) => void;
+  onAddToCart: (product: Product, qty: number, selectedVariant?: ProductVariant) => void;
   onToggleWishlist: (product: Product) => void;
   onQuickView: (product: Product) => void;
   language?: Language;
-  onBuyNow?: (product: Product, qty: number) => void;
+  onBuyNow?: (product: Product, qty: number, selectedVariant?: ProductVariant) => void;
 }
 
 export const Wishlist: React.FC<WishlistProps> = ({

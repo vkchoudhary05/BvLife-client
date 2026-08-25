@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CartItem, Product, Coupon } from '../types';
+import { CartItem, Product, ProductVariant, Coupon } from '../types';
 
 export function useCartAndWishlist() {
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -28,30 +28,56 @@ export function useCartAndWishlist() {
     localStorage.setItem('grams_wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
-  const handleAddToCart = useCallback((product: Product, qty: number) => {
+  const handleAddToCart = useCallback((product: Product, qty: number, selectedVariant?: ProductVariant) => {
+    // If no variant passed but product has variants, pick default or first variant
+    const variantToUse = selectedVariant || (product.variants && product.variants.length > 0
+      ? (product.variants.find(v => v.isDefault) || product.variants[0])
+      : undefined);
+
+    const maxStock = variantToUse ? variantToUse.stock : product.stock;
+
     setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
-      if (existing) {
-        return prev.map(item =>
-          item.product.id === product.id
-            ? { ...item, quantity: Math.min(product.stock, item.quantity + qty) }
-            : item
-        );
+      const existingIndex = prev.findIndex(item => 
+        item.product.id === product.id && 
+        (item.selectedVariant?.id || '') === (variantToUse?.id || '')
+      );
+
+      if (existingIndex > -1) {
+        return prev.map((item, idx) => {
+          if (idx === existingIndex) {
+            return {
+              ...item,
+              quantity: Math.min(maxStock, item.quantity + qty),
+              selectedVariant: variantToUse || item.selectedVariant
+            };
+          }
+          return item;
+        });
       }
-      return [...prev, { product, quantity: qty }];
+      return [...prev, { product, quantity: qty, selectedVariant: variantToUse }];
     });
   }, []);
 
-  const handleUpdateCartQty = useCallback((productId: string, qty: number) => {
+  const handleUpdateCartQty = useCallback((productId: string, qty: number, variantId?: string) => {
     setCart(prev =>
-      prev.map(item =>
-        item.product.id === productId ? { ...item, quantity: qty } : item
-      )
+      prev.map(item => {
+        const matchesProduct = item.product.id === productId;
+        const matchesVariant = variantId ? item.selectedVariant?.id === variantId : true;
+        if (matchesProduct && matchesVariant) {
+          const maxStock = item.selectedVariant ? item.selectedVariant.stock : item.product.stock;
+          return { ...item, quantity: Math.min(maxStock, Math.max(1, qty)) };
+        }
+        return item;
+      })
     );
   }, []);
 
-  const handleRemoveFromCart = useCallback((productId: string) => {
-    setCart(prev => prev.filter(item => item.product.id !== productId));
+  const handleRemoveFromCart = useCallback((productId: string, variantId?: string) => {
+    setCart(prev => prev.filter(item => {
+      if (item.product.id !== productId) return true;
+      if (variantId && item.selectedVariant?.id !== variantId) return true;
+      return false;
+    }));
   }, []);
 
   const handleToggleWishlist = useCallback((product: Product) => {

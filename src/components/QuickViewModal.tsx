@@ -3,16 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, Star, ShieldCheck, ShoppingCart, Info, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Product } from '../types';
+import { Product, ProductVariant } from '../types';
+import { getVariantImage, getVariantGalleryImages } from '../utils/variantImages';
+import { api } from '../services/api';
 
 interface QuickViewModalProps {
   product: Product;
   onClose: () => void;
-  onAddToCart: (product: Product, qty: number) => void;
+  onAddToCart: (product: Product, qty: number, selectedVariant?: ProductVariant) => void;
   onNavigate: (page: string, params?: any) => void;
-  onBuyNow?: (product: Product, qty: number) => void;
+  onBuyNow?: (product: Product, qty: number, selectedVariant?: ProductVariant) => void;
 }
 
 export const QuickViewModal: React.FC<QuickViewModalProps> = ({
@@ -23,21 +25,58 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
   onBuyNow
 }) => {
   const [qty, setQty] = useState(1);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(undefined);
   const [selectedImage, setSelectedImage] = useState<string>(product.mainImage);
 
-  // Combine and deduplicate all images ensuring mainImage is index 0
-  const allImages = useMemo(() => {
-    const list: string[] = [];
-    if (product.mainImage) list.push(product.mainImage);
-    if (Array.isArray(product.images)) {
-      product.images.forEach(img => {
-        if (img && typeof img === 'string' && !list.includes(img)) {
-          list.push(img);
-        }
-      });
+  // Initialize selected variant
+  useEffect(() => {
+    if (product.variants && product.variants.length > 0) {
+      const defaultVar = product.variants.find(v => v.isDefault) || product.variants[0];
+      setSelectedVariant(defaultVar);
+      setSelectedImage(getVariantImage(defaultVar, product));
+    } else {
+      setSelectedVariant(undefined);
+      setSelectedImage(product.mainImage);
     }
-    return list.length > 0 ? list : [product.mainImage || ''];
   }, [product]);
+
+  const activePrice = selectedVariant ? selectedVariant.price : product.price;
+  const activeOriginalPrice = selectedVariant ? (selectedVariant.originalPrice || activePrice) : product.originalPrice;
+  const activeStock = selectedVariant ? selectedVariant.stock : product.stock;
+
+  // Combine and deduplicate all images tailored to the active variant
+  const allImages = useMemo(() => {
+    if (selectedVariant?.allImages && Array.isArray(selectedVariant.allImages) && selectedVariant.allImages.length > 0) {
+      return selectedVariant.allImages;
+    }
+    return getVariantGalleryImages(selectedVariant, product);
+  }, [product, selectedVariant]);
+
+  const handleSelectVariant = async (variant: ProductVariant) => {
+    setSelectedVariant(variant);
+    const variantThumb = getVariantImage(variant, product);
+    setSelectedImage(variantThumb);
+    if (qty > variant.stock && variant.stock > 0) setQty(variant.stock);
+
+    try {
+      if (product?.id) {
+        const backendVariantData = await api.getProductVariant(product.id, variant.id);
+        if (backendVariantData?.variant && backendVariantData?.resolvedDetails) {
+          const resolved = backendVariantData.resolvedDetails;
+          setSelectedVariant(prev => ({
+            ...prev,
+            ...backendVariantData.variant,
+            ...resolved
+          }));
+          if (resolved.image) {
+            setSelectedImage(resolved.image);
+          }
+        }
+      }
+    } catch {
+      // Fallback to local variant representation
+    }
+  };
 
   const currentImage = selectedImage && allImages.includes(selectedImage)
     ? selectedImage
@@ -145,9 +184,16 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
               <span className="text-xs font-bold text-brand-green-700">{product.rating} Average Rating</span>
             </div>
 
-            <p className="text-xs text-brand-green-800/80 leading-relaxed line-clamp-4 pt-1">
-              {product.description}
+            <p className="text-xs text-brand-green-800/80 leading-relaxed line-clamp-3 pt-1">
+              {selectedVariant?.description ? `${product.description} ${selectedVariant.description}` : product.description}
             </p>
+
+            {selectedVariant?.dosage && (
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-brand-green-900 bg-brand-green-50/80 px-2.5 py-1 rounded-lg border border-brand-green-600/10">
+                <Sparkles className="w-3 h-3 text-brand-gold-600 shrink-0" />
+                <span className="truncate">Dosage: {selectedVariant.dosage}</span>
+              </div>
+            )}
           </div>
 
           {/* Core Ingredients Tags */}
@@ -167,21 +213,69 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
             </div>
           )}
 
+          {/* Product Variants Selector */}
+          {product.variants && product.variants.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[10px] uppercase tracking-wider text-brand-green-800 font-bold">
+                Select Formulation / Packaging Option:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                {product.variants.map(variant => {
+                  const isSelected = selectedVariant?.id === variant.id;
+                  const isOutOfStock = variant.stock <= 0;
+                  const variantThumb = getVariantImage(variant, product);
+                  return (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      disabled={isOutOfStock}
+                      onClick={() => handleSelectVariant(variant)}
+                      className={`p-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-2.5 text-left ${
+                        isSelected 
+                          ? 'border-brand-green-700 bg-brand-green-50 ring-2 ring-brand-green-600/30 text-brand-green-950 shadow-xs' 
+                          : isOutOfStock 
+                            ? 'border-gray-200 text-gray-400 bg-gray-50 opacity-60 cursor-not-allowed' 
+                            : 'border-brand-green-600/20 text-brand-green-900 bg-white hover:border-brand-green-600/50 hover:bg-brand-cream-50/50'
+                      }`}
+                    >
+                      <img
+                        src={variantThumb}
+                        alt={variant.name}
+                        className="w-9 h-9 rounded-lg object-cover bg-white border border-slate-100 shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-bold text-[11px] truncate">{variant.name}</span>
+                          <span className="text-brand-green-900 font-bold text-[11px] shrink-0">₹{variant.price}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-0.5">
+                          {variant.size && <span className="font-mono">{variant.size}</span>}
+                          {variant.form && <span className="uppercase text-[9px] font-semibold text-brand-gold-800">({variant.form})</span>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Pricing, Quantity, and Cart */}
-          <div className="pt-4 border-t border-brand-green-600/10 space-y-4">
+          <div className="pt-3 border-t border-brand-green-600/10 space-y-3">
             <div className="flex justify-between items-baseline">
               <div className="flex items-baseline gap-2">
-                <span className="font-bold text-2xl text-brand-green-950">₹{product.price}</span>
-                {product.originalPrice > product.price && (
-                  <span className="text-sm text-brand-green-600/50 line-through">₹{product.originalPrice}</span>
+                <span className="font-bold text-2xl text-brand-green-950">₹{activePrice}</span>
+                {activeOriginalPrice > activePrice && (
+                  <span className="text-sm text-brand-green-600/50 line-through">₹{activeOriginalPrice}</span>
                 )}
               </div>
-              <span className={`text-xs font-bold uppercase ${product.stock > 0 ? 'text-brand-green-700' : 'text-red-500'}`}>
-                {product.stock > 0 ? `In Stock (${product.stock} left)` : 'Out of Stock'}
+              <span className={`text-xs font-bold uppercase ${activeStock > 0 ? 'text-brand-green-700' : 'text-red-500'}`}>
+                {activeStock > 0 ? `In Stock (${activeStock} left)` : 'Out of Stock'}
               </span>
             </div>
 
-            {product.stock > 0 ? (
+            {activeStock > 0 ? (
               <div className="flex flex-col gap-2.5">
                 <div className="flex gap-2.5">
                   {/* Quantity adjustments */}
@@ -194,7 +288,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                     </button>
                     <span className="px-1 font-semibold text-sm text-brand-green-900 w-6 text-center">{qty}</span>
                     <button 
-                      onClick={() => setQty(Math.min(product.stock, qty + 1))}
+                      onClick={() => setQty(Math.min(activeStock, qty + 1))}
                       className="w-9 h-full flex items-center justify-center text-brand-green-800 font-semibold hover:bg-brand-green-50 cursor-pointer"
                     >
                       +
@@ -202,7 +296,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   </div>
 
                   <button
-                    onClick={() => { onAddToCart(product, qty); onClose(); }}
+                    onClick={() => { onAddToCart(product, qty, selectedVariant); onClose(); }}
                     className="flex-1 h-11 border border-brand-green-700 hover:bg-brand-green-50 text-brand-green-800 font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5 active:scale-[0.98]"
                   >
                     <ShoppingCart className="w-4 h-4 text-brand-green-700" />
@@ -214,9 +308,9 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   onClick={() => { 
                     onClose(); 
                     if (onBuyNow) {
-                      onBuyNow(product, qty);
+                      onBuyNow(product, qty, selectedVariant);
                     } else {
-                      onAddToCart(product, qty); 
+                      onAddToCart(product, qty, selectedVariant); 
                       onNavigate('checkout'); 
                     }
                   }}

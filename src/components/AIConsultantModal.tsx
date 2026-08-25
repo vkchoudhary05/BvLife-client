@@ -182,7 +182,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
   // Helper to render markdown-like text nicely
   const renderMessageContent = (content: string) => {
     return (
-      <div className="space-y-2 text-xs leading-relaxed text-brand-green-900">
+      <div className="space-y-2 text-xs leading-relaxed text-brand-green-950">
         {content.split('\n').map((line, idx) => {
           if (line.startsWith('###')) {
             return (
@@ -326,31 +326,40 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
   };
 
   return (
-    <div id="ai-consultant-modal" className="fixed inset-0 z-50 overflow-y-auto bg-brand-green-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-brand-cream-50 w-full max-w-4xl rounded-2xl shadow-2xl border border-brand-green-600/10 overflow-hidden flex flex-col max-h-[90vh]">
-        
-        {/* Header */}
-        <div className="bg-brand-green-800 text-brand-cream-100 p-5 flex justify-between items-center relative">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-brand-gold-500/20 flex items-center justify-center border border-brand-gold-500/40">
-              <Sparkles className="w-5 h-5 text-brand-gold-500 animate-pulse" />
-            </div>
-            <div>
-              <h3 className="font-serif text-lg font-bold">BV Life AI Wellness Guide</h3>
-              <p className="text-xs text-brand-cream-300">Intelligent Traditional Dosha Analysis & Remedies</p>
-            </div>
+    <div id="ai-consultant-modal" className="fixed inset-0 z-50 bg-brand-cream-50 w-full h-full flex flex-col overflow-hidden animate-in fade-in duration-200">
+      {/* Full Page Header */}
+      <div className="bg-brand-green-900 text-brand-cream-100 px-4 sm:px-8 py-3.5 sm:py-4 flex justify-between items-center relative border-b border-brand-gold-500/20 shadow-md shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-brand-gold-500/20 flex items-center justify-center border border-brand-gold-500/40 shadow-inner">
+            <Sparkles className="w-5 h-5 text-brand-gold-400 animate-pulse" />
           </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-serif text-base sm:text-xl font-bold text-white tracking-wide">BV Life AI Wellness Guide</h3>
+              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-brand-gold-400/20 border border-brand-gold-400/30 text-[10px] font-bold text-brand-gold-300 uppercase">
+                Ask Acharya
+              </span>
+            </div>
+            <p className="text-[11px] sm:text-xs text-brand-cream-300">Intelligent Traditional Dosha Analysis & Herbal Remedies</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
           <button 
             onClick={onClose} 
-            className="p-1.5 rounded-full hover:bg-brand-green-700 text-brand-cream-300 hover:text-brand-cream-100 cursor-pointer"
+            className="px-3.5 py-1.5 rounded-xl bg-brand-green-800 hover:bg-brand-green-700 text-brand-cream-100 font-bold text-xs flex items-center gap-1.5 border border-brand-gold-500/20 transition-colors cursor-pointer shadow-sm"
           >
-            <X className="w-5 h-5" />
+            <span>{language === 'hi' ? 'वापस जाएँ' : 'Back to Store'}</span>
+            <X className="w-4 h-4" />
           </button>
         </div>
+      </div>
 
+      <div className="flex-1 w-full max-w-6xl mx-auto flex flex-col overflow-hidden px-2 sm:px-6">
+        
         {/* Tab Selector bar */}
-        <div className="bg-brand-cream-100/50 border-b border-brand-green-600/10 p-3 flex justify-center">
-          <div className="grid grid-cols-2 p-1 bg-brand-cream-200/50 border border-brand-green-200 rounded-xl max-w-md w-full">
+        <div className="bg-brand-cream-100/70 border-b border-brand-green-600/10 p-2.5 sm:p-3 flex justify-center shrink-0 rounded-b-2xl mt-1 shadow-2xs">
+          <div className="grid grid-cols-2 p-1 bg-brand-cream-200/60 border border-brand-green-200 rounded-xl max-w-md w-full">
             <button
               type="button"
               onClick={() => setActiveTab('chat')}
@@ -379,7 +388,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
         </div>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
           {!currentUser ? (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center space-y-6 max-w-md mx-auto animate-in fade-in duration-300">
               <div className="w-16 h-16 rounded-full bg-brand-green-800 text-brand-gold-400 font-serif text-2xl font-bold flex items-center justify-center border border-brand-gold-500/30 shadow-md">
@@ -400,7 +409,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                   onClose();
                   onNavigate('login');
                 }}
-                className="w-full py-3.5 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-serif font-bold rounded-xl text-xs uppercase tracking-wider transition-all duration-200 shadow-md flex items-center justify-center gap-1.5 cursor-pointer border border-brand-gold-500/25 animate-bounce"
+                className="w-full py-3.5 bg-brand-green-800 hover:bg-brand-green-950 text-brand-cream-50 font-serif font-bold rounded-xl text-xs uppercase tracking-wider transition-all duration-200 shadow-md flex items-center justify-center gap-1.5 cursor-pointer border border-brand-gold-500/25 animate-bounce"
               >
                 <span>{language === 'hi' ? 'लॉगिन / पंजीकरण करें' : 'Login / Register'}</span>
                 <ArrowRight className="w-4 h-4 text-brand-gold-400" />
@@ -446,7 +455,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                       <div className={`p-3.5 rounded-2xl space-y-1 ${
                         msg.role === 'user'
                           ? 'bg-brand-green-800 text-brand-cream-50 rounded-tr-none'
-                          : 'bg-brand-cream-100/70 border border-brand-green-200 text-brand-green-900 rounded-tl-none'
+                          : 'bg-brand-cream-100/70 border border-brand-green-200 text-brand-green-950 rounded-tl-none'
                       }`}>
                         {/* Render content */}
                         {msg.role === 'user' ? (

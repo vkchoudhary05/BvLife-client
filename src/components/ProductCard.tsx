@@ -3,20 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
-import { Heart, ShoppingCart, Star, Eye, Sparkle } from 'lucide-react';
-import { Product } from '../types';
+import React, { useState } from 'react';
+import { ShoppingCart, Star, Eye, Layers } from 'lucide-react';
+import { Product, ProductVariant } from '../types';
 import { Language, translateProductAttr } from '../lib/translations';
+import { getVariantImage } from '../utils/variantImages';
 
 interface ProductCardProps {
   product: Product;
   onNavigate: (page: string, params?: any) => void;
-  onAddToCart: (product: Product, qty: number) => void;
+  onAddToCart: (product: Product, qty: number, selectedVariant?: ProductVariant) => void;
   onQuickView: (product: Product) => void;
-  isWishlisted: boolean;
-  onToggleWishlist: (product: Product) => void;
+  isWishlisted?: boolean;
+  onToggleWishlist?: (product: Product) => void;
   language?: Language;
-  onBuyNow?: (product: Product, qty: number) => void;
+  onBuyNow?: (product: Product, qty: number, selectedVariant?: ProductVariant) => void;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -29,9 +30,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   language = 'en',
   onBuyNow
 }) => {
+  const defaultVariant = product.variants && product.variants.length > 0
+    ? (product.variants.find(v => v.isDefault) || product.variants[0])
+    : undefined;
+
+  const [activeVariant, setActiveVariant] = useState<ProductVariant | undefined>(defaultVariant);
+
+  const currentVariant = activeVariant || defaultVariant;
+  const displayPrice = currentVariant ? currentVariant.price : product.price;
+  const displayOriginalPrice = currentVariant ? (currentVariant.originalPrice || displayPrice) : product.originalPrice;
+  const displayImage = currentVariant ? getVariantImage(currentVariant, product) : product.mainImage;
+
   const discountPercent = Math.round(
-    ((product.originalPrice - product.price) / product.originalPrice) * 100
+    ((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100
   );
+
+  const hasVariants = Boolean(product.variants && product.variants.length > 1);
 
   return (
     <div
@@ -48,7 +62,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Product Image */}
         <img
-          src={product.mainImage}
+          src={displayImage}
           alt={product.name}
           className="absolute inset-0 w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-500 cursor-pointer"
           onClick={() => onNavigate('product', { id: product.id })}
@@ -65,23 +79,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {discountPercent}% OFF
             </span>
           )}
+          {hasVariants && (
+            <span className="inline-flex items-center gap-1 bg-brand-cream-100/90 border border-brand-green-600/20 text-brand-green-900 text-[8px] sm:text-[9px] font-extrabold px-1.5 py-0.5 rounded-md tracking-tight backdrop-blur-xs">
+              <Layers className="w-2.5 h-2.5 text-brand-gold-700" />
+              <span>{product.variants?.length} Options</span>
+            </span>
+          )}
         </div>
-
-        {/* Wishlist */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleWishlist(product);
-          }}
-          className={`absolute top-2 right-2 sm:top-3 sm:right-3 p-1.5 sm:p-2 rounded-full shadow-md backdrop-blur-sm transition-all z-10 cursor-pointer active:scale-90 ${
-            isWishlisted
-              ? 'bg-brand-green-700 text-brand-cream-100 hover:bg-brand-green-800'
-              : 'bg-white/85 text-brand-green-800 ring-1 ring-brand-green-900/5 hover:bg-brand-gold-500 hover:text-brand-green-900'
-          }`}
-          title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
-        >
-          <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isWishlisted ? 'fill-current' : ''}`} />
-        </button>
 
         {/* Hover Quick Actions Rail */}
         <div className="absolute inset-0 bg-gradient-to-t from-brand-green-950/35 via-brand-green-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex items-center justify-center gap-2">
@@ -100,9 +104,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         <div className="space-y-0.5 sm:space-y-1">
           {/* Category */}
-          <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-brand-gold-700 font-bold">
-            {translateProductAttr(product.category, language as Language)}
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-brand-gold-700 font-bold">
+              {translateProductAttr(product.category, language as Language)}
+            </span>
+            {defaultVariant && (
+              <span className="text-[9px] font-semibold text-brand-green-700/80 bg-brand-green-50 px-1.5 py-0.2 rounded border border-brand-green-200/50">
+                {defaultVariant.size || defaultVariant.name}
+              </span>
+            )}
+          </div>
 
           {/* Title */}
           <h4
@@ -131,14 +142,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Pricing and Action Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-1.5 sm:pt-2 border-t border-brand-green-600/10 gap-2">
           <div className="flex flex-row sm:flex-col items-baseline sm:items-start gap-1.5 sm:gap-0">
-            {product.originalPrice > product.price && (
+            {displayOriginalPrice > displayPrice && (
               <span className="text-[9px] sm:text-[11px] text-brand-green-600/50 line-through">
-                ₹{product.originalPrice}
+                ₹{displayOriginalPrice}
               </span>
             )}
-            <span className="font-semibold text-xs sm:text-base text-brand-green-950">
-              ₹{product.price}
-            </span>
+            <div className="flex items-baseline gap-1">
+              {hasVariants && <span className="text-[10px] text-brand-green-700 font-medium">from</span>}
+              <span className="font-semibold text-xs sm:text-base text-brand-green-950">
+                ₹{displayPrice}
+              </span>
+            </div>
           </div>
 
           {product.stock > 0 ? (
@@ -146,7 +160,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onAddToCart(product, 1);
+                  onAddToCart(product, 1, currentVariant);
                 }}
                 className="h-9 w-9 flex items-center justify-center rounded-xl border border-brand-green-700/30 text-brand-green-800 bg-brand-green-50/40 hover:bg-brand-green-100 hover:border-brand-green-700 transition-all cursor-pointer active:scale-90 shrink-0"
                 title={language === 'hi' ? 'कार्ट में जोड़ें' : 'Add to Cart'}
@@ -157,9 +171,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (onBuyNow) {
-                    onBuyNow(product, 1);
+                    onBuyNow(product, 1, currentVariant);
                   } else {
-                    onAddToCart(product, 1);
+                    onAddToCart(product, 1, currentVariant);
                     onNavigate('checkout');
                   }
                 }}

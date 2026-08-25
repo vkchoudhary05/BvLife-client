@@ -41,7 +41,7 @@ export const getPageFromUrl = () => {
   }
   
   // Default match for other pages
-  const knownPages = ['cart', 'checkout', 'dashboard', 'login', 'track-order', 'wishlist', 'order-confirmation', 'order-success'];
+  const knownPages = ['cart', 'checkout', 'dashboard', 'login', 'track-order', 'wishlist', 'order-confirmation', 'order-success', 'consult-doctor', 'consultation'];
   if (knownPages.includes(cleanPath)) {
     return { page: cleanPath, params: null };
   }

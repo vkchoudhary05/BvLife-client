@@ -22,9 +22,10 @@ import { StaticPages } from './pages/StaticPages';
 import { TrackOrder } from './pages/TrackOrder';
 import { Wishlist } from './pages/Wishlist';
 import { Login } from './pages/Login';
+import { DoctorConsultation } from './pages/DoctorConsultation';
 
 // Types & Custom Hooks
-import { Product } from './types';
+import { Product, ProductVariant } from './types';
 import { Language } from './lib/translations';
 import { getPageFromUrl } from './utils/navigation';
 import { useAuth } from './hooks/useAuth';
@@ -107,6 +108,7 @@ export default function App() {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [buyNowProduct, setBuyNowProduct] = useState<Product | null>(null);
   const [buyNowQty, setBuyNowQty] = useState<number>(1);
+  const [buyNowVariant, setBuyNowVariant] = useState<ProductVariant | undefined>(undefined);
 
   // Fetch contextual data lazily based on active page route
   useEffect(() => {
@@ -200,6 +202,7 @@ export default function App() {
           onLanguageChange={handleLanguageChange}
           searchQuery={currentPage === 'shop' ? (pageParams?.search || '') : ''}
           settings={activeSettings}
+          products={products}
         />
       )}
 
@@ -218,9 +221,10 @@ export default function App() {
             wishlist={wishlist}
             onToggleWishlist={handleToggleWishlist}
             language={language}
-            onBuyNow={(prod, qty) => {
+            onBuyNow={(prod, qty, variant) => {
               setBuyNowProduct(prod);
               setBuyNowQty(qty);
+              setBuyNowVariant(variant);
             }}
           />
         )}
@@ -237,9 +241,10 @@ export default function App() {
             searchQuery={pageParams?.search || ''}
             categoryFilter={pageParams?.category || ''}
             language={language}
-            onBuyNow={(prod, qty) => {
+            onBuyNow={(prod, qty, variant) => {
               setBuyNowProduct(prod);
               setBuyNowQty(qty);
+              setBuyNowVariant(variant);
             }}
           />
         )}
@@ -255,9 +260,10 @@ export default function App() {
             onNavigate={handleNavigate}
             onAddToCart={handleAddToCart}
             onQuickView={(p) => setQuickViewProduct(p)}
-            onBuyNow={(prod, qty) => {
+            onBuyNow={(prod, qty, variant) => {
               setBuyNowProduct(prod);
               setBuyNowQty(qty);
+              setBuyNowVariant(variant);
             }}
             wishlist={wishlist}
             onToggleWishlist={handleToggleWishlist}
@@ -291,9 +297,10 @@ export default function App() {
             onToggleWishlist={handleToggleWishlist}
             onQuickView={(p) => setQuickViewProduct(p)}
             language={language}
-            onBuyNow={(prod, qty) => {
+            onBuyNow={(prod, qty, variant) => {
               setBuyNowProduct(prod);
               setBuyNowQty(qty);
+              setBuyNowVariant(variant);
             }}
           />
         )}
@@ -325,6 +332,15 @@ export default function App() {
             currentUser={currentUser}
             authToken={authToken}
             onPostReview={handlePostReview}
+          />
+        )}
+
+        {/* Consult with a Doctor Portal */}
+        {(currentPage === 'consult-doctor' || currentPage === 'consultation') && (
+          <DoctorConsultation
+            currentUser={currentUser}
+            onNavigate={handleNavigate}
+            language={language}
           />
         )}
 
@@ -441,9 +457,10 @@ export default function App() {
           onClose={() => setQuickViewProduct(null)}
           onAddToCart={handleAddToCart}
           onNavigate={handleNavigate}
-          onBuyNow={(prod, qty) => {
+          onBuyNow={(prod, qty, variant) => {
             setBuyNowProduct(prod);
             setBuyNowQty(qty);
+            setBuyNowVariant(variant);
           }}
         />
       )}
@@ -465,10 +482,12 @@ export default function App() {
       {currentPage !== 'admin' && buyNowProduct && (
         <BuyNowModal
           product={buyNowProduct}
+          selectedVariant={buyNowVariant}
           quantity={buyNowQty}
           onClose={() => {
             setBuyNowProduct(null);
             setBuyNowQty(1);
+            setBuyNowVariant(undefined);
           }}
           onPlaceOrder={onPlaceOrder}
           onPostReview={handlePostReview}

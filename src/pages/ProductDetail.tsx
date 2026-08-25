@@ -17,6 +17,7 @@ import {
   MessageSquare, 
   ShoppingCart,
   CheckCircle2,
+  Check,
   HelpCircle,
   Clock,
   Leaf,
@@ -26,9 +27,11 @@ import {
   Truck,
   ArrowRight
 } from 'lucide-react';
-import { Product, Review, User, Order } from '../types';
+import { Product, Review, User, Order, ProductVariant } from '../types';
 import { Language, t, translateProductAttr } from '../lib/translations';
 import { ProductCard } from '../components/ProductCard';
+import { getVariantImage, detectFormulationType, getVariantGalleryImages } from '../utils/variantImages';
+import { api } from '../services/api';
 
 interface ProductDetailProps {
   productId: string;
@@ -37,13 +40,13 @@ interface ProductDetailProps {
   orders?: Order[];
   currentUser?: User | null;
   onNavigate: (page: string, params?: any) => void;
-  onAddToCart: (product: Product, qty: number) => void;
+  onAddToCart: (product: Product, qty: number, selectedVariant?: ProductVariant) => void;
   onQuickView?: (product: Product) => void;
   wishlist: string[];
   onToggleWishlist: (product: Product) => void;
   onPostReview: (reviewData: { productId: string, rating: number, comment: string }) => void;
   language: Language;
-  onBuyNow?: (product: Product, qty: number) => void;
+  onBuyNow?: (product: Product, qty: number, selectedVariant?: ProductVariant) => void;
 }
 
 export const ProductDetail: React.FC<ProductDetailProps> = ({
@@ -65,6 +68,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [copied, setCopied] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('ingredients');
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(undefined);
 
   // Section refs for smooth scrolling
   const ingredientsRef = useRef<HTMLDivElement>(null);
@@ -78,20 +82,141 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
     return products.find(prod => prod.id === productId);
   }, [products, productId]);
 
-  // Combine and deduplicate all product images, guaranteeing mainImage is always index 0
+  // Sync default variant when product loads or changes
+  useEffect(() => {
+    if (product?.variants && product.variants.length > 0) {
+      const defaultVar = product.variants.find(v => v.isDefault) || product.variants[0];
+      setSelectedVariant(defaultVar);
+      setSelectedImage(getVariantImage(defaultVar, product));
+    } else if (product?.mainImage) {
+      setSelectedVariant(undefined);
+      setSelectedImage(product.mainImage);
+    }
+  }, [productId, product]);
+
+  // Handle variant selection with backend sync
+  const handleVariantSelect = async (variant: ProductVariant) => {
+    setSelectedVariant(variant);
+    const targetImage = getVariantImage(variant, product);
+    setSelectedImage(targetImage);
+    if (quantity > variant.stock && variant.stock > 0) {
+      setQuantity(variant.stock);
+    }
+
+    // Call backend endpoint to fetch/confirm server-side resolved variant product details & full gallery
+    try {
+      if (product?.id) {
+        const backendVariantData = await api.getProductVariant(product.id, variant.id);
+        if (backendVariantData?.variant && backendVariantData?.resolvedDetails) {
+          const resolved = backendVariantData.resolvedDetails;
+          setSelectedVariant(prev => ({
+            ...prev,
+            ...backendVariantData.variant,
+            ...resolved
+          }));
+          if (resolved.image) {
+            setSelectedImage(resolved.image);
+          }
+        }
+      }
+    } catch {
+      // Graceful fallback to client-side variant data
+    }
+  };
+
+  // Derive botanical herb family & sister formulations
+  const herbFamily = useMemo(() => {
+    if (!product) return null;
+    const baseHerb = product.baseHerb || (
+      product.name.toLowerCase().includes('amla') ? 'Amla' :
+      product.name.toLowerCase().includes('ashwagandha') ? 'Ashwagandha' :
+      product.name.toLowerCase().includes('triphala') ? 'Triphala' :
+      product.name.toLowerCase().includes('brahmi') ? 'Brahmi' :
+      product.name.toLowerCase().includes('kumkumadi') ? 'Kumkumadi' :
+      product.name.toLowerCase().includes('shatavari') ? 'Shatavari' :
+      product.name.toLowerCase().includes('shilajit') ? 'Shilajit' : ''
+    );
+
+    const siblings = products.filter(p => {
+      if (product.familyGroup && p.familyGroup === product.familyGroup) return true;
+      if (baseHerb && (p.baseHerb?.toLowerCase() === baseHerb.toLowerCase() || p.name.toLowerCase().includes(baseHerb.toLowerCase()))) return true;
+      return false;
+    });
+
+    const formulations = product.relatedFormulations || (siblings.length > 1 ? siblings.map(s => ({
+      id: s.id,
+      productId: s.id,
+      name: s.name,
+      form: s.formulation || (s.name.toLowerCase().includes('tablet') ? 'tablet' : s.name.toLowerCase().includes('oil') ? 'oil' : s.name.toLowerCase().includes('churna') ? 'churna' : 'classical'),
+      formLabel: s.formLabel || (s.name.toLowerCase().includes('tablet') ? 'Tablets / Vati' : s.name.toLowerCase().includes('oil') ? 'Taila / Hair Oil' : s.name.toLowerCase().includes('churna') ? 'Churna / Herbal Powder' : s.subcategory || s.name),
+      image: s.mainImage,
+      price: s.price,
+      originalPrice: s.originalPrice,
+      stock: s.stock,
+      sku: s.sku,
+      isCurrent: s.id === product.id,
+      sizes: s.variants?.map(v => v.size || v.name).filter(Boolean) || [],
+      variants: s.variants || []
+    })) : undefined);
+
+    return {
+      baseHerb,
+      siblings,
+      formulations
+    };
+  }, [product, products]);
+
+  // Handle switching to a sister formulation (e.g. from Tablet to Oil or Churna)
+  const handleFormulationSwitch = async (targetForm: string, targetProductId?: string, targetVariantId?: string) => {
+    if (targetProductId && targetProductId !== product?.id) {
+      onNavigate('product', { id: targetProductId, variantId: targetVariantId });
+      return;
+    }
+
+    try {
+      if (product?.id) {
+        const switchRes = await api.switchProductFormulation(product.id, targetForm);
+        if (switchRes?.switchedTo === 'product' && switchRes?.productId) {
+          onNavigate('product', { id: switchRes.productId, variantId: switchRes.defaultVariantId });
+          return;
+        } else if (switchRes?.switchedTo === 'variant' && switchRes?.variant) {
+          handleVariantSelect(switchRes.variant);
+          return;
+        }
+      }
+    } catch {
+      // Fallback
+      if (targetProductId) {
+        onNavigate('product', { id: targetProductId, variantId: targetVariantId });
+      }
+    }
+  };
+
+  // Derived active properties based on selected variant (with parent fallback)
+  const activePrice = selectedVariant ? selectedVariant.price : (product?.price || 0);
+  const activeOriginalPrice = selectedVariant ? (selectedVariant.originalPrice || activePrice) : (product?.originalPrice || 0);
+  const activeStock = selectedVariant ? selectedVariant.stock : (product?.stock || 0);
+  const activeSku = selectedVariant?.sku || product?.sku || '';
+  const activeNetQuantity = selectedVariant?.netQuantity || selectedVariant?.size || '';
+  const activeFormType = selectedVariant?.formType || selectedVariant?.form || product?.subcategory || 'Classical Formulation';
+  const activeDosage = selectedVariant?.dosage || product?.dosage || '';
+  const activeUsageInstructions = selectedVariant?.usageInstructions || product?.usageInstructions || '';
+  const activeBenefits = (selectedVariant?.benefits && selectedVariant.benefits.length > 0) 
+    ? selectedVariant.benefits 
+    : (product?.benefits || []);
+  const activeDescription = selectedVariant?.description
+    ? `${product?.description || ''} ${selectedVariant.description}`
+    : (product?.description || '');
+
+  // Combine and deduplicate all product images, tailored to the selected variant served from backend
   const allImages = useMemo(() => {
     if (!product) return [];
-    const list: string[] = [];
-    if (product.mainImage) list.push(product.mainImage);
-    if (Array.isArray(product.images)) {
-      product.images.forEach(img => {
-        if (img && typeof img === 'string' && !list.includes(img)) {
-          list.push(img);
-        }
-      });
+    // If selectedVariant has server-resolved allImages/images array, include them
+    if (selectedVariant?.allImages && Array.isArray(selectedVariant.allImages) && selectedVariant.allImages.length > 0) {
+      return selectedVariant.allImages;
     }
-    return list.length > 0 ? list : [product.mainImage || ''];
-  }, [product]);
+    return getVariantGalleryImages(selectedVariant, product);
+  }, [product, selectedVariant]);
 
   // Check if current user has an order for this product (Delivered vs In Transit)
   const { matchedDeliveredOrder, matchedActiveOrder, isAlreadyReviewed } = useMemo(() => {
@@ -171,13 +296,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
       isAlreadyReviewed: reviewed
     };
   }, [currentUser, orders, productId, reviews]);
-
-  // Automatically reset selected image whenever product changes or loads
-  useEffect(() => {
-    if (product?.mainImage) {
-      setSelectedImage(product.mainImage);
-    }
-  }, [productId, product?.mainImage]);
 
   // Current active image displayed in the main preview
   const currentImage = selectedImage && allImages.includes(selectedImage)
@@ -379,126 +497,283 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
         </div>
 
         {/* Right Column: Key Details & Purchasing Actions */}
-        <div className="lg:col-span-6 space-y-6">
+        <div className="lg:col-span-6 space-y-5 sm:space-y-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs uppercase tracking-widest text-brand-gold-700 font-bold bg-brand-gold-500/10 px-2.5 py-1 rounded-md">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] uppercase tracking-widest text-brand-gold-800 font-bold bg-brand-gold-500/15 px-2.5 py-0.5 rounded-md">
                 {translateProductAttr(product.category, language)}
               </span>
-              <span className="text-[10px] font-semibold text-brand-green-600/50 uppercase tracking-widest">SKU: {product.sku}</span>
+              <span className="text-[10px] font-semibold text-brand-green-700/60 uppercase tracking-widest">
+                SKU: {activeSku || product.sku}
+              </span>
+              {product.bestSeller && (
+                <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-200">
+                  ★ {language === 'hi' ? 'बेस्टसेलर' : 'Best Seller'}
+                </span>
+              )}
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-brand-green-950 leading-tight">
+            
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-brand-green-950 leading-tight">
               {product.name}
             </h1>
             
             {/* Rating & Fast Navigation to Reviews */}
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-center gap-2 pt-0.5">
               <div className="flex text-amber-400">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className={`w-4 h-4 ${i < Math.floor(dynamicRating) ? 'fill-current' : 'text-gray-200'}`} />
+                  <Star key={i} className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${i < Math.floor(dynamicRating) ? 'fill-current' : 'text-gray-200'}`} />
                 ))}
               </div>
-              <span className="text-xs font-semibold text-brand-green-800">
-                {language === 'hi' ? `${dynamicRating} / 5.0 रेटिंग` : `${dynamicRating} / 5.0 Rating`}
+              <span className="text-xs font-bold text-brand-green-900">
+                {dynamicRating} / 5.0
               </span>
               <span className="text-brand-green-600/40 text-xs">•</span>
               <button 
                 onClick={() => scrollToSection('reviews', reviewsRef)} 
-                className="text-xs text-brand-gold-700 font-semibold hover:underline cursor-pointer flex items-center gap-1"
+                className="text-xs text-brand-gold-800 font-semibold hover:underline cursor-pointer flex items-center gap-1"
               >
                 <span>{language === 'hi' ? `(${productReviews.length} सत्यापित समीक्षाएं)` : `(${productReviews.length} verified reviews)`}</span>
               </button>
             </div>
           </div>
 
-          {/* Pricing Box */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-brand-cream-100/70 border border-brand-green-600/10 flex items-center justify-between gap-4 shadow-xs">
+          {/* Pricing Box - Clean Luxury Banner */}
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-brand-cream-100/80 border border-brand-green-600/10 flex items-center justify-between gap-3 shadow-2xs">
             <div className="space-y-0.5">
-              <span className="text-[10px] text-brand-green-700 font-bold uppercase tracking-wider">
-                {language === 'hi' ? 'मूल्य' : 'Price'}
-              </span>
-              <div className="flex items-baseline gap-2.5">
-                <span className="font-bold text-3xl sm:text-4xl text-brand-green-950">₹{product.price}</span>
-                {product.originalPrice > product.price && (
-                  <span className="text-sm sm:text-base text-brand-green-600/50 line-through">₹{product.originalPrice}</span>
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="font-bold text-2xl sm:text-3xl lg:text-4xl text-brand-green-950 font-serif">₹{activePrice}</span>
+                {activeOriginalPrice > activePrice && (
+                  <>
+                    <span className="text-xs sm:text-sm text-brand-green-600/50 line-through">₹{activeOriginalPrice}</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      {Math.round(((activeOriginalPrice - activePrice) / activeOriginalPrice) * 100)}% OFF
+                    </span>
+                  </>
                 )}
               </div>
+              <p className="text-[10px] text-brand-green-700/80 font-medium">
+                {language === 'hi' ? 'सभी कर शामिल • निःशुल्क होम डिलीवरी' : 'Inclusive of all taxes • Free Shipping available'}
+              </p>
             </div>
-            <div className="text-right space-y-0.5">
-              <span className="text-[10px] text-brand-green-700 font-bold uppercase tracking-wider">
-                {language === 'hi' ? 'ब्रांड' : 'Brand'}
+            <div className="text-right space-y-0.5 shrink-0">
+              <span className="text-[9px] text-brand-green-700 font-bold uppercase tracking-wider block">
+                {product.brand || 'Grams Life'}
               </span>
-              <p className="text-xs sm:text-sm font-bold text-brand-green-800">{product.brand}</p>
+              <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                activeStock > 5 
+                  ? 'bg-emerald-100 text-emerald-800' 
+                  : activeStock > 0 
+                    ? 'bg-amber-100 text-amber-800' 
+                    : 'bg-red-100 text-red-800'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${activeStock > 5 ? 'bg-emerald-600' : activeStock > 0 ? 'bg-amber-600 animate-pulse' : 'bg-red-600'}`} />
+                <span>{activeStock > 5 ? 'In Stock' : activeStock > 0 ? `Only ${activeStock} left` : 'Out of Stock'}</span>
+              </span>
             </div>
           </div>
+
+          {/* 📦 PACK SIZE & NET QUANTITY SELECTOR (Upper Side, Horizontal In-Line on Mobile & Desktop) */}
+          {product.variants && product.variants.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-brand-green-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-brand-gold-600" />
+                  <span>{language === 'hi' ? 'मात्रा व साइज़ (Select Quantity):' : 'Select Quantity / Pack Size:'}</span>
+                </span>
+                {selectedVariant && (
+                  <span className="text-[10px] font-bold text-brand-green-900 bg-brand-green-100/90 px-2 py-0.5 rounded-md">
+                    {selectedVariant.size || selectedVariant.name}
+                  </span>
+                )}
+              </div>
+
+              {/* Horizontal In-line Quantity Pills (e.g. 100g, 200g, 500g) */}
+              <div className="flex flex-nowrap sm:flex-wrap overflow-x-auto pb-1 gap-2 items-center scrollbar-none -mx-1 px-1">
+                {product.variants.map(variant => {
+                  const isSelected = selectedVariant?.id === variant.id;
+                  const isOutOfStock = variant.stock <= 0;
+                  const savings = variant.originalPrice && variant.originalPrice > variant.price 
+                    ? variant.originalPrice - variant.price 
+                    : 0;
+
+                  return (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      disabled={isOutOfStock}
+                      onClick={() => handleVariantSelect(variant)}
+                      className={`relative shrink-0 text-left px-3 py-1.5 sm:py-2 rounded-xl border transition-all cursor-pointer flex items-center gap-2 select-none ${
+                        isSelected 
+                          ? 'border-brand-green-800 bg-brand-green-900 text-white shadow-xs ring-2 ring-brand-green-700/20' 
+                          : isOutOfStock 
+                            ? 'border-dashed border-gray-200 bg-gray-50 text-gray-400 opacity-60 cursor-not-allowed' 
+                            : 'border-slate-200 bg-white hover:border-brand-green-600/50 hover:bg-brand-green-50/40 text-slate-800 shadow-2xs'
+                      }`}
+                    >
+                      {/* Check dot / indicator */}
+                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 border ${
+                        isSelected ? 'bg-brand-gold-400 border-brand-gold-400 text-brand-green-950' : 'border-slate-300 bg-white'
+                      }`}>
+                        {isSelected && (
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
+                        )}
+                      </div>
+
+                      {/* Variant Size & Price in a clean horizontal badge */}
+                      <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+                        <span className={`font-bold text-xs ${isSelected ? 'text-white' : 'text-brand-green-950'}`}>
+                          {variant.size || variant.name}
+                        </span>
+                        <span className={`font-serif font-bold text-xs ${isSelected ? 'text-brand-gold-300' : 'text-brand-green-900'}`}>
+                          ₹{variant.price}
+                        </span>
+                        {savings > 0 && (
+                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                            isSelected ? 'bg-brand-gold-400 text-brand-green-950' : 'text-emerald-700 bg-emerald-100'
+                          }`}>
+                            Save ₹{savings}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Active Variant Live Details (Compact banner) */}
+          {selectedVariant && (selectedVariant.description || selectedVariant.dosage) && (
+            <div className="p-2.5 sm:p-3 rounded-xl bg-brand-cream-100/60 border border-brand-green-600/10 space-y-1 text-xs">
+              {selectedVariant.description && (
+                <p className="text-[11px] text-brand-green-900/90 leading-snug">
+                  {selectedVariant.description}
+                </p>
+              )}
+              {selectedVariant.dosage && (
+                <div className="flex items-center gap-1.5 text-[11px] text-brand-green-950 font-medium pt-0.5">
+                  <Clock className="w-3 h-3 text-brand-gold-700 shrink-0" />
+                  <span><strong className="text-brand-green-900 font-bold">Suggested Usage:</strong> {selectedVariant.dosage}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 🌿 BOTANICAL FORMULATION SELECTOR (Sister Classical Forms - Placed Below Quantity) */}
+          {herbFamily && herbFamily.formulations && herbFamily.formulations.length > 1 && (
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-brand-green-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <Leaf className="w-3.5 h-3.5 text-brand-gold-600" />
+                  <span>{language === 'hi' ? 'शास्त्रीय रूप (Formulation):' : 'Formulation Type:'}</span>
+                </span>
+                <span className="text-[10px] font-semibold text-brand-gold-800 bg-brand-gold-100/80 px-2 py-0.5 rounded-md">
+                  {herbFamily.baseHerb ? `${herbFamily.baseHerb} Family` : 'Classical Ayurvedic'}
+                </span>
+              </div>
+
+              {/* Minimalist Formulation Pills for Mobile & Desktop */}
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {herbFamily.formulations.map((f: any) => {
+                  const isCurrent = f.productId === product.id || f.isCurrent;
+                  return (
+                    <button
+                      key={f.id || f.form}
+                      type="button"
+                      onClick={() => handleFormulationSwitch(f.form, f.productId)}
+                      className={`group px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border select-none ${
+                        isCurrent
+                          ? 'bg-brand-green-900 text-white border-brand-green-900 shadow-2xs ring-2 ring-brand-green-700/20'
+                          : 'bg-white hover:bg-brand-green-50/70 text-brand-green-950 border-slate-200 hover:border-brand-green-600/40 shadow-2xs'
+                      }`}
+                    >
+                      {f.image ? (
+                        <img 
+                          src={f.image} 
+                          alt={f.name} 
+                          className="w-4 h-4 rounded object-contain bg-white/90 p-0.5 shrink-0" 
+                          referrerPolicy="no-referrer" 
+                        />
+                      ) : (
+                        <Sparkles className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? 'text-brand-gold-300' : 'text-brand-gold-600'}`} />
+                      )}
+                      <span>{f.formLabel || f.name}</span>
+                      <span className={`text-[10px] font-mono font-normal ${isCurrent ? 'text-brand-gold-300' : 'text-slate-500'}`}>
+                        ₹{f.price}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Description */}
-          <p className="text-sm text-brand-green-800/95 leading-relaxed">
-            {product.description}
+          <p className="text-xs sm:text-sm text-brand-green-800/95 leading-relaxed">
+            {activeDescription}
           </p>
 
-          {/* Fast Highlights List */}
-          <div className="grid grid-cols-2 gap-3 p-3.5 bg-white rounded-2xl border border-brand-green-600/10 text-xs text-brand-green-800">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4.5 h-4.5 text-brand-green-700 flex-shrink-0" />
-              <span className="font-medium">{language === 'hi' ? 'GMP गुणवत्ता प्रमाणित' : 'GMP Quality Certified'}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4.5 h-4.5 text-brand-gold-600 flex-shrink-0" />
-              <span className="font-medium">{language === 'hi' ? '100% शुद्ध वनस्पति' : '100% Pure Botanical'}</span>
-            </div>
-          </div>
+          {/* 🛒 COMPACT QUANTITY & EXPRESS BUY ACTIONS BAR (Ergonomic on both Mobile & Desktop) */}
+          <div className="space-y-3 pt-1">
+            {activeStock > 0 ? (
+              <div className="space-y-2.5 max-w-lg">
+                {/* Row: Compact Stepper + Add to Cart + Buy Now */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                  
+                  <div className="flex items-center gap-2">
+                    {/* Compact Quantity Stepper */}
+                    <div className="flex items-center justify-between border-2 border-brand-green-700/25 rounded-xl bg-white overflow-hidden w-24 sm:w-28 h-10 sm:h-11 shrink-0 shadow-2xs focus-within:border-brand-green-700 transition-all">
+                      <button 
+                        type="button"
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="w-7 sm:w-8 h-full flex items-center justify-center text-brand-green-800 font-bold hover:bg-brand-green-50 transition-colors cursor-pointer select-none text-sm font-sans"
+                        aria-label="Decrease quantity"
+                      >
+                        -
+                      </button>
+                      <span className="font-bold text-xs sm:text-sm text-brand-green-950 tabular-nums">{quantity}</span>
+                      <button 
+                        type="button"
+                        onClick={() => setQuantity(Math.min(activeStock, quantity + 1))}
+                        className="w-7 sm:w-8 h-full flex items-center justify-center text-brand-green-800 font-bold hover:bg-brand-green-50 transition-colors cursor-pointer select-none text-sm font-sans"
+                        aria-label="Increase quantity"
+                      >
+                        +
+                      </button>
+                    </div>
 
-          {/* Buy actions */}
-          <div className="space-y-4 pt-1">
-            {product.stock > 0 ? (
-              <div className="flex flex-col gap-3 max-w-md">
-                {/* Row 1: Quantity Selector + Add to Cart */}
-                <div className="flex flex-row items-center gap-3 w-full">
-                  {/* Quantity input */}
-                  <div className="flex items-center justify-between border-2 border-brand-green-700/20 rounded-2xl bg-white overflow-hidden w-28 sm:w-32 h-13 shrink-0 shadow-xs focus-within:border-brand-green-700 transition-all">
-                    <button 
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-10 h-full flex items-center justify-center text-brand-green-800 font-bold hover:bg-brand-green-50 transition-colors cursor-pointer select-none text-base font-sans"
+                    {/* Add to Cart button */}
+                    <button
+                      type="button"
+                      onClick={() => onAddToCart(product, quantity, selectedVariant)}
+                      className="flex-1 sm:flex-initial px-4 h-10 sm:h-11 border-2 border-brand-green-800 hover:bg-brand-green-50 text-brand-green-800 font-bold rounded-xl transition-all shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98] text-xs sm:text-sm whitespace-nowrap"
                     >
-                      -
-                    </button>
-                    <span className="font-bold text-sm text-brand-green-950 tabular-nums">{quantity}</span>
-                    <button 
-                      onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                      className="w-10 h-full flex items-center justify-center text-brand-green-800 font-bold hover:bg-brand-green-50 transition-colors cursor-pointer select-none text-base font-sans"
-                    >
-                      +
+                      <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-green-800 shrink-0" />
+                      <span>{t('btn_add_to_cart', language)}</span>
                     </button>
                   </div>
 
-                  {/* Add to Cart button */}
+                  {/* Express Direct Buy Now Button */}
                   <button
-                    onClick={() => onAddToCart(product, quantity)}
-                    className="flex-1 h-13 border-2 border-brand-green-700 hover:bg-brand-green-50 text-brand-green-800 font-extrabold rounded-2xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] text-sm tracking-wider"
+                    type="button"
+                    onClick={() => {
+                      if (onBuyNow) {
+                        onBuyNow(product, quantity, selectedVariant);
+                      } else {
+                        onAddToCart(product, quantity, selectedVariant);
+                        onNavigate('checkout');
+                      }
+                    }}
+                    className="w-full sm:flex-1 h-10 sm:h-11 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] text-xs sm:text-sm uppercase tracking-wider"
                   >
-                    <ShoppingCart className="w-4 h-4 text-brand-green-700 shrink-0" />
-                    <span>{t('btn_add_to_cart', language)}</span>
+                    <span>{language === 'hi' ? 'अभी खरीदें' : 'Buy Now'}</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-brand-gold-400" />
                   </button>
-                </div>
 
-                {/* Row 2: Express Direct Buy Now Button */}
-                <button
-                  onClick={() => {
-                    if (onBuyNow) {
-                      onBuyNow(product, quantity);
-                    } else {
-                      onAddToCart(product, quantity);
-                      onNavigate('checkout');
-                    }
-                  }}
-                  className="w-full h-13 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] text-sm uppercase tracking-wider"
-                >
-                  <span>{language === 'hi' ? 'अभी खरीदें' : 'Buy Now'}</span>
-                </button>
+                </div>
               </div>
             ) : (
-              <div className="bg-red-50 border border-red-200 text-red-600 font-bold text-center py-3.5 rounded-2xl text-xs sm:text-sm">
+              <div className="bg-red-50 border border-red-200 text-red-700 font-bold text-center py-3 rounded-xl text-xs sm:text-sm">
                 {language === 'hi' 
                   ? 'वर्तमान में आउट ऑफ स्टॉक (छोटा बैच तैयार किया जा रहा है)' 
                   : 'Currently Out of Stock (Undergoing Small-Batch Preparation)'
@@ -506,33 +781,41 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
               </div>
             )}
 
-            {/* Wishlist & Share controls */}
-            <div className="flex justify-between items-center text-xs text-brand-green-800 pt-1 font-semibold max-w-md">
+            {/* Share control */}
+            <div className="flex justify-end items-center text-xs text-brand-green-800 pt-0.5 font-semibold max-w-lg">
               <button 
-                onClick={() => onToggleWishlist(product)}
-                className="flex items-center gap-1.5 hover:text-brand-gold-600 cursor-pointer"
-              >
-                <Heart className={`w-4 h-4 ${wishlist.includes(product.id) ? 'fill-current text-red-500' : ''}`} />
-                <span>
-                  {wishlist.includes(product.id) 
-                    ? (language === 'hi' ? 'इच्छा-सूची से निकालें' : 'Remove From Wishlist') 
-                    : (language === 'hi' ? 'इच्छा-सूची में जोड़ें' : 'Add To Wishlist')
-                  }
-                </span>
-              </button>
-              
-              <button 
+                type="button"
                 onClick={handleShare}
                 className="flex items-center gap-1.5 hover:text-brand-gold-600 cursor-pointer relative"
               >
-                <Share2 className="w-4 h-4 text-brand-gold-600" />
+                <Share2 className="w-3.5 h-3.5 text-brand-gold-600" />
                 <span>
                   {copied 
                     ? (language === 'hi' ? 'लिंक कॉपी हो गया!' : 'Link Copied!') 
-                    : (language === 'hi' ? 'उपचार लिंक साझा करें' : 'Share Remedy Link')
+                    : (language === 'hi' ? 'साझा करें' : 'Share Remedy')
                   }
                 </span>
               </button>
+            </div>
+          </div>
+
+          {/* Trust Highlights Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-200/80 text-[11px] text-brand-green-900">
+            <div className="flex items-center gap-1.5 p-2 rounded-lg bg-brand-cream-50 border border-slate-100">
+              <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span className="font-semibold">GMP Certified</span>
+            </div>
+            <div className="flex items-center gap-1.5 p-2 rounded-lg bg-brand-cream-50 border border-slate-100">
+              <Sparkles className="w-4 h-4 text-brand-gold-600 shrink-0" />
+              <span className="font-semibold">100% Herbal</span>
+            </div>
+            <div className="flex items-center gap-1.5 p-2 rounded-lg bg-brand-cream-50 border border-slate-100">
+              <Truck className="w-4 h-4 text-brand-green-700 shrink-0" />
+              <span className="font-semibold">Fast Shipping</span>
+            </div>
+            <div className="flex items-center gap-1.5 p-2 rounded-lg bg-brand-cream-50 border border-slate-100">
+              <PackageCheck className="w-4 h-4 text-amber-700 shrink-0" />
+              <span className="font-semibold">Pure Extraction</span>
             </div>
           </div>
 
@@ -677,9 +960,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
             </div>
           </div>
 
-          {product.benefits && product.benefits.length > 0 ? (
+          {activeBenefits && activeBenefits.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {product.benefits.map((b, i) => (
+              {activeBenefits.map((b, i) => (
                 <div key={i} className="flex items-start gap-3 text-xs sm:text-sm text-brand-green-900 leading-relaxed bg-brand-green-50/40 p-4 rounded-2xl border border-brand-green-600/10">
                   <CheckCircle2 className="w-4.5 h-4.5 text-brand-green-700 flex-shrink-0 mt-0.5" />
                   <span className="font-medium">{b}</span>
@@ -706,7 +989,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 {language === 'hi' ? 'खुराक और उपयोग के निर्देश' : 'Dosage & Directions for Use'}
               </h3>
               <p className="text-xs text-brand-green-600/70">
-                {language === 'hi' ? 'सर्वोत्तम परिणामों के लिए सही समय और अनुशंसित मात्रा' : 'Follow the recommended guidelines for optimal holistic results.'}
+                {selectedVariant ? `Tailored specifically for ${selectedVariant.name}` : (language === 'hi' ? 'सर्वोत्तम परिणामों के लिए सही समय और अनुशंसित मात्रा' : 'Follow the recommended guidelines for optimal holistic results.')}
               </p>
             </div>
           </div>
@@ -717,7 +1000,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 {language === 'hi' ? 'अनुशंसित खुराक' : 'Recommended Dosage'}
               </span>
               <p className="text-sm font-bold text-brand-green-950">
-                {product.dosage || (language === 'hi' ? '1-2 गोलियाँ या 1 चम्मच प्रतिदिन' : '1-2 units daily or as advised by physician')}
+                {activeDosage || (language === 'hi' ? '1-2 गोलियाँ या 1 चम्मच प्रतिदिन' : '1-2 units daily or as advised by physician')}
               </p>
             </div>
 
@@ -726,7 +1009,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                 {language === 'hi' ? 'उपभोग का समय और विधि' : 'Application & Consumption Method'}
               </span>
               <p className="text-xs sm:text-sm text-brand-green-900 leading-relaxed">
-                {product.usageInstructions || (language === 'hi' ? 'गुनगुने पानी या दूध के साथ लें।' : 'Consume with warm water or milk after meals.')}
+                {activeUsageInstructions || (language === 'hi' ? 'गुनगुने पानी या दूध के साथ लें।' : 'Consume with warm water or milk after meals.')}
               </p>
             </div>
           </div>

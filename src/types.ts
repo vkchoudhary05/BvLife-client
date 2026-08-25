@@ -25,6 +25,47 @@ export interface Review {
   date: string;
 }
 
+export interface RelatedFormulation {
+  id: string;
+  productId: string;
+  name: string;
+  form: string;
+  formLabel: string;
+  icon?: string;
+  image: string;
+  price: number;
+  originalPrice?: number;
+  stock: number;
+  sku?: string;
+  isCurrent?: boolean;
+  sizes?: string[];
+  variants?: ProductVariant[];
+}
+
+export interface ProductVariant {
+  id: string;
+  name: string; // e.g. "100g Jar", "200g Bottle", "60 Tablets", "120 Tablets", "100 ml", "200 ml"
+  formType?: string; // "Churna / Powder" | "Tablets / Vati" | "Taila / Oil" | "Syrup / Asava" | "Cosmetics / Cream" | "Capsules" | "Resin" | "Custom"
+  form?: string;
+  size?: string; // "100g", "200g", "500g", "60 Tabs", "120 Tabs", "50ml", "100ml", "200ml"
+  sku?: string;
+  price: number;
+  originalPrice: number;
+  stock: number;
+  image?: string;
+  images?: string[];
+  allImages?: string[];
+  isDefault?: boolean;
+  description?: string;
+  dosage?: string;
+  usageInstructions?: string;
+  benefits?: string[];
+  netQuantity?: string;
+  weight?: string;
+  volume?: string;
+  highlights?: string[];
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -38,6 +79,7 @@ export interface Product {
   description: string;
   mainImage: string;
   images: string[];
+  allImages?: string[];
   ingredients: Ingredient[];
   benefits: string[];
   dosage: string;
@@ -48,11 +90,32 @@ export interface Product {
   bestSeller?: boolean;
   lowStockAlertLimit: number;
   createdDate: string;
+  variants?: ProductVariant[];
+  familyGroup?: string; // e.g. "amla-family", "ashwagandha-family", "triphala-family"
+  baseHerb?: string; // e.g. "Amla", "Ashwagandha", "Triphala"
+  formulation?: string; // "tablet" | "oil" | "churna" | "capsule" | "syrup" | "resin" | "cream"
+  formLabel?: string;
+  relatedFormulations?: RelatedFormulation[];
+  activeVariant?: ProductVariant;
+  selectedVariantId?: string;
+  currentPrice?: number;
+  currentOriginalPrice?: number;
+  currentStock?: number;
+  currentSku?: string;
+  currentImage?: string;
+  currentImages?: string[];
+  currentDosage?: string;
+  currentUsageInstructions?: string;
+  currentDescription?: string;
+  currentBenefits?: string[];
+  currentNetQuantity?: string;
+  currentFormType?: string;
 }
 
 export interface CartItem {
   product: Product;
   quantity: number;
+  selectedVariant?: ProductVariant;
 }
 
 export interface Address {
@@ -73,6 +136,10 @@ export interface OrderItem {
   price: number;
   quantity: number;
   mainImage: string;
+  variantId?: string;
+  variantName?: string;
+  variantSize?: string;
+  sku?: string;
 }
 
 export interface TrackingUpdate {
@@ -171,4 +238,46 @@ export interface Payment {
   status: 'Pending' | 'Paid' | 'Failed' | 'Refunded';
   createdAt: string;
 }
+
+export interface Doctor {
+  id: string;
+  name: string;
+  title: string;
+  qualification: string;
+  experienceYears: number;
+  specialties: string[];
+  languages: string[];
+  fee: number;
+  originalFee?: number;
+  rating: number;
+  reviewsCount: number;
+  image: string;
+  bio: string;
+  availableDays: string[];
+  nextAvailable: string;
+}
+
+export interface DoctorAppointment {
+  id: string;
+  doctorId: string;
+  doctorName: string;
+  doctorSpecialty: string;
+  doctorImage: string;
+  doctorQualification: string;
+  patientName: string;
+  patientAge: number;
+  patientGender: string;
+  patientPhone: string;
+  patientEmail: string;
+  date: string;
+  timeSlot: string;
+  consultationMode: 'video' | 'audio' | 'clinic' | 'chat';
+  healthConcern: string;
+  previousHistory?: string;
+  fee: number;
+  status: 'Confirmed' | 'Completed' | 'Cancelled';
+  bookingDate: string;
+  meetingLink?: string;
+}
+
 

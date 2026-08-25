@@ -584,8 +584,14 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
                   return (
                     <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-brand-green-100/60 last:border-0 last:pb-0">
                       <div className="space-y-0.5">
-                        <div className="font-bold text-brand-green-950">
-                          {item.productName} <span className="text-brand-green-600/60 font-normal">x{item.quantity}</span>
+                        <div className="font-bold text-brand-green-950 flex flex-wrap items-center gap-1.5">
+                          <span>{item.productName}</span>
+                          {(item.variantName || item.variantSize) && (
+                            <span className="text-[10px] font-semibold bg-brand-gold-100 text-brand-gold-900 px-2 py-0.5 rounded-full border border-brand-gold-300/60">
+                              {item.variantName || item.variantSize}
+                            </span>
+                          )}
+                          <span className="text-brand-green-600/60 font-normal">x{item.quantity}</span>
                         </div>
                         <span className="font-serif text-brand-green-900 text-xs">₹{item.price * item.quantity}</span>
                       </div>
@@ -727,7 +733,14 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
                 <tbody className="divide-y divide-brand-green-100">
                   {invoiceOrder.items?.map((item, idx) => (
                     <tr key={idx}>
-                      <td className="py-2 font-bold">{item.productName}</td>
+                      <td className="py-2 font-bold">
+                        <div>{item.productName}</div>
+                        {(item.variantName || item.variantSize) && (
+                          <div className="text-[10px] text-brand-gold-700 font-normal font-sans">
+                            {item.variantName || item.variantSize}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-2 text-center">{item.quantity}</td>
                       <td className="py-2 text-right">₹{item.price}</td>
                       <td className="py-2 text-right font-bold">₹{item.price * item.quantity}</td>

@@ -10,14 +10,16 @@ import {
   Printer, FileText, X, Download, Settings, Lock, Mail, Phone, ArrowRight, Eye, EyeOff, RotateCw,
   Search, Clock, Truck, AlertCircle, RefreshCw, Filter, ArrowUpDown, Layers, Radio, Copy,
   ExternalLink, SlidersHorizontal, BarChart3, TrendingUp, DollarSign, PackageCheck, AlertTriangle, CreditCard,
-  Building2, Star, MessageSquare
+  Building2, Star, MessageSquare, ChevronDown, ChevronUp, Boxes, PackagePlus, Camera
 } from 'lucide-react';
-import { User as UserType, Order, Address, Product, Coupon, WebsiteSettings } from '../types';
+import { User as UserType, Order, Address, Product, ProductVariant, Coupon, WebsiteSettings } from '../types';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 import { SecureOtpWidget } from '../components/secureOtpWidget';
-import { WriteReviewModal } from '../components/WriteReviewModel';
+import { WriteReviewModal } from "../components/WriteReviewModel";
+import { ImageUploadField } from '../components/ImageUploadField';
 import { sendMSG91Otp, formatMSG91Identifier } from '../services/msg91OtpService';
 import { Pagination } from '../components/Pagination';
+import { FORMULATION_PRESET_IMAGES, FORMULATION_IMAGES_MAP, getVariantImage, getFormulationPresetImage } from '../utils/variantImages';
 
 interface DashboardProps {
   user: UserType | null;
@@ -351,12 +353,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [prodLowStockAlertLimit, setProdLowStockAlertLimit] = useState(5);
   const [prodIngredients, setProdIngredients] = useState<{name: string, description: string}[]>([]);
   const [prodFaqs, setProdFaqs] = useState<{question: string, answer: string}[]>([]);
+  const [prodVariants, setProdVariants] = useState<ProductVariant[]>([]);
+  const [prodFamilyGroup, setProdFamilyGroup] = useState('');
+  const [prodBaseHerb, setProdBaseHerb] = useState('');
+  const [prodFormulation, setProdFormulation] = useState('tablet');
+  const [prodFormLabel, setProdFormLabel] = useState('');
 
-  // Temporary inline input states for ingredients & FAQs
+  // Temporary inline input states for ingredients & FAQs & variants
   const [ingName, setIngName] = useState('');
   const [ingDesc, setIngDesc] = useState('');
   const [faqQ, setFaqQ] = useState('');
   const [faqA, setFaqA] = useState('');
+
+  // Temporary inline variant input state
+  const [varName, setVarName] = useState('');
+  const [varSize, setVarSize] = useState('');
+  const [varForm, setVarForm] = useState<string>('powder');
+  const [varPrice, setVarPrice] = useState<number>(500);
+  const [varOrigPrice, setVarOrigPrice] = useState<number>(600);
+  const [varStock, setVarStock] = useState<number>(20);
+  const [varSku, setVarSku] = useState('');
+  const [varImg, setVarImg] = useState('');
+  const [varIsDefault, setVarIsDefault] = useState(false);
 
   const handleAddIngredient = () => {
     if (!ingName || !ingDesc) return;
@@ -378,6 +396,356 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const handleRemoveFaq = (index: number) => {
     setProdFaqs(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddVariant = () => {
+    if (!varName.trim()) return;
+    const variantPrice = Number(varPrice) || prodPrice;
+    const variantOrigPrice = varOrigPrice ? Number(varOrigPrice) : (prodOrigPrice || variantPrice);
+    const newVariant: ProductVariant = {
+      id: 'var_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      name: varName.trim(),
+      size: varSize.trim() || undefined,
+      form: varForm || undefined,
+      price: variantPrice,
+      originalPrice: variantOrigPrice,
+      stock: Number(varStock) || 0,
+      sku: varSku.trim() || undefined,
+      image: varImg.trim() || undefined,
+      isDefault: varIsDefault || prodVariants.length === 0
+    };
+
+    if (newVariant.isDefault) {
+      setProdVariants(prev => [...prev.map(v => ({ ...v, isDefault: false })), newVariant]);
+    } else {
+      setProdVariants(prev => [...prev, newVariant]);
+    }
+
+    setVarName('');
+    setVarSize('');
+    setVarPrice(prodPrice);
+    setVarOrigPrice(prodOrigPrice);
+    setVarStock(20);
+    setVarSku('');
+    setVarImg('');
+    setVarIsDefault(false);
+  };
+
+  const handleRemoveVariant = (index: number) => {
+    setProdVariants(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      if (updated.length > 0 && !updated.some(v => v.isDefault)) {
+        updated[0].isDefault = true;
+      }
+      return updated;
+    });
+  };
+
+  const handleSetDefaultVariant = (index: number) => {
+    setProdVariants(prev => prev.map((v, i) => ({
+      ...v,
+      isDefault: i === index
+    })));
+  };
+
+  const handleApplyVariantPreset = (presetType: 'churna' | 'tablets' | 'oil' | 'cosmetics') => {
+    const baseP = prodPrice || 450;
+    const baseOrig = prodOrigPrice || 550;
+
+    if (presetType === 'churna') {
+      setProdVariants([
+        {
+          id: 'var_churna_100g_' + Date.now(),
+          name: '100g Churna Jar',
+          size: '100g',
+          form: 'churna',
+          price: baseP,
+          originalPrice: baseOrig,
+          stock: 25,
+          image: FORMULATION_IMAGES_MAP.churna,
+          sku: prodSku ? `${prodSku}-100G` : undefined,
+          isDefault: true
+        },
+        {
+          id: 'var_churna_200g_' + Date.now(),
+          name: '200g Value Pack',
+          size: '200g',
+          form: 'churna',
+          price: Math.round(baseP * 1.8),
+          originalPrice: Math.round(baseOrig * 1.8),
+          stock: 20,
+          image: FORMULATION_IMAGES_MAP.churna,
+          sku: prodSku ? `${prodSku}-200G` : undefined,
+          isDefault: false
+        }
+      ]);
+    } else if (presetType === 'tablets') {
+      setProdVariants([
+        {
+          id: 'var_tab_60_' + Date.now(),
+          name: '60 Tablets Bottle',
+          size: '60 tab',
+          form: 'tablet',
+          price: baseP,
+          originalPrice: baseOrig,
+          stock: 30,
+          image: FORMULATION_IMAGES_MAP.tablet,
+          sku: prodSku ? `${prodSku}-60T` : undefined,
+          isDefault: true
+        },
+        {
+          id: 'var_tab_120_' + Date.now(),
+          name: '120 Tablets Double Pack',
+          size: '120 tab',
+          form: 'tablet',
+          price: Math.round(baseP * 1.85),
+          originalPrice: Math.round(baseOrig * 1.85),
+          stock: 20,
+          image: FORMULATION_IMAGES_MAP.tablet,
+          sku: prodSku ? `${prodSku}-120T` : undefined,
+          isDefault: false
+        }
+      ]);
+    } else if (presetType === 'oil') {
+      setProdVariants([
+        {
+          id: 'var_oil_100ml_' + Date.now(),
+          name: '100ml Bottle',
+          size: '100ml',
+          form: 'oil',
+          price: baseP,
+          originalPrice: baseOrig,
+          stock: 25,
+          image: FORMULATION_IMAGES_MAP.oil,
+          sku: prodSku ? `${prodSku}-100ML` : undefined,
+          isDefault: true
+        },
+        {
+          id: 'var_oil_200ml_' + Date.now(),
+          name: '200ml Family Pack',
+          size: '200ml',
+          form: 'oil',
+          price: Math.round(baseP * 1.8),
+          originalPrice: Math.round(baseOrig * 1.8),
+          stock: 15,
+          image: FORMULATION_IMAGES_MAP.oil,
+          sku: prodSku ? `${prodSku}-200ML` : undefined,
+          isDefault: false
+        }
+      ]);
+    } else if (presetType === 'cosmetics') {
+      setProdVariants([
+        {
+          id: 'var_cos_50g_' + Date.now(),
+          name: '50g Essential Jar',
+          size: '50g',
+          form: 'cream',
+          price: baseP,
+          originalPrice: baseOrig,
+          stock: 20,
+          image: FORMULATION_IMAGES_MAP.cream,
+          sku: prodSku ? `${prodSku}-50G` : undefined,
+          isDefault: true
+        },
+        {
+          id: 'var_cos_100g_' + Date.now(),
+          name: '100g Salon Pack',
+          size: '100g',
+          form: 'cream',
+          price: Math.round(baseP * 1.75),
+          originalPrice: Math.round(baseOrig * 1.75),
+          stock: 15,
+          image: FORMULATION_IMAGES_MAP.cream,
+          sku: prodSku ? `${prodSku}-100G` : undefined,
+          isDefault: false
+        }
+      ]);
+    }
+  };
+
+  // Admin Variant Management state
+  const [expandedVariantProdId, setExpandedVariantProdId] = useState<string | null>(null);
+  const [showVariantMatrixModal, setShowVariantMatrixModal] = useState(false);
+  const [adminCatalogFormFilter, setAdminCatalogFormFilter] = useState('');
+  const [adminCatalogFamilyFilter, setAdminCatalogFamilyFilter] = useState('');
+  const [matrixSearch, setMatrixSearch] = useState('');
+  const [matrixFormFilter, setMatrixFormFilter] = useState('');
+  const [matrixStockFilter, setMatrixStockFilter] = useState<'all' | 'low' | 'out'>('all');
+
+  // Inline Quick Add Variant state for specific product row
+  const [quickVarForms, setQuickVarForms] = useState<Record<string, {
+    name: string;
+    size: string;
+    form: string;
+    price: number;
+    origPrice: number;
+    stock: number;
+    sku: string;
+    image?: string;
+  }>>({});
+
+  const getQuickVarForm = (productId: string, defaultPrice = 450, defaultOrig = 550) => {
+    return quickVarForms[productId] || {
+      name: '',
+      size: '',
+      form: 'churna',
+      price: defaultPrice,
+      origPrice: defaultOrig,
+      stock: 20,
+      sku: '',
+      image: ''
+    };
+  };
+
+  const updateQuickVarForm = (productId: string, field: string, value: any) => {
+    setQuickVarForms(prev => ({
+      ...prev,
+      [productId]: {
+        ...getQuickVarForm(productId),
+        [field]: value
+      }
+    }));
+  };
+
+  // Quick Variant Actions for Admin
+  const handleQuickUpdateVariantStock = (prod: Product, variantId: string, deltaOrValue: number, isAbsolute = false) => {
+    if (!prod.variants || prod.variants.length === 0) return;
+    const updatedVariants = prod.variants.map(v => {
+      if (v.id === variantId) {
+        const nextStock = isAbsolute ? Math.max(0, deltaOrValue) : Math.max(0, (v.stock || 0) + deltaOrValue);
+        return { ...v, stock: nextStock };
+      }
+      return v;
+    });
+    const totalStock = updatedVariants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    onEditProduct(prod.id, { variants: updatedVariants, stock: totalStock });
+  };
+
+  const handleQuickUpdateVariantPrice = (prod: Product, variantId: string, newPrice: number, newOrigPrice?: number) => {
+    if (!prod.variants || prod.variants.length === 0) return;
+    const updatedVariants = prod.variants.map(v => {
+      if (v.id === variantId) {
+        return {
+          ...v,
+          price: Math.max(0, newPrice),
+          originalPrice: newOrigPrice !== undefined ? Math.max(0, newOrigPrice) : v.originalPrice
+        };
+      }
+      return v;
+    });
+    const defaultVar = updatedVariants.find(v => v.isDefault) || updatedVariants[0];
+    onEditProduct(prod.id, {
+      variants: updatedVariants,
+      price: defaultVar ? defaultVar.price : prod.price,
+      originalPrice: defaultVar ? (defaultVar.originalPrice || prod.originalPrice) : prod.originalPrice
+    });
+  };
+
+  const handleQuickUpdateVariantImage = (prod: Product, variantId: string, newImage: string) => {
+    if (!prod.variants || prod.variants.length === 0) return;
+    const updatedVariants = prod.variants.map(v => {
+      if (v.id === variantId) {
+        return {
+          ...v,
+          image: newImage.trim() || undefined
+        };
+      }
+      return v;
+    });
+    onEditProduct(prod.id, {
+      variants: updatedVariants
+    });
+  };
+
+  const handleQuickSetDefaultVariant = (prod: Product, variantId: string) => {
+    if (!prod.variants || prod.variants.length === 0) return;
+    const targetVar = prod.variants.find(v => v.id === variantId);
+    const updatedVariants = prod.variants.map(v => ({
+      ...v,
+      isDefault: v.id === variantId
+    }));
+    onEditProduct(prod.id, {
+      variants: updatedVariants,
+      price: targetVar ? targetVar.price : prod.price,
+      originalPrice: targetVar?.originalPrice || prod.originalPrice
+    });
+  };
+
+  const handleQuickDeleteVariant = (prod: Product, variantId: string) => {
+    if (!prod.variants) return;
+    let updatedVariants = prod.variants.filter(v => v.id !== variantId);
+    if (updatedVariants.length > 0 && !updatedVariants.some(v => v.isDefault)) {
+      updatedVariants[0].isDefault = true;
+    }
+    const totalStock = updatedVariants.reduce((sum, v) => sum + (v.stock || 0), prod.stock);
+    onEditProduct(prod.id, {
+      variants: updatedVariants.length > 0 ? updatedVariants : undefined,
+      stock: updatedVariants.length > 0 ? totalStock : prod.stock
+    });
+  };
+
+  const handleQuickAddVariantToProduct = (prod: Product) => {
+    const formState = getQuickVarForm(prod.id, prod.price, prod.originalPrice);
+    if (!formState.name.trim()) return;
+
+    const presetImg = formState.form ? (FORMULATION_IMAGES_MAP[formState.form.toLowerCase()] || '') : '';
+    const chosenImg = formState.image?.trim() || presetImg || undefined;
+
+    const newVar: ProductVariant = {
+      id: 'var_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      name: formState.name.trim(),
+      size: formState.size.trim() || undefined,
+      form: formState.form || undefined,
+      price: Number(formState.price) || prod.price,
+      originalPrice: Number(formState.origPrice) || prod.originalPrice,
+      stock: Number(formState.stock) || 0,
+      sku: formState.sku.trim() || undefined,
+      image: chosenImg,
+      isDefault: !(prod.variants && prod.variants.length > 0)
+    };
+
+    const updatedVariants = [...(prod.variants || []), newVar];
+    const totalStock = updatedVariants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    onEditProduct(prod.id, { variants: updatedVariants, stock: totalStock });
+
+    setQuickVarForms(prev => ({
+      ...prev,
+      [prod.id]: {
+        name: '',
+        size: '',
+        form: formState.form,
+        price: prod.price,
+        origPrice: prod.originalPrice,
+        stock: 20,
+        sku: '',
+        image: ''
+      }
+    }));
+  };
+
+  const handleQuickAddPresetVariant = (prod: Product, presetName: string, size: string, form: string, priceMult = 1, origMult = 1, defaultStock = 20) => {
+    const baseP = prod.price || 450;
+    const baseOrig = prod.originalPrice || 550;
+    const newPrice = Math.round(baseP * priceMult);
+    const newOrig = Math.round(baseOrig * origMult);
+    const presetImg = FORMULATION_IMAGES_MAP[form.toLowerCase()] || '';
+
+    const newVar: ProductVariant = {
+      id: 'var_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+      name: presetName,
+      size,
+      form,
+      price: newPrice,
+      originalPrice: newOrig,
+      stock: defaultStock,
+      sku: prod.sku ? `${prod.sku}-${size.toUpperCase().replace(/\s+/g, '')}` : undefined,
+      image: presetImg || undefined,
+      isDefault: !(prod.variants && prod.variants.length > 0)
+    };
+
+    const updatedVariants = [...(prod.variants || []), newVar];
+    const totalStock = updatedVariants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    onEditProduct(prod.id, { variants: updatedVariants, stock: totalStock });
   };
 
   // Admin coupon add state
@@ -564,6 +932,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdLowStockAlertLimit(prod.lowStockAlertLimit !== undefined ? prod.lowStockAlertLimit : 5);
     setProdIngredients(prod.ingredients || []);
     setProdFaqs(prod.faqs || []);
+    setProdVariants(prod.variants ? JSON.parse(JSON.stringify(prod.variants)) : []);
+    setProdFamilyGroup(prod.familyGroup || '');
+    setProdBaseHerb(prod.baseHerb || '');
+    setProdFormulation(prod.formulation || 'tablet');
+    setProdFormLabel(prod.formLabel || '');
     setShowAddProd(true);
   };
 
@@ -592,6 +965,43 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdLowStockAlertLimit(5);
     setProdIngredients([]);
     setProdFaqs([]);
+    setProdVariants([]);
+    setProdFamilyGroup('');
+    setProdBaseHerb('');
+    setProdFormulation('tablet');
+    setProdFormLabel('');
+    setVarName('');
+    setVarSize('');
+    setVarPrice(500);
+    setVarOrigPrice(600);
+    setVarStock(20);
+    setVarSku('');
+    setVarImg('');
+    setVarIsDefault(false);
+  };
+
+  // Clone/Create sister formulation in same family
+  const handleCloneSisterFormulation = (sourceProd: Product, targetForm: string, targetLabel: string) => {
+    handleResetProductForm();
+    setEditProdId(null);
+    const herb = sourceProd.baseHerb || sourceProd.name.split(' ')[0] || 'Ayurvedic';
+    const fam = sourceProd.familyGroup || `${herb.toLowerCase()}-family`;
+    setProdName(`${herb} ${targetLabel}`);
+    setProdFamilyGroup(fam);
+    setProdBaseHerb(herb);
+    setProdFormulation(targetForm);
+    setProdFormLabel(targetLabel);
+    setProdCategory(sourceProd.category);
+    setProdBrand(sourceProd.brand || 'Grams Life');
+    setProdPrice(sourceProd.price);
+    setProdOrigPrice(sourceProd.originalPrice);
+    setProdStock(sourceProd.stock);
+    setProdDesc(`Authentic Ayurvedic ${targetLabel} prepared with pure ${herb} extract according to classical texts.`);
+    setProdDosage(targetForm === 'oil' ? 'Apply gently on scalp/skin twice daily.' : targetForm === 'churna' ? '1 teaspoon (3-5g) with warm water.' : '1-2 tablets twice daily.');
+    setProdUsageInstructions(sourceProd.usageInstructions || 'As directed by physician');
+    setProdBenefits(sourceProd.benefits.join(', '));
+    setProdImg(sourceProd.mainImage || '');
+    setShowAddProd(true);
   };
 
   // Handle Product Save (Add/Edit)
@@ -620,7 +1030,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
       bestSeller: prodBestSeller,
       lowStockAlertLimit: prodLowStockAlertLimit,
       ingredients: prodIngredients,
-      faqs: prodFaqs
+      faqs: prodFaqs,
+      familyGroup: prodFamilyGroup.trim() || undefined,
+      baseHerb: prodBaseHerb.trim() || undefined,
+      formulation: prodFormulation || undefined,
+      formLabel: prodFormLabel.trim() || undefined,
+      variants: prodVariants.length > 0 ? prodVariants : undefined
     };
 
     if (editProdId) {
@@ -1513,8 +1928,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                       <img src={item.mainImage} alt={item.productName} className="w-10 h-10 rounded-lg object-contain bg-white border border-brand-green-100 p-0.5 shrink-0 group-hover:border-brand-green-600 transition-colors" referrerPolicy="no-referrer" />
                                     )}
                                     <div className="min-w-0">
-                                      <p className="font-bold text-brand-green-950 truncate group-hover:text-brand-green-700 transition-colors flex items-center gap-1">
+                                      <p className="font-bold text-brand-green-950 truncate group-hover:text-brand-green-700 transition-colors flex items-center gap-1.5 flex-wrap">
                                         <span>{item.productName}</span>
+                                        {(item.variantName || item.variantSize) && (
+                                          <span className="text-[10px] font-semibold bg-brand-gold-100 text-brand-gold-900 px-2 py-0.2 rounded-full border border-brand-gold-300/60 shrink-0">
+                                            {item.variantName || item.variantSize}
+                                          </span>
+                                        )}
                                         <ExternalLink className="w-3 h-3 text-brand-green-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                                       </p>
                                       <p className="text-[10px] text-brand-green-600">Qty: {item.quantity} • ₹{item.price * item.quantity}</p>
@@ -2134,6 +2554,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
             const filteredCatalog = products.filter(prod => {
               if (adminCatalogCategory && prod.category !== adminCatalogCategory) return false;
               
+              if (adminCatalogFamilyFilter) {
+                const targetFam = adminCatalogFamilyFilter.toLowerCase();
+                const matchFam = (prod.familyGroup || '').toLowerCase().includes(targetFam) || 
+                                 (prod.baseHerb || '').toLowerCase().includes(targetFam) ||
+                                 (prod.name || '').toLowerCase().includes(targetFam);
+                if (!matchFam) return false;
+              }
+
+              if (adminCatalogFormFilter) {
+                const targetForm = adminCatalogFormFilter.toLowerCase();
+                const hasForm = prod.variants?.some(v => 
+                  (v.form || '').toLowerCase().includes(targetForm) || 
+                  (v.name || '').toLowerCase().includes(targetForm) ||
+                  (v.size || '').toLowerCase().includes(targetForm)
+                ) || (prod.formulation || '').toLowerCase().includes(targetForm);
+                if (!hasForm) return false;
+              }
+
               if (adminCatalogStockFilter === 'in-stock' && prod.stock <= 0) return false;
               if (adminCatalogStockFilter === 'low-stock') {
                 const limit = prod.lowStockAlertLimit || 10;
@@ -2147,7 +2585,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 const skuMatch = (prod.sku || '').toLowerCase().includes(q);
                 const brandMatch = (prod.brand || '').toLowerCase().includes(q);
                 const catMatch = (prod.category || '').toLowerCase().includes(q);
-                return nameMatch || skuMatch || brandMatch || catMatch;
+                const varMatch = prod.variants?.some(v => 
+                  (v.name || '').toLowerCase().includes(q) ||
+                  (v.sku || '').toLowerCase().includes(q) ||
+                  (v.size || '').toLowerCase().includes(q) ||
+                  (v.form || '').toLowerCase().includes(q)
+                );
+                return nameMatch || skuMatch || brandMatch || catMatch || varMatch;
               }
               return true;
             });
@@ -2158,6 +2602,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             const lowStockCount = products.filter(p => p.stock > 0 && p.stock <= (p.lowStockAlertLimit || 10)).length;
             const outOfStockCount = products.filter(p => p.stock <= 0).length;
+            const totalVariantsCount = products.reduce((sum, p) => sum + (p.variants?.length || 0), 0);
 
             return (
               <div className="space-y-6 animate-in fade-in duration-300">
@@ -2168,10 +2613,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <span>Remedies Catalog & Formulation Registry</span>
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Configure botanical ingredients, pricing, image galleries, dosha benefits, and inventory levels.
+                      Configure botanical compounds, Churna/Tablet/Oil/Cosmetic variants, pricing, image galleries, and live stock.
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    <button 
+                      onClick={() => setShowVariantMatrixModal(true)}
+                      className="bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 font-bold px-3.5 py-2.5 rounded-2xl text-xs flex items-center gap-2 shadow-2xs cursor-pointer transition-all uppercase tracking-wider"
+                      title="Open global inventory matrix across all variants and forms"
+                    >
+                      <Layers className="w-4 h-4 text-amber-600" />
+                      <span>Variant Matrix ({totalVariantsCount})</span>
+                    </button>
                     <button 
                       onClick={() => setShowAddProd(!showAddProd)}
                       className="bg-gradient-to-r from-blue-600 via-green-600 to-green-700 hover:from-blue-700 hover:to-green-800 text-white font-bold px-4 py-2.5 rounded-2xl text-xs flex items-center gap-2 shadow-md shadow-green-500/20 cursor-pointer transition-all uppercase tracking-wider"
@@ -2183,8 +2636,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
 
                 {/* Filter and Search Toolbar */}
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80 shadow-xs">
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80 shadow-xs">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
                     <button
                       onClick={() => { setAdminCatalogStockFilter('all'); setAdminCatalogPage(1); }}
                       className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
@@ -2227,7 +2680,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <select
+                      value={adminCatalogFamilyFilter}
+                      onChange={(e) => { setAdminCatalogFamilyFilter(e.target.value); setAdminCatalogPage(1); }}
+                      className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
+                    >
+                      <option value="">All Botanical Families</option>
+                      <option value="amla">🌿 Amla Family (Tablet, Oil, Churna)</option>
+                      <option value="ashwagandha">🌿 Ashwagandha Family (Capsules, Churna)</option>
+                      <option value="triphala">🌿 Triphala Family (Churna, Tablets)</option>
+                      <option value="brahmi">🌿 Brahmi Family (Taila, Tablets)</option>
+                      <option value="kumkumadi">🌿 Kumkumadi Family (Tailam, Lepa)</option>
+                      <option value="shatavari">🌿 Shatavari Family</option>
+                    </select>
+
+                    <select
+                      value={adminCatalogFormFilter}
+                      onChange={(e) => { setAdminCatalogFormFilter(e.target.value); setAdminCatalogPage(1); }}
+                      className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
+                    >
+                      <option value="">All Formulations & Forms</option>
+                      <option value="churna">Churna (Powders)</option>
+                      <option value="tablet">Tablets / Vati</option>
+                      <option value="oil">Oils / Taila / Drops</option>
+                      <option value="capsule">Capsules</option>
+                      <option value="cream">Cosmetics / Cream</option>
+                      <option value="liquid">Liquid / Syrup</option>
+                    </select>
+
                     <select
                       value={adminCatalogCategory}
                       onChange={(e) => { setAdminCatalogCategory(e.target.value); setAdminCatalogPage(1); }}
@@ -2250,11 +2731,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <option value="Respiratory Care">Respiratory Care</option>
                     </select>
 
-                    <div className="relative min-w-[200px]">
+                    <div className="relative min-w-[180px]">
                       <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
                       <input
                         type="text"
-                        placeholder="Search name, SKU, brand..."
+                        placeholder="Search name, SKU, variant..."
                         value={adminCatalogSearch}
                         onChange={(e) => { setAdminCatalogSearch(e.target.value); setAdminCatalogPage(1); }}
                         className="w-full bg-white border border-slate-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
@@ -2341,26 +2822,162 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </div>
                     </div>
 
-                    <div className="bg-white border border-green-100 p-4 rounded-2xl space-y-3 shadow-2xs">
-                      <span className="block font-bold text-slate-900 text-xs uppercase tracking-wider">Product Visuals (Image Gallery)</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        <div className="space-y-1">
-                          <label className="font-semibold text-slate-700">Primary Image URL</label>
-                          <input type="text" placeholder="https://..." value={prodImg} onChange={e => setProdImg(e.target.value)} className="w-full bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
+                    {/* 🌿 BOTANICAL HERB FAMILY & LINKED FORMULATIONS */}
+                    <div className="bg-gradient-to-br from-amber-50/70 via-emerald-50/40 to-slate-50 border border-brand-gold-300 p-4 rounded-2xl space-y-3.5 shadow-2xs">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-brand-gold-200/60 pb-2">
+                        <div>
+                          <span className="block font-bold text-brand-green-950 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                            <Leaf className="w-4 h-4 text-emerald-700" />
+                            <span>Ayurvedic Herb Family & Sister Formulations</span>
+                          </span>
+                          <p className="text-[11px] text-slate-600 mt-0.5">
+                            Link sibling products (e.g. Amla Tablet, Amla Hair Oil, Amla Churna) so customers can switch forms smoothly.
+                          </p>
                         </div>
-                        <div className="space-y-1">
-                          <label className="font-semibold text-slate-700">Second Image URL (Optional)</label>
-                          <input type="text" placeholder="https://..." value={prodImg2} onChange={e => setProdImg2(e.target.value)} className="w-full bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="font-semibold text-slate-700">Third Image URL (Optional)</label>
-                          <input type="text" placeholder="https://..." value={prodImg3} onChange={e => setProdImg3(e.target.value)} className="w-full bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="font-semibold text-slate-700">Fourth Image URL (Optional)</label>
-                          <input type="text" placeholder="https://..." value={prodImg4} onChange={e => setProdImg4(e.target.value)} className="w-full bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="text-[10px] font-bold text-slate-500">Quick Herb:</span>
+                          {['Amla', 'Ashwagandha', 'Triphala', 'Brahmi', 'Kumkumadi', 'Shatavari'].map(h => (
+                            <button
+                              key={h}
+                              type="button"
+                              onClick={() => {
+                                setProdBaseHerb(h);
+                                setProdFamilyGroup(`${h.toLowerCase()}-family`);
+                              }}
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                                prodBaseHerb.toLowerCase() === h.toLowerCase()
+                                  ? 'bg-emerald-700 text-white shadow-xs'
+                                  : 'bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              }`}
+                            >
+                              🌿 {h}
+                            </button>
+                          ))}
                         </div>
                       </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700">Base Botanical Herb</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Amla, Ashwagandha"
+                            value={prodBaseHerb}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setProdBaseHerb(val);
+                              if (!prodFamilyGroup && val) setProdFamilyGroup(`${val.toLowerCase().trim()}-family`);
+                            }}
+                            className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 font-semibold"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700">Family Group ID</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. amla-family"
+                            value={prodFamilyGroup}
+                            onChange={e => setProdFamilyGroup(e.target.value)}
+                            className="w-full bg-white border border-slate-200 p-2 rounded-xl font-mono text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700">Formulation Type</label>
+                          <select
+                            value={prodFormulation}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setProdFormulation(val);
+                              if (val === 'tablet') setProdFormLabel('Tablets / Vati');
+                              else if (val === 'oil') setProdFormLabel('Taila / Hair Oil');
+                              else if (val === 'churna') setProdFormLabel('Churna / Herbal Powder');
+                              else if (val === 'capsule') setProdFormLabel('Vegetarian Capsules');
+                              else if (val === 'cream') setProdFormLabel('Lepa / Radiant Cream');
+                              else if (val === 'liquid') setProdFormLabel('Asava / Arishta / Syrup');
+                            }}
+                            className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
+                          >
+                            <option value="tablet">Tablets / Vati</option>
+                            <option value="oil">Taila / Scalp & Body Oil</option>
+                            <option value="churna">Churna / Herbal Powder</option>
+                            <option value="capsule">Vegetarian Capsules</option>
+                            <option value="cream">Lepa / Cream / Cosmetic</option>
+                            <option value="liquid">Liquid / Syrup / Tonic</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-700">Formulation Display Label</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Tablets / Vati, Hair Oil"
+                            value={prodFormLabel}
+                            onChange={e => setProdFormLabel(e.target.value)}
+                            className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 font-semibold"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Sister Products currently in this family */}
+                      {prodFamilyGroup && (
+                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 flex-wrap">
+                          <div className="text-[11px] text-slate-600 flex items-center gap-1.5">
+                            <span className="font-bold text-brand-green-950">Active Family Siblings:</span>
+                            {products.filter(p => p.familyGroup === prodFamilyGroup && p.id !== editProdId).length > 0 ? (
+                              <span className="text-emerald-700 font-bold">
+                                {products.filter(p => p.familyGroup === prodFamilyGroup && p.id !== editProdId).map(p => p.name).join(' • ')}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic">No other products linked yet in this family group.</span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const targetForm = prodFormulation === 'tablet' ? 'oil' : prodFormulation === 'oil' ? 'churna' : 'tablet';
+                                const targetLabel = targetForm === 'oil' ? 'Taila / Hair Oil' : targetForm === 'churna' ? 'Churna / Herbal Powder' : 'Tablets / Vati';
+                                handleCloneSisterFormulation({
+                                  id: editProdId || 'temp',
+                                  name: prodName,
+                                  baseHerb: prodBaseHerb,
+                                  familyGroup: prodFamilyGroup,
+                                  category: prodCategory,
+                                  brand: prodBrand,
+                                  price: prodPrice,
+                                  originalPrice: prodOrigPrice,
+                                  stock: prodStock,
+                                  description: prodDesc,
+                                  benefits: prodBenefits.split(',').map(b => b.trim()).filter(Boolean),
+                                  dosage: prodDosage,
+                                  usageInstructions: prodUsageInstructions,
+                                  mainImage: prodImg,
+                                  images: [],
+                                  featured: prodFeatured,
+                                  bestSeller: prodBestSeller
+                                } as Product, targetForm, targetLabel);
+                              }}
+                              className="px-2.5 py-1 rounded-xl bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 text-[10px] font-bold cursor-pointer transition-all shadow-xs flex items-center gap-1"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>+ Clone as Sibling Form (e.g. Oil/Churna)</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl space-y-2">
+                      <ImageUploadField
+                        id="product-primary-image"
+                        label="Product Image (URL or Upload)"
+                        value={prodImg}
+                        onChange={setProdImg}
+                        placeholder="https://... or upload local image file"
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -2454,6 +3071,306 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </div>
                     </div>
 
+                    {/* PRODUCT SIZES & VARIANTS MANAGEMENT SECTION */}
+                    <div className="bg-white border border-brand-gold-300/40 p-4 rounded-2xl space-y-3.5 shadow-2xs">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-2.5">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Layers className="w-4 h-4 text-brand-gold-600" />
+                            <span className="font-bold text-slate-900 text-xs">Product Sizes & Packaging Variants ({prodVariants.length})</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Manage Churna (100g/200g), Tablets (60/120 tab), Oils (100ml/200ml) or Cosmetics with individual prices.
+                          </p>
+                        </div>
+                        
+                        {/* Quick Presets Generator Buttons */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase">Presets:</span>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyVariantPreset('churna')}
+                            className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                            title="Generate 100g & 200g Churna Jars"
+                          >
+                            Churna (100g/200g)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyVariantPreset('tablets')}
+                            className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                            title="Generate 60 & 120 Tablets Bottles"
+                          >
+                            Tabs (60/120 Tab)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyVariantPreset('oil')}
+                            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                            title="Generate 100ml & 200ml Herbal Oils"
+                          >
+                            Oils (100ml/200ml)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApplyVariantPreset('cosmetics')}
+                            className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                            title="Generate 50g & 100g Cosmetics"
+                          >
+                            Cosmetics (50g/100g)
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Render Existing Variants List */}
+                      {prodVariants.length > 0 && (
+                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                          {prodVariants.map((v, index) => {
+                            const varImage = v.image || (v.form ? FORMULATION_IMAGES_MAP[v.form.toLowerCase()] : '') || prodImg || 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=600&q=80';
+                            return (
+                              <div 
+                                key={v.id || index} 
+                                className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-3 rounded-xl border transition-all ${
+                                  v.isDefault 
+                                    ? 'bg-amber-50/50 border-amber-300 shadow-2xs' 
+                                    : 'bg-slate-50 border-slate-200'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <img 
+                                    src={varImage} 
+                                    alt={v.name} 
+                                    className="w-10 h-10 rounded-lg object-cover border border-slate-200 bg-white shrink-0 shadow-2xs" 
+                                    referrerPolicy="no-referrer"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetDefaultVariant(index)}
+                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase transition-all cursor-pointer shrink-0 ${
+                                      v.isDefault 
+                                        ? 'bg-amber-500 text-white shadow-2xs' 
+                                        : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                                    }`}
+                                    title="Click to make this the default displayed variant"
+                                  >
+                                    {v.isDefault ? 'Default' : 'Set Default'}
+                                  </button>
+
+                                  <div className="space-y-0.5 min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-bold text-slate-900 text-xs">{v.name}</span>
+                                      {v.size && (
+                                        <span className="px-1.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200 text-[10px] font-mono font-bold">
+                                          {v.size}
+                                        </span>
+                                      )}
+                                      {v.form && (
+                                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[9px] uppercase font-bold">
+                                          {v.form}
+                                        </span>
+                                      )}
+                                      {v.image ? (
+                                        <span className="px-1 py-0.2 rounded bg-green-100 text-green-800 text-[8px] font-bold">Custom Photo</span>
+                                      ) : (
+                                        <span className="px-1 py-0.2 rounded bg-blue-100 text-blue-800 text-[8px] font-bold">Auto Form Image</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[11px] text-slate-600 flex-wrap">
+                                      <span className="font-bold text-slate-900">₹{v.price}</span>
+                                      {v.originalPrice && v.originalPrice > v.price && (
+                                        <span className="text-slate-400 line-through">₹{v.originalPrice}</span>
+                                      )}
+                                      <span>•</span>
+                                      <span>Stock: <strong className="text-slate-800">{v.stock}</strong></span>
+                                      {v.sku && (
+                                        <>
+                                          <span>•</span>
+                                          <span className="font-mono text-[10px] text-slate-500">SKU: {v.sku}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <button 
+                                  type="button" 
+                                  onClick={() => handleRemoveVariant(index)}
+                                  className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 cursor-pointer self-end sm:self-center shrink-0"
+                                  title="Remove Variant"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Add Variant Sub-Form */}
+                      <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1.5 border-b border-slate-200/60 pb-2">
+                          <span className="block font-semibold text-slate-800 text-[11px]">Add Custom Variant / Formulation</span>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-[10px] text-slate-500 font-medium">Quick Fill:</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVarName('60 Tablets Bottle');
+                                setVarSize('60 tab');
+                                setVarForm('tablet');
+                              }}
+                              className="px-2 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700 cursor-pointer transition-all"
+                            >
+                              💊 60 Tab
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVarName('100ml Taila / Oil Bottle');
+                                setVarSize('100ml');
+                                setVarForm('oil');
+                              }}
+                              className="px-2 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700 cursor-pointer transition-all"
+                            >
+                              💧 100ml Oil
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVarName('100g Churna Jar');
+                                setVarSize('100g');
+                                setVarForm('churna');
+                              }}
+                              className="px-2 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700 cursor-pointer transition-all"
+                            >
+                              🍯 100g Churna
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVarName('50g Radiant Cream');
+                                setVarSize('50g');
+                                setVarForm('cream');
+                              }}
+                              className="px-2 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700 cursor-pointer transition-all"
+                            >
+                              🧴 50g Cream
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div className="space-y-1 sm:col-span-1">
+                            <label className="text-[10px] font-bold text-slate-600">Variant Name *</label>
+                            <input 
+                              type="text" 
+                              placeholder="e.g. 100g Churna Jar, 60 Tab" 
+                              value={varName} 
+                              onChange={e => setVarName(e.target.value)} 
+                              className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-600">Size / Pack (e.g. 100g, 60 tab, 200ml)</label>
+                            <input 
+                              type="text" 
+                              placeholder="e.g. 100g, 200ml, 60 tab" 
+                              value={varSize} 
+                              onChange={e => setVarSize(e.target.value)} 
+                              className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-600">Form / Type</label>
+                            <select 
+                              value={varForm} 
+                              onChange={e => setVarForm(e.target.value)} 
+                              className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
+                            >
+                              <option value="churna">Churna (Powder Jar)</option>
+                              <option value="tablet">Tablets (Bottle / Vati)</option>
+                              <option value="oil">Oil / Taila (Dropper Flask)</option>
+                              <option value="capsule">Capsules</option>
+                              <option value="cream">Cream / Cosmetics</option>
+                              <option value="liquid">Liquid / Tonic</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <ImageUploadField
+                            id="variant-modal-image"
+                            label="Variant Image (Optional)"
+                            optional
+                            value={varImg}
+                            onChange={setVarImg}
+                            placeholder="Optional: Paste URL or upload photo"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-600">Price (₹) *</label>
+                            <input 
+                              type="number" 
+                              value={varPrice} 
+                              onChange={e => setVarPrice(Number(e.target.value))} 
+                              className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-600">Original Price (₹)</label>
+                            <input 
+                              type="number" 
+                              value={varOrigPrice} 
+                              onChange={e => setVarOrigPrice(Number(e.target.value))} 
+                              className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-600">Stock Count</label>
+                            <input 
+                              type="number" 
+                              value={varStock} 
+                              onChange={e => setVarStock(Number(e.target.value))} 
+                              className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-600">Variant SKU</label>
+                            <input 
+                              type="text" 
+                              placeholder="e.g. GL-1001-100G" 
+                              value={varSku} 
+                              onChange={e => setVarSku(e.target.value)} 
+                              className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-mono text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-1">
+                          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={varIsDefault} 
+                              onChange={e => setVarIsDefault(e.target.checked)} 
+                              className="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500" 
+                            />
+                            <span>Make this the default active variant</span>
+                          </label>
+
+                          <button 
+                            type="button" 
+                            onClick={handleAddVariant}
+                            className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-4 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add Variant</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Product FAQs Section */}
                     <div className="bg-white border border-green-100 p-4 rounded-2xl space-y-3.5 shadow-2xs">
                       <div className="flex justify-between items-center border-b border-slate-100 pb-2">
@@ -2541,64 +3458,434 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         const isOutOfStock = prod.stock <= 0;
 
                         return (
-                          <div key={prod.id} className="border border-green-100 bg-white hover:border-green-300 hover:shadow-md p-4.5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs shadow-xs transition-all">
-                            <div className="flex items-center gap-3.5 min-w-0">
-                              <img src={prod.mainImage} alt={prod.name} className="w-14 h-14 rounded-2xl object-cover flex-shrink-0 border border-slate-100 bg-slate-50 shadow-2xs" />
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h5 className="font-bold text-slate-900 text-sm">{prod.name}</h5>
-                                  {prod.sku && (
-                                    <span className="text-[10px] font-mono bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full border border-blue-200">
-                                      SKU: {prod.sku}
+                          <div key={prod.id} className={`border bg-white p-4.5 rounded-2xl flex flex-col text-xs shadow-xs transition-all ${
+                            expandedVariantProdId === prod.id ? 'border-amber-400 ring-2 ring-amber-400/20 shadow-md' : 'border-green-100 hover:border-green-300 hover:shadow-md'
+                          }`}>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                              <div className="flex items-center gap-3.5 min-w-0">
+                                <img src={prod.mainImage} alt={prod.name} className="w-14 h-14 rounded-2xl object-cover flex-shrink-0 border border-slate-100 bg-slate-50 shadow-2xs" />
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h5 className="font-bold text-slate-900 text-sm">{prod.name}</h5>
+                                    {prod.sku && (
+                                      <span className="text-[10px] font-mono bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full border border-blue-200">
+                                        SKU: {prod.sku}
+                                      </span>
+                                    )}
+                                    {(prod.familyGroup || prod.baseHerb) && (
+                                      <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                                        <Leaf className="w-2.5 h-2.5 text-emerald-600" />
+                                        <span>{prod.baseHerb || prod.familyGroup} • {prod.formLabel || prod.formulation || 'Classical'}</span>
+                                      </span>
+                                    )}
+                                    {prod.featured && (
+                                      <span className="text-[10px] font-bold bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full border border-violet-200">
+                                        Featured
+                                      </span>
+                                    )}
+                                    {prod.bestSeller && (
+                                      <span className="text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
+                                        Best Seller
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3 text-slate-600 mt-1 flex-wrap">
+                                    <span className="font-semibold text-green-700">{prod.category}</span>
+                                    <span>•</span>
+                                    <span className="font-bold text-slate-900 text-sm">₹{prod.price}</span>
+                                    {prod.originalPrice > prod.price && (
+                                      <span className="text-slate-400 line-through text-[11px]">₹{prod.originalPrice}</span>
+                                    )}
+                                    <span>•</span>
+                                    <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                                      isOutOfStock ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                                      isLowStock ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse' :
+                                      'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    }`}>
+                                      {isOutOfStock ? 'Out of Stock (0)' : isLowStock ? `Low Stock (${prod.stock})` : `Stock: ${prod.stock}`}
                                     </span>
-                                  )}
-                                  {prod.featured && (
-                                    <span className="text-[10px] font-bold bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full border border-violet-200">
-                                      Featured
-                                    </span>
-                                  )}
-                                  {prod.bestSeller && (
-                                    <span className="text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">
-                                      Best Seller
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-3 text-slate-600 mt-1 flex-wrap">
-                                  <span className="font-semibold text-green-700">{prod.category}</span>
-                                  <span>•</span>
-                                  <span className="font-bold text-slate-900 text-sm">₹{prod.price}</span>
-                                  {prod.originalPrice > prod.price && (
-                                    <span className="text-slate-400 line-through text-[11px]">₹{prod.originalPrice}</span>
-                                  )}
-                                  <span>•</span>
-                                  <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                                    isOutOfStock ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                                    isLowStock ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse' :
-                                    'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  }`}>
-                                    {isOutOfStock ? 'Out of Stock (0)' : isLowStock ? `Low Stock (${prod.stock})` : `Stock: ${prod.stock}`}
-                                  </span>
+                                    {prod.variants && prod.variants.length > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedVariantProdId(expandedVariantProdId === prod.id ? null : prod.id)}
+                                        className="px-2 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-bold cursor-pointer transition-all flex items-center gap-1"
+                                      >
+                                        <Boxes className="w-3 h-3 text-amber-600" />
+                                        <span>{prod.variants.length} Variants ({prod.variants.map(v => v.size || v.name).join(', ')})</span>
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
+                              <div className="flex items-center gap-2 self-end sm:self-center shrink-0 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCloneSisterFormulation(
+                                    prod, 
+                                    prod.formulation === 'tablet' ? 'oil' : prod.formulation === 'oil' ? 'churna' : 'tablet',
+                                    prod.formulation === 'tablet' ? 'Taila / Hair Oil' : prod.formulation === 'oil' ? 'Churna / Herbal Powder' : 'Tablets / Vati'
+                                  )}
+                                  className="px-2.5 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-xs flex items-center gap-1 cursor-pointer transition-all shadow-2xs"
+                                  title="Create a sibling formulation (e.g., Oil, Tablets, or Churna) linked to this product's family"
+                                >
+                                  <Leaf className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>+ Sister Form</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedVariantProdId(expandedVariantProdId === prod.id ? null : prod.id)}
+                                  className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs ${
+                                    expandedVariantProdId === prod.id
+                                      ? 'bg-amber-500 text-white shadow-xs'
+                                      : prod.variants && prod.variants.length > 0
+                                        ? 'border border-amber-300 bg-amber-50/80 hover:bg-amber-100 text-amber-900'
+                                        : 'border border-slate-200 hover:bg-slate-50 text-slate-700'
+                                  }`}
+                                  title="Manage Variants, Sizes & Packaging"
+                                >
+                                  <Boxes className="w-3.5 h-3.5" />
+                                  <span>{prod.variants && prod.variants.length > 0 ? `Variants (${prod.variants.length})` : '+ Add Variants'}</span>
+                                  {expandedVariantProdId === prod.id ? (
+                                    <ChevronUp className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                                <button 
+                                  onClick={() => handleEditProductOpen(prod)}
+                                  className="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
+                                  title="Edit Details"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5 text-green-600" />
+                                  <span>Edit</span>
+                                </button>
+                                <button 
+                                  onClick={() => onDeleteProduct(prod.id)}
+                                  className="px-3.5 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-600 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
+                                  title="Delete Compound"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                              <button 
-                                onClick={() => handleEditProductOpen(prod)}
-                                className="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
-                                title="Edit Details"
-                              >
-                                <Edit2 className="w-3.5 h-3.5 text-green-600" />
-                                <span>Edit</span>
-                              </button>
-                              <button 
-                                onClick={() => onDeleteProduct(prod.id)}
-                                className="px-3.5 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-600 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
-                                title="Delete Compound"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Delete</span>
-                              </button>
-                            </div>
+
+                            {/* INLINE EXPANDED VARIANT DRAWER */}
+                            {expandedVariantProdId === prod.id && (
+                              <div className="mt-4 pt-3.5 border-t border-amber-200/80 bg-amber-50/40 -mx-4.5 -mb-4.5 p-4.5 rounded-b-2xl space-y-3.5 animate-in slide-in-from-top-2 duration-200">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                  <div>
+                                    <h6 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                                      <Layers className="w-4 h-4 text-amber-600" />
+                                      <span>Packaging & Variant Matrix: {prod.name}</span>
+                                    </h6>
+                                    <p className="text-[11px] text-slate-500 mt-0.5">
+                                      Manage Churna/Tablet/Oil/Cosmetic sizes, real-time stock counters, and individual SKU pricing.
+                                    </p>
+                                  </div>
+
+                                  {/* Quick Presets for this product */}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Presets:</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleQuickAddPresetVariant(prod, '100g Churna Jar', '100g', 'churna', 1, 1, 25)}
+                                      className="px-2 py-0.5 bg-white border border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-amber-900 rounded-lg text-[10px] font-bold cursor-pointer transition-all shadow-2xs"
+                                    >
+                                      + 100g Churna
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleQuickAddPresetVariant(prod, '200g Value Pack', '200g', 'churna', 1.8, 1.8, 20)}
+                                      className="px-2 py-0.5 bg-white border border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-amber-900 rounded-lg text-[10px] font-bold cursor-pointer transition-all shadow-2xs"
+                                    >
+                                      + 200g Churna
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleQuickAddPresetVariant(prod, '60 Tablets Bottle', '60 tab', 'tablet', 1, 1, 30)}
+                                      className="px-2 py-0.5 bg-white border border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 text-emerald-900 rounded-lg text-[10px] font-bold cursor-pointer transition-all shadow-2xs"
+                                    >
+                                      + 60 Tab
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleQuickAddPresetVariant(prod, '120 Tablets Double Pack', '120 tab', 'tablet', 1.85, 1.85, 20)}
+                                      className="px-2 py-0.5 bg-white border border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 text-emerald-900 rounded-lg text-[10px] font-bold cursor-pointer transition-all shadow-2xs"
+                                    >
+                                      + 120 Tab
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleQuickAddPresetVariant(prod, '100ml Bottle', '100ml', 'oil', 1, 1, 25)}
+                                      className="px-2 py-0.5 bg-white border border-blue-200 hover:border-blue-400 hover:bg-blue-50 text-blue-900 rounded-lg text-[10px] font-bold cursor-pointer transition-all shadow-2xs"
+                                    >
+                                      + 100ml Oil
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleQuickAddPresetVariant(prod, '200ml Family Pack', '200ml', 'oil', 1.8, 1.8, 15)}
+                                      className="px-2 py-0.5 bg-white border border-blue-200 hover:border-blue-400 hover:bg-blue-50 text-blue-900 rounded-lg text-[10px] font-bold cursor-pointer transition-all shadow-2xs"
+                                    >
+                                      + 200ml Oil
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Variants Listing Table */}
+                                {prod.variants && prod.variants.length > 0 ? (
+                                  <div className="space-y-2 bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                                    <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-2 pb-1 border-b border-slate-100">
+                                      <div className="col-span-4 sm:col-span-3">Form & Size</div>
+                                      <div className="col-span-3 sm:col-span-2 text-center">SKU</div>
+                                      <div className="col-span-3 sm:col-span-2 text-center">Selling / MRP</div>
+                                      <div className="col-span-5 sm:col-span-3 text-center">Warehouse Stock</div>
+                                      <div className="col-span-2 text-right">Actions</div>
+                                    </div>
+
+                                    {prod.variants.map(v => (
+                                      <div 
+                                        key={v.id}
+                                        className={`grid grid-cols-12 gap-2 items-center p-2 rounded-xl text-xs transition-all ${
+                                          v.isDefault ? 'bg-amber-50/80 border border-amber-300' : 'bg-slate-50/80 border border-slate-200'
+                                        }`}
+                                      >
+                                        <div className="col-span-4 sm:col-span-3 flex items-center gap-2 min-w-0">
+                                          <div className="relative group shrink-0">
+                                            <img 
+                                              src={getVariantImage(v, prod)} 
+                                              alt={v.name} 
+                                              className="w-8 h-8 rounded-lg object-cover border border-slate-200 bg-white shrink-0 shadow-2xs group-hover:opacity-80 transition-opacity" 
+                                              referrerPolicy="no-referrer"
+                                            />
+                                            <label 
+                                              className="absolute inset-0 bg-black/50 text-white rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity"
+                                              title="Upload custom packaging photo for this variant"
+                                            >
+                                              <Camera className="w-3.5 h-3.5" />
+                                              <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                  if (e.target.files && e.target.files[0]) {
+                                                    const reader = new FileReader();
+                                                    reader.onload = (re) => {
+                                                      if (re.target?.result) {
+                                                        handleQuickUpdateVariantImage(prod, v.id, re.target.result as string);
+                                                      }
+                                                    };
+                                                    reader.readAsDataURL(e.target.files[0]);
+                                                  }
+                                                }}
+                                              />
+                                            </label>
+                                          </div>
+                                          <div className="space-y-0.5 min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <span className="font-bold text-slate-900 truncate">{v.name}</span>
+                                              {v.isDefault && (
+                                                <span className="px-1.5 py-0.2 text-[9px] bg-amber-500 text-white font-bold rounded-md">
+                                                  DEFAULT
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="flex items-center gap-1 flex-wrap text-[10px]">
+                                              {v.size && (
+                                                <span className="px-1.5 py-0.2 bg-white text-slate-800 font-mono font-bold rounded border border-slate-200">
+                                                  {v.size}
+                                                </span>
+                                              )}
+                                              {v.form && (
+                                                <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 uppercase font-bold rounded text-[9px]">
+                                                  {v.form}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="col-span-3 sm:col-span-2 text-center">
+                                          <span className="font-mono text-[11px] text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                            {v.sku || '—'}
+                                          </span>
+                                        </div>
+
+                                        <div className="col-span-3 sm:col-span-2 flex items-center justify-center gap-1">
+                                          <div className="flex items-center">
+                                            <span className="text-slate-400 text-[10px] mr-0.5">₹</span>
+                                            <input
+                                              type="number"
+                                              value={v.price}
+                                              onChange={(e) => handleQuickUpdateVariantPrice(prod, v.id, Number(e.target.value))}
+                                              className="w-16 bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold text-slate-900 text-center focus:ring-1 focus:ring-green-500"
+                                              title="Variant Selling Price (₹)"
+                                            />
+                                          </div>
+                                          {v.originalPrice && v.originalPrice > v.price && (
+                                            <span className="text-[10px] text-slate-400 line-through">₹{v.originalPrice}</span>
+                                          )}
+                                        </div>
+
+                                        <div className="col-span-5 sm:col-span-3 flex items-center justify-center gap-1.5">
+                                          <div className="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden shadow-2xs">
+                                            <button
+                                              type="button"
+                                              onClick={() => handleQuickUpdateVariantStock(prod, v.id, -1)}
+                                              className="px-2 py-0.5 hover:bg-slate-100 text-slate-600 font-bold cursor-pointer"
+                                              title="Decrease 1"
+                                            >
+                                              -
+                                            </button>
+                                            <input
+                                              type="number"
+                                              value={v.stock || 0}
+                                              onChange={(e) => handleQuickUpdateVariantStock(prod, v.id, Number(e.target.value), true)}
+                                              className="w-12 text-center text-xs font-bold text-slate-900 border-x border-slate-200 py-0.5 focus:outline-none"
+                                            />
+                                            <button
+                                              type="button"
+                                              onClick={() => handleQuickUpdateVariantStock(prod, v.id, 1)}
+                                              className="px-2 py-0.5 hover:bg-slate-100 text-slate-600 font-bold cursor-pointer"
+                                              title="Increase 1"
+                                            >
+                                              +
+                                            </button>
+                                          </div>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => handleQuickUpdateVariantStock(prod, v.id, 10)}
+                                            className="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[10px] font-bold cursor-pointer"
+                                            title="Add 10 units"
+                                          >
+                                            +10
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleQuickUpdateVariantStock(prod, v.id, 25)}
+                                            className="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[10px] font-bold cursor-pointer"
+                                            title="Add 25 units"
+                                          >
+                                            +25
+                                          </button>
+                                        </div>
+
+                                        <div className="col-span-2 flex items-center justify-end gap-1.5">
+                                          {!v.isDefault && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleQuickSetDefaultVariant(prod, v.id)}
+                                              className="px-2 py-1 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 text-amber-800 rounded text-[10px] font-bold cursor-pointer shadow-2xs"
+                                              title="Set as Default Display Variant"
+                                            >
+                                              Default
+                                            </button>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={() => handleQuickDeleteVariant(prod, v.id)}
+                                            className="p-1 hover:bg-rose-50 text-rose-500 hover:text-rose-700 rounded cursor-pointer"
+                                            title="Delete Variant"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="bg-white p-3 rounded-xl border border-slate-200 text-center text-slate-500 text-xs">
+                                    No variants configured yet. Use the Quick Presets above or add custom sizes below.
+                                  </div>
+                                )}
+
+                                {/* Custom Inline Quick Variant Adder Form */}
+                                <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2.5">
+                                  <div className="text-[11px] font-bold text-slate-800 flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5">
+                                      <PackagePlus className="w-3.5 h-3.5 text-green-600" />
+                                      <span>Add Custom Variant / Bottle / Size</span>
+                                    </div>
+                                    <span className="text-[10px] text-slate-400 font-normal">Custom packaging & pricing</span>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 sm:grid-cols-7 gap-2">
+                                    <div className="col-span-2 sm:col-span-2">
+                                      <input
+                                        type="text"
+                                        placeholder="Variant Name (e.g. 500g Jar)"
+                                        value={getQuickVarForm(prod.id, prod.price, prod.originalPrice).name}
+                                        onChange={(e) => updateQuickVarForm(prod.id, 'name', e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-green-500"
+                                      />
+                                    </div>
+                                    <div>
+                                      <input
+                                        type="text"
+                                        placeholder="Size (e.g. 100g, 60 tab)"
+                                        value={getQuickVarForm(prod.id, prod.price, prod.originalPrice).size}
+                                        onChange={(e) => updateQuickVarForm(prod.id, 'size', e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-green-500"
+                                      />
+                                    </div>
+                                    <div>
+                                      <select
+                                        value={getQuickVarForm(prod.id, prod.price, prod.originalPrice).form}
+                                        onChange={(e) => updateQuickVarForm(prod.id, 'form', e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:bg-white focus:ring-1 focus:ring-green-500"
+                                      >
+                                        <option value="churna">Churna (Powder)</option>
+                                        <option value="tablet">Tablets</option>
+                                        <option value="oil">Oil / Taila</option>
+                                        <option value="capsule">Capsules</option>
+                                        <option value="cream">Cream / Cosmetics</option>
+                                        <option value="liquid">Liquid / Syrup</option>
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <input
+                                        type="number"
+                                        placeholder="Price (₹)"
+                                        value={getQuickVarForm(prod.id, prod.price, prod.originalPrice).price}
+                                        onChange={(e) => updateQuickVarForm(prod.id, 'price', Number(e.target.value))}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-green-500"
+                                      />
+                                    </div>
+                                    <div>
+                                      <input
+                                        type="number"
+                                        placeholder="Stock"
+                                        value={getQuickVarForm(prod.id, prod.price, prod.originalPrice).stock}
+                                        onChange={(e) => updateQuickVarForm(prod.id, 'stock', Number(e.target.value))}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-900 focus:bg-white focus:ring-1 focus:ring-green-500"
+                                      />
+                                    </div>
+                                    <div className="col-span-2 sm:col-span-1 flex items-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleQuickAddVariantToProduct(prod)}
+                                        className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-1 px-2.5 rounded-lg text-xs flex items-center justify-center gap-1 cursor-pointer transition-all shadow-2xs"
+                                      >
+                                        <Plus className="w-3 h-3" />
+                                        <span>Add</span>
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Variant Image Selector for Quick Variant */}
+                                  <div className="pt-1.5 border-t border-slate-100">
+                                    <ImageUploadField
+                                      compact
+                                      placeholder="Variant image URL or upload photo (Optional - auto-assigned from formulation if blank)"
+                                      value={getQuickVarForm(prod.id, prod.price, prod.originalPrice).image || ''}
+                                      onChange={(imgUrl) => updateQuickVarForm(prod.id, 'image', imgUrl)}
+                                      presetCategory={getQuickVarForm(prod.id, prod.price, prod.originalPrice).form || 'all'}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -2954,7 +4241,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                     <img src={item.mainImage} alt={item.productName} className="w-10 h-10 object-cover rounded-lg shrink-0 border border-slate-100" />
                                   )}
                                   <div className="min-w-0 text-xs">
-                                    <p className="font-bold text-slate-900 truncate">{item.productName}</p>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <p className="font-bold text-slate-900 truncate">{item.productName}</p>
+                                      {(item.variantName || item.variantSize) && (
+                                        <span className="text-[10px] font-semibold bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.2 rounded-md shrink-0">
+                                          {item.variantName || item.variantSize}
+                                        </span>
+                                      )}
+                                    </div>
                                     <p className="text-green-700 font-mono text-[11px]">Qty: {item.quantity} × ₹{item.price}</p>
                                   </div>
                                 </div>
@@ -4019,6 +5313,343 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* Global Variant Inventory Matrix Modal */}
+      {showVariantMatrixModal && (() => {
+        // Flatten all variants across all products
+        const allFlattenedVariants: {
+          product: Product;
+          variant: ProductVariant;
+        }[] = [];
+
+        products.forEach(p => {
+          if (p.variants && p.variants.length > 0) {
+            p.variants.forEach(v => {
+              allFlattenedVariants.push({ product: p, variant: v });
+            });
+          }
+        });
+
+        const filteredMatrix = allFlattenedVariants.filter(({ product, variant }) => {
+          if (matrixFormFilter) {
+            const target = matrixFormFilter.toLowerCase();
+            const formMatch = (variant.form || '').toLowerCase().includes(target) || (variant.name || '').toLowerCase().includes(target) || (variant.size || '').toLowerCase().includes(target);
+            if (!formMatch) return false;
+          }
+
+          if (matrixStockFilter === 'low' && (variant.stock > 10 || variant.stock <= 0)) return false;
+          if (matrixStockFilter === 'out' && variant.stock > 0) return false;
+
+          if (matrixSearch.trim()) {
+            const q = matrixSearch.toLowerCase().trim();
+            const nameMatch = (product.name || '').toLowerCase().includes(q);
+            const varMatch = (variant.name || '').toLowerCase().includes(q);
+            const skuMatch = (variant.sku || product.sku || '').toLowerCase().includes(q);
+            const sizeMatch = (variant.size || '').toLowerCase().includes(q);
+            const formMatch = (variant.form || '').toLowerCase().includes(q);
+            return nameMatch || varMatch || skuMatch || sizeMatch || formMatch;
+          }
+
+          return true;
+        });
+
+        const lowStockVariantsCount = allFlattenedVariants.filter(v => v.variant.stock > 0 && v.variant.stock <= 10).length;
+        const outOfStockVariantsCount = allFlattenedVariants.filter(v => v.variant.stock <= 0).length;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden my-auto">
+              
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-amber-50/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                      <span>Store-Wide Variant & Packaging Inventory Matrix</span>
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Real-time cross-catalog stock control, packaging sizes (100g, 200g, 60 tab, 100ml), and SKU pricing.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowVariantMatrixModal(false)}
+                  className="p-2 hover:bg-slate-200 text-slate-500 rounded-full transition-all cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* KPI Summary Bar */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-slate-50/60 border-b border-slate-100 text-xs">
+                <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Total Variants</span>
+                  <p className="text-lg font-extrabold text-slate-900 mt-0.5">{allFlattenedVariants.length} Active SKUs</p>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Total Products</span>
+                  <p className="text-lg font-extrabold text-slate-900 mt-0.5">{products.length} Formulations</p>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-amber-200 shadow-2xs">
+                  <span className="text-[10px] uppercase font-bold text-amber-700">Low Stock Variants</span>
+                  <p className="text-lg font-extrabold text-amber-900 mt-0.5">{lowStockVariantsCount} Units (&lt;10)</p>
+                </div>
+                <div className="bg-white p-3 rounded-2xl border border-rose-200 shadow-2xs">
+                  <span className="text-[10px] uppercase font-bold text-rose-700">Out of Stock</span>
+                  <p className="text-lg font-extrabold text-rose-900 mt-0.5">{outOfStockVariantsCount} SKUs (0)</p>
+                </div>
+              </div>
+
+              {/* Toolbar */}
+              <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                  <button
+                    type="button"
+                    onClick={() => { setMatrixFormFilter(''); setMatrixStockFilter('all'); }}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      !matrixFormFilter && matrixStockFilter === 'all'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    All ({allFlattenedVariants.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatrixFormFilter('churna')}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      matrixFormFilter === 'churna' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
+                    }`}
+                  >
+                    Churna / Powder
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatrixFormFilter('tablet')}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      matrixFormFilter === 'tablet' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                    }`}
+                  >
+                    Tablets / Vati
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatrixFormFilter('oil')}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      matrixFormFilter === 'oil' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-800 hover:bg-blue-100'
+                    }`}
+                  >
+                    Taila / Oil
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatrixFormFilter('cream')}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      matrixFormFilter === 'cream' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-800 hover:bg-purple-100'
+                    }`}
+                  >
+                    Cosmetics
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatrixStockFilter(matrixStockFilter === 'low' ? 'all' : 'low')}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                      matrixStockFilter === 'low' ? 'bg-amber-600 text-white' : 'border border-amber-300 text-amber-800 hover:bg-amber-50'
+                    }`}
+                  >
+                    Low Stock ({lowStockVariantsCount})
+                  </button>
+                </div>
+
+                <div className="relative min-w-[220px]">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Search variant, size, SKU..."
+                    value={matrixSearch}
+                    onChange={(e) => setMatrixSearch(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
+                  />
+                  {matrixSearch && (
+                    <button
+                      onClick={() => setMatrixSearch('')}
+                      className="absolute right-2.5 top-1.5 text-xs text-slate-400 hover:text-slate-700 font-bold"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Table Body */}
+              <div className="overflow-y-auto max-h-[55vh] p-4 divide-y divide-slate-100 custom-scrollbar">
+                {filteredMatrix.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500 text-xs">
+                    No variants match the current search/filter criteria.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-3 pb-1 border-b border-slate-100">
+                      <div className="col-span-4 sm:col-span-3">Parent Compound</div>
+                      <div className="col-span-3 sm:col-span-3">Variant & Size</div>
+                      <div className="col-span-2 text-center">SKU / Code</div>
+                      <div className="col-span-3 sm:col-span-2 text-center">Price & MRP</div>
+                      <div className="col-span-12 sm:col-span-2 text-center">Live Stock Control</div>
+                    </div>
+
+                    {filteredMatrix.map(({ product, variant }) => {
+                      const isLowStock = variant.stock > 0 && variant.stock <= 10;
+                      const isOutOfStock = variant.stock <= 0;
+
+                      return (
+                        <div 
+                          key={product.id + '_' + variant.id}
+                          className={`grid grid-cols-12 gap-2 items-center p-3 rounded-2xl border text-xs transition-all ${
+                            isOutOfStock 
+                              ? 'bg-rose-50/40 border-rose-200' 
+                              : isLowStock 
+                                ? 'bg-amber-50/40 border-amber-200' 
+                                : 'bg-white border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          {/* Parent Product */}
+                          <div className="col-span-4 sm:col-span-3 flex items-center gap-2.5 min-w-0">
+                            <img src={product.mainImage} alt={product.name} className="w-9 h-9 rounded-xl object-cover border border-slate-100 flex-shrink-0 bg-slate-50" />
+                            <div className="min-w-0">
+                              <h6 className="font-bold text-slate-900 text-xs truncate" title={product.name}>{product.name}</h6>
+                              <span className="text-[10px] text-green-700 font-semibold">{product.category}</span>
+                            </div>
+                          </div>
+
+                          {/* Variant & Size */}
+                          <div className="col-span-3 sm:col-span-3 flex items-center gap-2 min-w-0">
+                            <img 
+                              src={getVariantImage(variant, product)} 
+                              alt={variant.name} 
+                              className="w-8 h-8 rounded-lg object-cover border border-slate-200 bg-white shrink-0 shadow-2xs" 
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="space-y-0.5 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-slate-900 truncate">{variant.name}</span>
+                                {variant.isDefault && (
+                                  <span className="px-1.5 py-0.2 text-[9px] bg-amber-500 text-white font-bold rounded-md">
+                                    Default
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 flex-wrap text-[10px]">
+                                {variant.size && (
+                                  <span className="px-1.5 py-0.2 bg-slate-100 text-slate-800 font-mono font-bold rounded border border-slate-200">
+                                    {variant.size}
+                                  </span>
+                                )}
+                                {variant.form && (
+                                  <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 uppercase font-bold rounded text-[9px]">
+                                    {variant.form}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* SKU */}
+                          <div className="col-span-2 text-center">
+                            <span className="font-mono text-[11px] text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                              {variant.sku || product.sku || '—'}
+                            </span>
+                          </div>
+
+                          {/* Selling Price & MRP */}
+                          <div className="col-span-3 sm:col-span-2 flex items-center justify-center gap-1">
+                            <div className="flex items-center">
+                              <span className="text-slate-400 text-[10px] mr-0.5">₹</span>
+                              <input
+                                type="number"
+                                value={variant.price}
+                                onChange={(e) => handleQuickUpdateVariantPrice(product, variant.id, Number(e.target.value))}
+                                className="w-16 bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold text-slate-900 text-center focus:ring-1 focus:ring-green-500"
+                                title="Edit Variant Selling Price (₹)"
+                              />
+                            </div>
+                            {variant.originalPrice && variant.originalPrice > variant.price && (
+                              <span className="text-[10px] text-slate-400 line-through">₹{variant.originalPrice}</span>
+                            )}
+                          </div>
+
+                          {/* Live Stock Stepper & Quick Restock */}
+                          <div className="col-span-12 sm:col-span-2 flex items-center justify-center gap-1.5 flex-wrap">
+                            <div className="flex items-center border border-slate-200 rounded-lg bg-white overflow-hidden shadow-2xs">
+                              <button
+                                type="button"
+                                onClick={() => handleQuickUpdateVariantStock(product, variant.id, -1)}
+                                className="px-2 py-0.5 hover:bg-slate-100 text-slate-600 font-bold cursor-pointer"
+                                title="Decrease 1"
+                              >
+                                -
+                              </button>
+                              <input
+                                type="number"
+                                value={variant.stock || 0}
+                                onChange={(e) => handleQuickUpdateVariantStock(product, variant.id, Number(e.target.value), true)}
+                                className="w-12 text-center text-xs font-bold text-slate-900 border-x border-slate-200 py-0.5 focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleQuickUpdateVariantStock(product, variant.id, 1)}
+                                className="px-2 py-0.5 hover:bg-slate-100 text-slate-600 font-bold cursor-pointer"
+                                title="Increase 1"
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleQuickUpdateVariantStock(product, variant.id, 25)}
+                              className="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[10px] font-bold cursor-pointer"
+                              title="Restock +25"
+                            >
+                              +25
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleQuickUpdateVariantStock(product, variant.id, 50)}
+                              className="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[10px] font-bold cursor-pointer"
+                              title="Restock +50"
+                            >
+                              +50
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between text-xs">
+                <span className="text-slate-500">
+                  Showing <strong>{filteredMatrix.length}</strong> of <strong>{allFlattenedVariants.length}</strong> total variant SKUs.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowVariantMatrixModal(false)}
+                  className="px-5 py-2 bg-slate-900 hover:bg-black text-white font-bold rounded-xl cursor-pointer transition-all shadow-xs"
+                >
+                  Close Matrix
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Forgot Password Recovery Modal */}
       <ForgotPasswordModal
