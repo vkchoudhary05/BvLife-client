@@ -215,147 +215,231 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
       </section>
 
   {/* DOCTOR CONSULTATION BANNER */}
-<section className="max-w-[1440px] mx-auto px-2 sm:px-4 lg:px-8 mt-6 sm:mt-8">
- <div
+<section className="max-w-[1440px] mx-auto px-6 sm:px-4 lg:px-8 ">
+  <div
     className="
       w-full
-      rounded-xl sm:rounded-2xl
-      bg-brand-green-700
-      cursor-pointer
-      group
       flex
       flex-col
       lg:flex-row
       lg:h-[350px]
-      overflow-visible
+      lg:rounded-2xl
+      lg:bg-brand-gold-700
+      lg:overflow-visible
       relative
     "
-    onClick={() => onNavigate("consult-doctor")}
   >
 
-    {/* DOCTOR IMAGE */}
- {/* DOCTOR IMAGE */}
-<div
-  className="
-    order-1
-    lg:order-2
-    w-full
-    lg:w-[30%]
-    h-[220px]
-    sm:h-[300px]
-    md:h-[360px]
-    lg:h-[360px]
-    relative
-    overflow-visible
-    flex
-    items-end
-    justify-center
-    lg:justify-end
-  "
->
-  <img
-    src="/assets/Dr3.jpeg"
-    alt="Consult Ayurvedic Doctor"
-    className="
-      absolute
-      bottom-0
-      left-1/2
-      -translate-x-1/2
-      lg:left-auto
-      lg:right-[-60px]
-      lg:translate-x-0
-      h-[260px]
-      sm:h-[340px]
-      md:h-[400px]
-      lg:h-[390px]
-      w-auto
-      max-w-none
-      object-contain
-      object-bottom
-      group-hover:scale-[1.02]
-      transition-transform
-      duration-500
-    "
-  />
-</div>
-
-    {/* INFORMATION */}
+    {/* DOCTOR IMAGE - sits BEHIND the gold card */}
     <div
       className="
-        order-2
-        lg:order-1
+        order-1
+        lg:order-2
         w-full
-        lg:w-[63%]
-        px-6
-        sm:px-8
-        lg:px-10
-        xl:px-16
-        py-8
-        sm:py-10
-        lg:py-12
+        lg:w-[30%]
         flex
-        flex-col
         justify-center
+        lg:justify-end
+        relative
+        z-0
+        lg:z-0
+        lg:h-full
       "
     >
-      <h2
+      <img
+        src="/assets/Dr6.png"
+        alt="Consult Ayurvedic Doctor"
         className="
-          text-white
-          font-serif
-          font-normal
-          text-[30px]
-          sm:text-[20px]
-          lg:text-[15px]
-          xl:text-[35px]
-          leading-[1.15]
+          h-[450px]
+          sm:h-[360px]
+          md:h-[400px]
+          lg:absolute
+          lg:h-[415px]
+          lg:bottom-0
+          lg:right-[-60px]
+          w-auto
+          max-w-none
+          object-contain
+          object-bottom
+          mb-[-20px]
+          sm:mb-[-70px]
+          md:mb-[-80px]
+          lg:mb-[-55px]
+          transition-transform
+          duration-500
         "
-      >
-        Find Out The Root Cause Of
-        <br />
-        Your Problems
-      </h2>
-
-      <p
-        className="
-          mt-2
-          text-white
-          text-[10px]
-          sm:text-[16px]
-          lg:text-[17px]
-          xl:text-[14px]
-          leading-[1.45]
-          max-w-[650px]
-        "
-      >
-        As per Ayurveda, no two individuals are alike. Ayurveda
-        offers personalised treatment for each individual at all
-        touch-points. Consult our expert Vaidyas to get root
-        cause-based personalised treatment from the comfort of
-        your home.
-      </p>
-
-      <button
-        className="
-          mt-7
-          w-fit
-          bg-[#f5ead2]
-          text-black
-          px-8
-          sm:px-10
-          py-3
-          sm:py-3.5
-          rounded-lg
-          font-bold
-          text-[10px]
-          sm:text-[14px]
-          tracking-[2px]
-          hover:bg-white
-          transition-colors
-        "
-      >
-        CONSULT VAIDYA
-      </button>
+      />
     </div>
+{/* CARD / TEXT */}
+<div
+  className="
+    order-2
+    lg:order-1
+    w-full
+    lg:w-[63%]
+    rounded-2xl
+    lg:rounded-none
+    bg-brand-gold-500
+    lg:bg-transparent
+    cursor-pointer
+    group
+    px-6
+    sm:px-8
+    lg:px-10
+    xl:px-16
+    pt-7
+    sm:pt-8
+    md:pt-10
+    lg:py-10
+    pb-8
+    flex
+    flex-col
+    items-center
+    justify-center
+    text-center
+    relative
+    z-10
+    -mt-22
+    sm:-mt-10
+    md:-mt-12
+    lg:mt-0
+    animate-fade-in-up
+  "
+  onClick={() => onNavigate("consult-doctor")}
+>
+  {/* Doctor Name */}
+  <h2
+    className="
+      text-white
+      font-serif
+      font-normal
+      text-[25px]
+      sm:text-[29px]
+      lg:text-[28px]
+      xl:text-[35px]
+      leading-[1.15]
+      max-w-[650px]
+      animate-slide-up
+    "
+  >
+    Consult Dr. Sanjeev Rastogi
+    <br />
+    <span className="text-[20px] sm:text-[23px] lg:text-[24px] xl:text-[28px]">
+      Ayurveda Consultant
+    </span>
+  </h2>
+
+  {/* Qualifications Badge */}
+  <div
+    className="
+      mt-3
+      flex
+      flex-wrap
+      items-center
+      justify-center
+      gap-2
+      sm:gap-3
+      animate-slide-up-delay
+    "
+  >
+    <span className="bg-white/20 backdrop-blur-sm text-white px-3 sm:px-4 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold tracking-wide border border-white/30">
+      🎓 Ph.D.
+    </span>
+    <span className="bg-white/20 backdrop-blur-sm text-white px-3 sm:px-4 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold tracking-wide border border-white/30">
+      MD (Ayurveda)
+    </span>
+    <span className="bg-white/20 backdrop-blur-sm text-white px-3 sm:px-4 py-1 rounded-full text-[11px] sm:text-[12px] font-semibold tracking-wide border border-white/30">
+      ⏳ 30+ Years Experience
+    </span>
+  </div>
+
+  {/* Description */}
+  <p
+    className="
+      mt-4
+      text-white
+      text-[13px]
+      sm:text-[15px]
+      lg:text-[15px]
+      xl:text-[16px]
+      leading-[1.6]
+      max-w-[580px]
+      animate-fade-in
+    "
+  >
+    Discover personalised Ayurvedic guidance with Dr. Sanjeev Rastogi.
+    Understand your concerns from an Ayurvedic perspective and explore
+    a personalised approach focused on your individual needs and
+    overall wellbeing.
+  </p>
+
+  {/* Button */}
+ <button
+  className="
+    mt-6
+    inline-flex
+    items-center
+    justify-center
+    bg-[#f5ead9]
+    text-black
+
+    px-8
+    sm:px-10
+    lg:px-9
+    xl:px-11
+
+    py-3
+    sm:py-3.5
+    lg:py-3.5
+
+    rounded-lg
+
+    font-bold
+    text-[11px]
+    sm:text-[13px]
+    lg:text-[13px]
+    xl:text-[14px]
+
+    tracking-[1.5px]
+
+    shadow-[0_6px_20px_rgba(0,0,0,0.18)]
+
+    border
+    border-[#fff7e8]
+
+    hover:bg-white
+    hover:-translate-y-0.5
+    hover:scale-[1.02]
+
+    transition-all
+    duration-300
+
+    relative
+    overflow-hidden
+    group/btn
+  "
+>
+  <span className="relative z-10 whitespace-nowrap">
+    CONSULT DR. SANJEEV
+  </span>
+
+  {/* Shimmer */}
+  <span
+    className="
+      absolute
+      inset-0
+      -translate-x-full
+      group-hover/btn:translate-x-full
+      transition-transform
+      duration-700
+      bg-gradient-to-r
+      from-transparent
+      via-white/50
+      to-transparent
+    "
+  />
+</button>
+</div>
 
   </div>
 </section>
