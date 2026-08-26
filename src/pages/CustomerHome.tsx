@@ -12,6 +12,7 @@ import { Language, t } from '../lib/translations';
 import productImage from "@/assets/banner5.png";
 import productImage2 from "@/assets/banner5.png";
 import productImage3 from "@/assets/banner5.png";
+import drImage from "@/assets/Dr6.png"
 
 // Mobile (tall/square, portrait-friendly) hero banners
 import productImageMobile from "@/assets/banner009.png";
@@ -247,7 +248,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
       "
     >
       <img
-        src="/assets/Dr6.png"
+        src={drImage}
         alt="Consult Ayurvedic Doctor"
         className="
           h-[450px]
