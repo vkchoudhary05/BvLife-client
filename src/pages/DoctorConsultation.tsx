@@ -363,7 +363,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
           }}
           onMouseEnter={() => setIsSlidePaused(true)}
           onMouseLeave={() => setIsSlidePaused(false)}
-     className="
+          className="
           relative
           w-full
           h-[195px]
