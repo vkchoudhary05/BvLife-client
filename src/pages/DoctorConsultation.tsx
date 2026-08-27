@@ -56,17 +56,17 @@ const doctorHeroSlides = [
     id: "doc-slide-1",
     desktopImage: doctorBannerDesktop,
     mobileImage: doctorBannerMobile,
-    badge: "BHU Gold Medalist • AYUSH Certified",
-    title: "Vaidya Ratna Dr. Arundhati Sharma",
-    subtitle: "India's Foremost Nadi Pariksha & Classical Healing Legend"
+    // badge: "BHU Gold Medalist • AYUSH Certified",
+    // title: "Vaidya Ratna Dr. Arundhati Sharma",
+    // subtitle: "India's Foremost Nadi Pariksha & Classical Healing Legend"
   },
   {
     id: "doc-slide-2",
     desktopImage: doctorBannerDesktop,
     mobileImage: doctorBannerMobile,
-    badge: "100% Verified Personalized Care",
-    title: "Root-Cause Ayurvedic Consultations",
-    subtitle: "Bespoke Herbal Prescriptions & Ahar-Vihar Regimens"
+    // badge: "100% Verified Personalized Care",
+    // title: "Root-Cause Ayurvedic Consultations",
+    // subtitle: "Bespoke Herbal Prescriptions & Ahar-Vihar Regimens"
   }
 ];
 
@@ -354,7 +354,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     <div id="doctor-consultation-page" className="min-h-screen bg-brand-cream-50/60 pb-20">
       
       {/* 1. TOP HERO BANNER — HOMEPAGE-STYLE RESPONSIVE BANNER SLIDER */}
-      <section className="max-w-[1440px] mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 pt-3 sm:pt-5">
+      <section className="max-w-[1440px] mx-auto  ">
         <div
           id="doctor-hero-banner"
           onClick={() => {
@@ -363,30 +363,26 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
           }}
           onMouseEnter={() => setIsSlidePaused(true)}
           onMouseLeave={() => setIsSlidePaused(false)}
-          className="
-            relative
-            w-full
-            h-[195px]
-            xs:h-[280px]
-            sm:h-[335px]
-            md:h-[380px]
-            lg:h-[420px]
-            xl:h-[460px]
-            2xl:h-[520px]
-            rounded-2xl
-            sm:rounded-3xl
-            overflow-hidden
-            flex
-            items-center
-            justify-center
-            cursor-pointer
-            group
-            shadow-xl
-            border
-            border-brand-gold-500/25
-            bg-brand-green-950
-          "
-        >
+     className="
+          relative
+          w-full
+          h-[195px]
+          xs:h-[280px]
+          sm:h-[335px]
+          md:h-[350px]
+          lg:h-[368px]
+          xl:h-[400px]
+          2xl:h-[550px]
+          rounded
+          overflow-hidden
+          flex
+          items-center
+          justify-center
+          cursor-pointer
+          group
+          shadow-sm
+        "
+      >
           {/* Banner Picture with Responsive Mobile & Desktop Assets */}
           <div className="absolute inset-0">
             <picture>
@@ -406,66 +402,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
             <div className="absolute inset-0 bg-gradient-to-r from-brand-green-950/70 via-transparent to-brand-green-950/40 hidden md:block" />
           </div>
 
-          {/* Floating Live Badge Top Left */}
-          <div className="absolute top-3 left-3 sm:top-5 sm:left-5 z-20 flex items-center gap-2">
-            <div className="px-3 py-1.5 rounded-full bg-brand-green-950/85 backdrop-blur-md border border-brand-gold-400/50 text-brand-gold-300 text-[10px] sm:text-xs font-bold tracking-wide shadow-lg flex items-center gap-1.5">
-              <Award className="w-3.5 h-3.5 text-brand-gold-400" />
-              <span>{doctorHeroSlides[currentSlide].badge}</span>
-            </div>
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/80 backdrop-blur-md border border-emerald-400/40 text-emerald-300 text-xs font-semibold shadow-md">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>1-on-1 Slots Open Today</span>
-            </div>
-          </div>
-
-          {/* Banner Text Content Overlay (Mobile + Desktop) */}
-          <div className="absolute bottom-3 left-3 right-3 sm:bottom-6 sm:left-6 sm:right-6 z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-3 text-white">
-            <div className="max-w-2xl space-y-1">
-              <div className="inline-flex items-center gap-1.5 text-brand-gold-300 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 text-brand-gold-400" />
-                <span>Personalized Classical Healing</span>
-              </div>
-              <h2 className="text-base sm:text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-white leading-tight drop-shadow-md">
-                {doctorHeroSlides[currentSlide].title}
-              </h2>
-              <p className="text-xs sm:text-sm md:text-base text-brand-cream-200/95 font-sans line-clamp-2 drop-shadow-sm">
-                {doctorHeroSlides[currentSlide].subtitle}
-              </p>
-            </div>
-
-            {/* Quick Action Pill on Desktop */}
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-gold-500 to-amber-500 text-brand-green-950 font-bold text-xs md:text-sm shadow-xl flex items-center gap-2 group-hover:scale-105 transition-transform">
-                <Calendar className="w-4 h-4" />
-                <span>Book Slot (₹{doctor.fee})</span>
-                <ArrowRight className="w-4 h-4" />
-              </span>
-            </div>
-          </div>
-
           {/* Banner Navigation Chevron Left */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentSlide((prev) => (prev - 1 + doctorHeroSlides.length) % doctorHeroSlides.length);
-            }}
-            aria-label="Previous banner"
-            className="flex absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-2 sm:p-2.5 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/20 hover:border-brand-gold-400 text-white transition-all duration-300 hover:scale-110 cursor-pointer shadow-lg"
-          >
-            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-
-          {/* Banner Navigation Chevron Right */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentSlide((prev) => (prev + 1) % doctorHeroSlides.length);
-            }}
-            aria-label="Next banner"
-            className="flex absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-2 sm:p-2.5 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/20 hover:border-brand-gold-400 text-white transition-all duration-300 hover:scale-110 cursor-pointer shadow-lg"
-          >
-            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
 
           {/* Banner Slide Indicator Dots */}
           <div className="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 sm:gap-2">
