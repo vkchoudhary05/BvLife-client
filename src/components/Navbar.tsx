@@ -6,7 +6,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Search, ShoppingCart, User, Sparkles, LogOut, LayoutDashboard, 
+  Search,TruckElectric, ShoppingCart, User, Sparkles, LogOut, LayoutDashboard, 
   Menu, X, Home, Package, BookOpen, Info, Phone, ChevronDown, 
   ChevronRight, ArrowLeft, Stethoscope, Layers, ShieldCheck, Flame, 
   Activity, Moon, Users, HeartPulse, Sparkle, Wind, Grid, Heart
@@ -279,7 +279,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               aria-label={isMobileMenuOpen ? "Close Navigation Menu" : "Open Navigation Menu"}
               id="mobile-menu-trigger-left"
             >
-              <Menu className="w-6.5 h-6.5 sm:w-7 sm:h-7" strokeWidth={2.2} />
+              <Menu className="w-5 h-5 sm:w-7 sm:h-7" strokeWidth={2.2} />
             </button>
 
             {/* Brand Logo */}
@@ -404,14 +404,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             
             {/* Search Icon & Dropdown Popover (Icon-only on both Desktop & Mobile) */}
             <div ref={mobileSearchRef} className="relative flex">
-              <button 
-                onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-                className="p-1.5 sm:p-2 text-black-950 hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 rounded-lg sm:rounded-full hover:bg-brand-green-50"
-                aria-label="Search Formulations"
-                title="Search"
-              >
-                <Search className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-black-900" strokeWidth={2} />
-              </button>
+                <button 
+                  onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                  className="p-1.5 sm:p-2 text-black-950 hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 rounded-lg sm:rounded-full hover:bg-brand-green-50"
+                  aria-label="Search Formulations"
+                  title="Search"
+                >
+                  <Search className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-black-900" strokeWidth={2} />
+                </button>
 
               {/* Search Dropdown/Popover */}
               {isMobileSearchOpen && (
@@ -459,7 +459,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               aria-label="Track Order"
               title="Track Order"
             >
-              <Package className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-black-900" strokeWidth={2} />
+              <TruckElectric className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-black-900" strokeWidth={2} />
             </button>
 
             {/* My Account Profile Icon */}
@@ -472,10 +472,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onNavigate('login');
                   }
                 }}
-                onMouseEnter={() => setShowProfileMenu(true)}
-                className="p-1.5 sm:p-2 text-black-950 hover:text-brand-gold-600 transition-colors cursor-pointer flex items-center justify-center rounded-lg sm:rounded-full hover:bg-brand-green-50"
-                aria-label="My Account"
-                title={currentUser ? `Account: ${currentUser.fullName}` : "Sign In / My Account"}
+                // onMouseEnter={() => setShowProfileMenu(true)}
+                // className="p-1.5 sm:p-2 text-black-950 hover:text-brand-gold-600 transition-colors cursor-pointer flex items-center justify-center rounded-lg sm:rounded-full hover:bg-brand-green-50"
+                // aria-label="My Account"
+                // title={currentUser ? `Account: ${currentUser.fullName}` : "Sign In / My Account"}
               >
                 <User className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-black-900" strokeWidth={2} />
               </button>
@@ -568,7 +568,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               aria-label="Shopping Cart"
               title="Shopping Cart"
             >
-              <ShoppingCart className="w-5 h-5 sm:w-5.5 sm:h-5.5" strokeWidth={2} />
+              <ShoppingCart className="w-5 h-5 sm:w-5 sm:h-5" strokeWidth={2} />
               {cartCount > 0 && (
                 <span className="absolute top-0 right-0 w-4 h-4 rounded-full bg-brand-green-700 text-white flex items-center justify-center text-[9px] font-bold">
                   {cartCount}

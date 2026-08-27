@@ -186,11 +186,11 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
 
       {/* 2. CATEGORY BROWSE SECTION */}
       <section id="category-browse" className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-8">
-        <div className="w-full text-left mb-5">
+        {/* <div className="w-full text-left mb-5">
           <h3 className="text-xl sm:text-xl font-semibold text-black">
             Shop by Concern
           </h3>
-        </div>
+        </div> */}
 
         <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-5">
           {categories.map((cat, i) => (
