@@ -16,10 +16,11 @@ import { Doctor, DoctorAppointment, User as UserType, MedicalReportFile } from '
 import { Language } from '../lib/translations';
 import { api } from '../services/api';
 import { ConsultationFeatures } from '../components/ConsultationFeatures';
+import drImage from "@/assets/DrSanjeev.png"
 
-const legendaryDoctorImg = '/assets/DrSanjeev.png';
-const doctorBannerDesktop = '/assets/DrSanjeev.png';
-const doctorBannerMobile = '/assets/DrSanjeev.png';
+const legendaryDoctorImg = drImage
+const doctorBannerDesktop = drImage
+const doctorBannerMobile = drImage
 interface DoctorConsultationProps {
   currentUser: UserType | null;
   onNavigate: (page: string, params?: any) => void;
