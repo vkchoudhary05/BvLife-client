@@ -23,6 +23,7 @@ import { TrackOrder } from './pages/TrackOrder';
 import { Wishlist } from './pages/Wishlist';
 import { Login } from './pages/Login';
 import { DoctorConsultation } from './pages/DoctorConsultation';
+import { DoctorDashboard } from './pages/DoctorDashboard';
 
 // Types & Custom Hooks
 import { Product, ProductVariant } from './types';
@@ -344,6 +345,21 @@ export default function App() {
           />
         )}
 
+        {/* Doctor Dashboard Portal */}
+        {(currentPage === 'doctor-dashboard' || currentPage === 'doctor') && (
+          <DoctorDashboard
+            currentUser={currentUser}
+            onNavigate={handleNavigate}
+            language={language}
+            onLoginSuccess={(user, token) => {
+              setCurrentUser(user);
+              if (token) {
+                handleLoginSuccess(token, true);
+              }
+            }}
+          />
+        )}
+
         {/* User Dashboard */}
         {currentPage === 'dashboard' && (
           <Dashboard
@@ -372,7 +388,7 @@ export default function App() {
         {currentPage === 'admin' && (
           (currentUser && (
             currentUser.role === 'admin' ||
-            ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes((currentUser.email || '').toLowerCase()) ||
+            ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com', 'doctor@gramslife.com'].includes((currentUser.email || '').toLowerCase()) ||
             ['7451050607', '9425011088'].includes((currentUser.phone || '').replace(/\D/g, '').slice(-10))
           )) ? (
             <Dashboard

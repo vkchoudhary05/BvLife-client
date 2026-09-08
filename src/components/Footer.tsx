@@ -158,8 +158,25 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
 
       {/* Sub Footer */}
       <div className="bg-brand-green-900 border-t border-gray-200 py-4 text-sm text-white font-semibold">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
           <p>© 2026 BV Life Inc. All Ayurvedic herbs strictly sourced from sustainable high-altitude farms.</p>
+          <div className="flex items-center gap-4 text-xs text-brand-cream-200/60">
+            <button
+              onClick={() => onNavigate('doctor-dashboard')}
+              className="hover:text-brand-gold-300 transition-colors cursor-pointer text-xs"
+              title="AYUSH Practitioner & Vaidya Access"
+            >
+              Doctor Portal
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => onNavigate('admin')}
+              className="hover:text-brand-gold-300 transition-colors cursor-pointer text-xs"
+              title="Administrative Panel"
+            >
+              Admin
+            </button>
+          </div>
         </div>
       </div>
 

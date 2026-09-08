@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -7,47 +6,47 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, Clock, Video, Phone, MessageSquare, CheckCircle, Star, 
-  ShieldCheck, Award, User, Sparkles, AlertCircle, FileText, 
-  ChevronRight, ChevronLeft, ArrowRight, X, Heart, Stethoscope, RefreshCw, Loader2,
-  GraduationCap, Check, BookOpen, MessageCircle, HelpCircle, Shield,
-  Activity, Users, MapPin, Zap, ChevronDown, ChevronUp, Upload, Trash2, Eye, Paperclip
+  ShieldCheck, Award, User, Check, X, ArrowRight, ArrowLeft, Loader2,
+  FileText, Upload, Trash2, Eye, Shield, Sparkles, ChevronLeft, ChevronRight,
+  HeartHandshake, Stethoscope, CreditCard, Lock, CheckCircle2, QrCode,
+  Building2, Smartphone, AlertCircle
 } from 'lucide-react';
 import { Doctor, DoctorAppointment, User as UserType, MedicalReportFile } from '../types';
 import { Language } from '../lib/translations';
 import { api } from '../services/api';
 import { ConsultationFeatures } from '../components/ConsultationFeatures';
-import drImage from "@/assets/DrSanjeev.png"
+import drImage from "@/assets/DrSanjeev.png";
 
-const legendaryDoctorImg = drImage
-const doctorBannerDesktop = drImage
-const doctorBannerMobile = drImage
+const legendaryDoctorImg = drImage;
+const doctorBannerDesktop = drImage;
+const doctorBannerMobile = drImage;
+
 interface DoctorConsultationProps {
   currentUser: UserType | null;
   onNavigate: (page: string, params?: any) => void;
   language: Language;
 }
 
-// Single Legend Doctor Profile
 const LEGEND_DOCTOR: Doctor = {
   id: 'doc-legend-1',
-  name: 'Dr. Arundhati Sharma',
+  name: 'Dr. Sanjeev Rastogi',
   title: 'Chief Ayurvedic Physician & Master Nadi Vaidya',
-  qualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist), Ayush Reg. #AY-24890',
-  experienceYears: 22,
+  qualification: "Ph.D, MD (Ayurveda), Banaras Hindu University (BHU)",
+  experienceYears: 30,
   specialties: [
     'Classical Nadi Pariksha (Pulse Diagnosis)',
-    'Gut Dysbiosis & Metabolic Agni Reversal',
-    'PCOS, Thyroid & Women’s Hormonal Harmony',
-    'Chronic Joint, Spine & Arthritis Management',
-    'Rasayana Cellular Rejuvenation & Detox'
+    'Gut Dysbiosis, Acidity & Agni Reversal',
+    'PCOS, Thyroid & Hormonal Health',
+    'Chronic Joint & Arthritis Care',
+    'Rasayana Cellular Rejuvenation'
   ],
-  languages: ['Hindi', 'English', 'Sanskrit'],
+  languages: ['Hindi', 'English'],
   fee: 499,
   originalFee: 1200,
   rating: 4.98,
   reviewsCount: 2450,
   image: legendaryDoctorImg,
-  bio: 'Gold Medalist from Banaras Hindu University (BHU) with over 22 years of clinical excellence in diagnosing and healing chronic lifestyle disorders. Descendant of a four-generation Ayurvedic Vaidya parampara, Dr. Arundhati specializes in precision Nadi Pariksha, bespoke herbal compounding, and personalized Panchakarma protocols that treat the root cause rather than merely suppressing symptoms.',
+  bio: 'Former Head of Dept. Kaya Chikitsa & Panchakarma at State Ayurvedic College, Lucknow with over 30 years of clinical and academic mastery.',
   availableDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
   nextAvailable: 'Today, 04:30 PM'
 };
@@ -57,18 +56,22 @@ const doctorHeroSlides = [
     id: "doc-slide-1",
     desktopImage: doctorBannerDesktop,
     mobileImage: doctorBannerMobile,
-    // badge: "BHU Gold Medalist • AYUSH Certified",
-    // title: "Vaidya Ratna Dr. Arundhati Sharma",
-    // subtitle: "India's Foremost Nadi Pariksha & Classical Healing Legend"
   },
   {
     id: "doc-slide-2",
     desktopImage: doctorBannerDesktop,
     mobileImage: doctorBannerMobile,
-    // badge: "100% Verified Personalized Care",
-    // title: "Root-Cause Ayurvedic Consultations",
-    // subtitle: "Bespoke Herbal Prescriptions & Ahar-Vihar Regimens"
   }
+];
+
+const HEALTH_CONCERNS = [
+  'Digestion & Acidity',
+  'PCOS & Hormonal Balance',
+  'Joint Pain & Arthritis',
+  'Skin & Hair Concerns',
+  'Stress & Insomnia',
+  'Metabolism & Weight',
+  'General Wellness'
 ];
 
 export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
@@ -77,17 +80,13 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
   language
 }) => {
   const [doctor, setDoctor] = useState<Doctor>(LEGEND_DOCTOR);
+  const [activeTab, setActiveTab] = useState<'book' | 'my-appointments' | 'about-doctor' | 'fees-chart'>('book');
+
+  // Hero Slider State
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSlidePaused, setIsSlidePaused] = useState(false);
-  const [selectedMode, setSelectedMode] = useState<'video' | 'audio' | 'clinic' | 'chat'>('video');
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('10:00 AM');
-  const [activeTab, setActiveTab] = useState<'book' | 'my-appointments' | 'doctor-profile'>('book');
-  const [bookingStep, setBookingStep] = useState<number>(1);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [activeFaq, setActiveFaq] = useState<number | null>(0);
 
-  // Auto rotate banner
+  // Auto rotate banner matching CustomerHome
   useEffect(() => {
     if (isSlidePaused) return;
     const timer = setInterval(() => {
@@ -96,21 +95,41 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     return () => clearInterval(timer);
   }, [isSlidePaused]);
 
-  // Form Fields
+  // Booking selections
+  const [selectedMode, setSelectedMode] = useState<'video' | 'audio' | 'clinic' | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('11:00 AM');
+
+  // Multi-step booking progression
+  const [bookingStep, setBookingStep] = useState<'format' | 'datetime' | 'information' | 'payment'>('format');
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Payment states
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'netbanking'>('upi');
+  const [upiApp, setUpiApp] = useState<'gpay' | 'phonepe' | 'paytm' | 'other'>('gpay');
+  const [upiId, setUpiId] = useState('');
+  const [showUpiQr, setShowUpiQr] = useState(false);
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+  const [selectedBank, setSelectedBank] = useState('State Bank of India');
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+
+  // Patient inputs
   const [patientName, setPatientName] = useState(currentUser?.fullName || '');
-  const [patientAge, setPatientAge] = useState<number | ''>(29);
+  const [patientAge, setPatientAge] = useState<number | ''>(28);
   const [patientGender, setPatientGender] = useState<'Male' | 'Female' | 'Other'>('Female');
   const [patientPhone, setPatientPhone] = useState(currentUser?.phone || '');
-  const [patientEmail, setPatientEmail] = useState(currentUser?.email || '');
-  const [healthConcern, setHealthConcern] = useState('Chronic Digestion / Acidity & Bloating');
-  const [previousHistory, setPreviousHistory] = useState('');
+  const [healthConcern, setHealthConcern] = useState('Digestion & Acidity');
+  const [customConcern, setCustomConcern] = useState('');
   
-  // Previous Medical Reports PDF State
+  // PDF Reports
   const [uploadedReports, setUploadedReports] = useState<MedicalReportFile[]>([]);
-  const [isDraggingReports, setIsDraggingReports] = useState(false);
-  const [reportUploadError, setReportUploadError] = useState<string | null>(null);
-  
-  // Booking confirmation state
+  const [showReportUpload, setShowReportUpload] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+
+  // Status & persistence
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState<DoctorAppointment | null>(null);
   const [myAppointments, setMyAppointments] = useState<DoctorAppointment[]>(() => {
     if (typeof window !== 'undefined') {
@@ -126,7 +145,15 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     return [];
   });
 
-  // Load doctor data from backend API
+  // Pre-fill user details if logged in
+  useEffect(() => {
+    if (currentUser) {
+      if (!patientName && currentUser.fullName) setPatientName(currentUser.fullName);
+      if (!patientPhone && currentUser.phone) setPatientPhone(currentUser.phone);
+    }
+  }, [currentUser]);
+
+  // Load doctor from backend API
   useEffect(() => {
     let isMounted = true;
     api.getDoctors().then(data => {
@@ -143,7 +170,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     return () => { isMounted = false; };
   }, []);
 
-  // Load user's appointments from backend
+  // Fetch appointments for user
   useEffect(() => {
     if (currentUser?.email) {
       api.getDoctorAppointmentsByUser(currentUser.email).then(backendApps => {
@@ -162,7 +189,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     }
   }, [currentUser]);
 
-  // Generate 7 days starting from today
+  // Next 7 available dates
   const next7Days = React.useMemo(() => {
     const days = [];
     const today = new Date();
@@ -183,37 +210,30 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     }
   }, [next7Days, selectedDate]);
 
-  useEffect(() => {
-    if (currentUser) {
-      if (!patientName) setPatientName(currentUser.fullName);
-      if (!patientEmail) setPatientEmail(currentUser.email);
-      if (!patientPhone && currentUser.phone) setPatientPhone(currentUser.phone);
-    }
-  }, [currentUser]);
+  const timeSlots = [
+    '09:30 AM', '10:15 AM', '11:00 AM', '11:45 AM',
+    '02:30 PM', '03:15 PM', '04:00 PM', '04:45 PM',
+    '06:00 PM', '06:45 PM', '07:30 PM'
+  ];
 
-  const morningSlots = ['09:30 AM', '10:15 AM', '11:00 AM', '11:45 AM'];
-  const afternoonSlots = ['02:30 PM', '03:15 PM', '04:00 PM', '04:45 PM'];
-  const eveningSlots = ['06:00 PM', '06:45 PM', '07:30 PM', '08:15 PM'];
-
-  // PDF Medical Reports Upload Handler
+  // PDF report handler
   const handleReportUpload = (files: FileList | File[]) => {
-    setReportUploadError(null);
+    setReportError(null);
     const fileArray = Array.from(files);
     
-    if (uploadedReports.length + fileArray.length > 5) {
-      setReportUploadError('You can upload a maximum of 5 PDF medical reports.');
+    if (uploadedReports.length + fileArray.length > 3) {
+      setReportError('Maximum 3 medical reports allowed.');
       return;
     }
 
     fileArray.forEach(file => {
       const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
       if (!isPdf) {
-        setReportUploadError('Please upload files in PDF format only (e.g., BloodTest.pdf, DoctorPrescription.pdf).');
+        setReportError('Only PDF files allowed.');
         return;
       }
-
-      if (file.size > 15 * 1024 * 1024) {
-        setReportUploadError(`File "${file.name}" exceeds maximum allowed size of 15MB.`);
+      if (file.size > 10 * 1024 * 1024) {
+        setReportError(`File "${file.name}" exceeds 10MB limit.`);
         return;
       }
 
@@ -224,95 +244,127 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = typeof reader.result === 'string' ? reader.result : undefined;
-        const newReport: MedicalReportFile = {
-          name: file.name,
-          size: formattedSize,
-          type: 'application/pdf',
-          dataUrl,
-          uploadedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setUploadedReports(prev => [...prev, newReport]);
+        setUploadedReports(prev => [
+          ...prev,
+          {
+            name: file.name,
+            size: formattedSize,
+            type: 'application/pdf',
+            dataUrl,
+            uploadedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
       };
       reader.readAsDataURL(file);
     });
   };
 
-  const handleRemoveReport = (index: number) => {
-    setUploadedReports(prev => prev.filter((_, idx) => idx !== index));
+  // Step 1 -> Step 2: User clicks "Book Now" on one of the 3 formats
+  const handleSelectFormatAndProceed = (mode: 'video' | 'audio' | 'clinic') => {
+    setSelectedMode(mode);
+    setBookingStep('datetime');
+    setTimeout(() => {
+      document.getElementById('booking-step-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   };
 
-  const openPdfPreview = (report: MedicalReportFile) => {
-    if (report.dataUrl) {
-      const newWindow = window.open();
-      if (newWindow) {
-        newWindow.document.write(
-          `<iframe src="${report.dataUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`
-        );
-        newWindow.document.title = report.name;
-      } else {
-        const a = document.createElement('a');
-        a.href = report.dataUrl;
-        a.download = report.name;
-        a.click();
-      }
-    }
-  };
-
-  const handleBookSlot = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!patientName.trim() || !patientPhone.trim()) {
-      alert('Please provide patient name and contact phone number.');
+  // Step 2 -> Step 3: User confirms date & time slot
+  const handleProceedToInformation = () => {
+    if (!selectedMode) {
+      setBookingStep('format');
       return;
     }
+    if (!selectedDate) {
+      alert('Please select a preferred date.');
+      return;
+    }
+    if (!selectedTimeSlot) {
+      alert('Please select a preferred time slot.');
+      return;
+    }
+    setBookingStep('information');
+    setTimeout(() => {
+      document.getElementById('booking-step-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
 
+  // Step 3 -> Step 4: User fills patient information and advances to pay
+  const handleProceedToPayment = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!patientName.trim()) {
+      setFormError('Please enter the patient’s full name.');
+      return;
+    }
+    if (!patientPhone.trim() || patientPhone.trim().replace(/\D/g, '').length < 8) {
+      setFormError('Please enter a valid WhatsApp or phone number (minimum 8 digits).');
+      return;
+    }
+    setFormError(null);
+    setBookingStep('payment');
+    setTimeout(() => {
+      document.getElementById('booking-step-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
+
+  // Step 4: Complete secure payment & confirm appointment
+  const handleExecutePayment = async () => {
+    setIsPaymentProcessing(true);
+    setIsSubmitting(true);
     const appointmentId = `BVL-DOC-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    const newAppointmentPayload: Partial<DoctorAppointment> = {
+    // Simulate authentic secure bank/UPI node processing
+    await new Promise(r => setTimeout(r, 900));
+
+    const newAppointment: DoctorAppointment = {
       id: appointmentId,
       doctorId: doctor.id,
       doctorName: doctor.name,
       doctorSpecialty: doctor.specialties[0],
       doctorImage: doctor.image || legendaryDoctorImg,
       doctorQualification: doctor.qualification,
-      patientName,
-      patientAge: Number(patientAge) || 30,
+      patientName: patientName.trim(),
+      patientAge: Number(patientAge) || 28,
       patientGender,
-      patientPhone,
-      patientEmail: patientEmail || 'patient@bvlife.com',
+      patientPhone: patientPhone.trim(),
+      patientEmail: currentUser?.email || 'patient@bvlife.com',
       date: selectedDate,
       timeSlot: selectedTimeSlot,
-      consultationMode: selectedMode,
-      healthConcern,
-      previousHistory,
+      consultationMode: selectedMode || 'video',
+      healthConcern: customConcern.trim() ? customConcern.trim() : healthConcern,
       medicalReports: uploadedReports,
       fee: doctor.fee,
       status: 'Confirmed',
       bookingDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      meetingLink: selectedMode === 'video' ? `https://meet.jit.si/BVLife-DrArundhati-${appointmentId}` : undefined
+      meetingLink: (selectedMode === 'video' || !selectedMode) ? `https://meet.jit.si/BVLife-DrSanjeevRastogi-${appointmentId}` : undefined
     };
 
-    setIsSubmitting(true);
-    let finalAppointment: DoctorAppointment = newAppointmentPayload as DoctorAppointment;
-
+    let finalApp = newAppointment;
     try {
-      const response = await api.bookDoctorAppointment(newAppointmentPayload);
-      if (response.success && response.appointment) {
-        finalAppointment = response.appointment;
+      const response = await api.bookDoctorAppointment(newAppointment);
+      if (response?.success && response.appointment) {
+        finalApp = response.appointment;
       }
     } catch (err) {
       console.warn('Backend appointment booking fallback:', err);
     } finally {
+      setIsPaymentProcessing(false);
       setIsSubmitting(false);
     }
 
-    const updated = [finalAppointment, ...myAppointments.filter(a => a.id !== finalAppointment.id)];
+    const updated = [finalApp, ...myAppointments.filter(a => a.id !== finalApp.id)];
     setMyAppointments(updated);
     if (typeof window !== 'undefined') {
       localStorage.setItem('bvlife_doctor_appointments', JSON.stringify(updated));
     }
 
-    setBookingConfirmed(finalAppointment);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setBookingConfirmed(finalApp);
+    setBookingStep('format');
+    setTimeout(() => {
+      const bookingAnchor = document.getElementById('booking-confirmed-card');
+      if (bookingAnchor) {
+        bookingAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   };
 
   const handleCancelAppointment = async (id: string) => {
@@ -328,62 +380,52 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     }
   };
 
-  const FAQS = [
-    {
-      q: 'How does an online Ayurvedic consultation with Dr. Arundhati Sharma work?',
-      a: 'During your 25-minute 1-on-1 private video or audio session, Dr. Arundhati evaluates your physical symptoms, conducts a visual Nadi & tongue analysis, examines facial and skin cues, and determines your biological Dosha constitution (Prakriti vs. Vikriti) to diagnose the root cause.'
-    },
-    {
-      q: 'What will I receive immediately after my consultation?',
-      a: 'Within 30 minutes of your session, you will receive an official AYUSH-certified digital prescription, personalized Ayurvedic herbal compounding recommendations, a tailored Ahar-Vihar (Diet & Lifestyle) chart, and direct WhatsApp contact for your 7-day follow-up care.'
-    },
-    {
-      q: 'Can Dr. Arundhati treat chronic, long-term health issues?',
-      a: 'Yes. With 22+ years of clinical practice, Dr. Arundhati specializes in treating chronic conditions including digestive dysbiosis (GERD/IBS), PCOS/hormonal imbalances, arthritis, stubborn skin issues (psoriasis/eczema), chronic fatigue, and stress disorders.'
-    },
-    {
-      q: 'Is my medical consultation private and confidential?',
-      a: '100% confidential. All consultations occur in secure, encrypted 1-on-1 rooms, and your health records are strictly protected under medical compliance guidelines.'
-    },
-    {
-      q: 'What if I need to reschedule or cancel my appointment?',
-      a: 'You can easily reschedule or cancel up to 2 hours before your scheduled time directly from the "My Consultations" tab, or via our 24/7 WhatsApp patient support.'
+  const handleNavigateToBook = (mode?: 'video' | 'audio' | 'clinic') => {
+    setActiveTab('book');
+    if (mode) {
+      setSelectedMode(mode);
+      setBookingStep('datetime');
+    } else {
+      setBookingStep('format');
     }
-  ];
+    setTimeout(() => {
+      document.getElementById('booking-step-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  };
 
   return (
-    <div id="doctor-consultation-page" className="min-h-screen bg-brand-cream-50/60 pb-20">
+    <div id="doctor-consultation-page" className="min-h-screen bg-[#FBF9F5] pb-24 text-slate-800">
       
-      {/* 1. TOP HERO BANNER — HOMEPAGE-STYLE RESPONSIVE BANNER SLIDER */}
-      <section className="max-w-[1440px] mx-auto  ">
+      {/* 1. TOP HERO BANNER — IDENTICAL REUSABLE BANNER SYSTEM */}
+      <section className="max-w-[1440px] mx-auto px-2 sm:px-4 pt-3 sm:pt-4">
         <div
           id="doctor-hero-banner"
           onClick={() => {
-            const el = document.getElementById('book-slot-section');
+            const el = document.getElementById('quick-book-container');
             if (el) el.scrollIntoView({ behavior: 'smooth' });
           }}
           onMouseEnter={() => setIsSlidePaused(true)}
           onMouseLeave={() => setIsSlidePaused(false)}
           className="
-          relative
-          w-full
-          h-[195px]
-          xs:h-[280px]
-          sm:h-[335px]
-          md:h-[350px]
-          lg:h-[368px]
-          xl:h-[400px]
-          2xl:h-[550px]
-          rounded
-          overflow-hidden
-          flex
-          items-center
-          justify-center
-          cursor-pointer
-          group
-          shadow-sm
-        "
-      >
+            relative
+            w-full
+            h-[195px]
+            xs:h-[280px]
+            sm:h-[335px]
+            md:h-[350px]
+            lg:h-[368px]
+            xl:h-[400px]
+            2xl:h-[550px]
+            rounded-xl
+            overflow-hidden
+            flex
+            items-center
+            justify-center
+            cursor-pointer
+            group
+            shadow-sm
+          "
+        >
           {/* Banner Picture with Responsive Mobile & Desktop Assets */}
           <div className="absolute inset-0">
             <picture>
@@ -393,20 +435,41 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
               />
               <img
                 src={doctorHeroSlides[currentSlide].desktopImage}
-                alt="Consult with Dr. Arundhati Sharma"
-                className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-700"
+                alt="Consult with Dr. Sanjeev Rastogi"
+                className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-700"
               />
             </picture>
 
-            {/* Gradient Overlay for Pristine Contrast & Luxury Feel */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent sm:from-black/50 sm:via-transparent sm:to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-brand-green-950/70 via-transparent to-brand-green-950/40 hidden md:block" />
+            {/* Subtle Gradient Overlay matching CustomerHome */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent sm:from-black/20 sm:via-transparent sm:to-transparent" />
           </div>
 
-          {/* Banner Navigation Chevron Left */}
+          {/* Navigation Chevron Left */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setCurrentSlide((prev) => (prev - 1 + doctorHeroSlides.length) % doctorHeroSlides.length);
+            }}
+            aria-label="Previous slide"
+            className="flex absolute left-2 xs:left-3 md:left-4 lg:left-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
+          >
+            <ChevronLeft className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
+          </button>
+
+          {/* Navigation Chevron Right */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setCurrentSlide((prev) => (prev + 1) % doctorHeroSlides.length);
+            }}
+            aria-label="Next slide"
+            className="flex absolute right-2 xs:right-3 md:right-4 lg:right-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
+          >
+            <ChevronRight className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
+          </button>
 
           {/* Banner Slide Indicator Dots */}
-          <div className="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 sm:gap-2">
+          <div className="absolute bottom-2 xs:bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 xs:gap-2">
             {doctorHeroSlides.map((_, i) => (
               <button
                 key={i}
@@ -417,8 +480,8 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                 }}
                 className={`transition-all duration-300 rounded-full cursor-pointer ${
                   currentSlide === i
-                    ? 'bg-brand-gold-400 w-6 sm:w-8 h-1.5 sm:h-2'
-                    : 'bg-white/50 hover:bg-white/80 w-1.5 sm:w-2 h-1.5 sm:h-2'
+                    ? 'bg-white w-4 xs:w-5 sm:w-6 md:w-8 h-1.5 xs:h-2'
+                    : 'bg-white/40 hover:bg-white/60 w-1.5 xs:w-2 h-1.5 xs:h-2'
                 }`}
               />
             ))}
@@ -426,661 +489,756 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
         </div>
       </section>
 
-      {/* 2. NAVIGATION TABS BAR */}
-      <div className="sticky top-14 sm:top-18 z-30 bg-white border-b border-brand-green-600/10 shadow-xs">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4 overflow-x-auto py-3">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <button
-                onClick={() => setActiveTab('book')}
-                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                  activeTab === 'book'
-                    ? 'bg-brand-green-800 text-white shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <Calendar className="w-4 h-4" />
-                <span>Book Slot with Dr. Arundhati</span>
-              </button>
+      {/* 2. NAVIGATION BAR WITH ALL 4 UPPER TABS */}
+      <section className="max-w-[1240px] mx-auto px-4 mt-5 sm:mt-6">
+        <div className="bg-white rounded-2xl p-2.5 border border-slate-200/90 shadow-xs flex flex-wrap items-center justify-between gap-3">
+          
+          {/* 4 PRIMARY NAVIGATION TABS */}
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
+            <button
+              id="tab-book-slot"
+              type="button"
+              onClick={() => setActiveTab('book')}
+              className={`px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+                activeTab === 'book'
+                  ? 'bg-brand-green-800 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <Calendar className="w-4 h-4 text-brand-gold-400" />
+              <span>Book Consultation</span>
+            </button>
 
-              <button
-                onClick={() => setActiveTab('doctor-profile')}
-                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                  activeTab === 'doctor-profile'
-                    ? 'bg-brand-green-800 text-white shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <User className="w-4 h-4" />
-                <span>Doctor Lineage & Credentials</span>
-              </button>
+            <button
+              id="tab-view-appointments"
+              type="button"
+              onClick={() => setActiveTab('my-appointments')}
+              className={`px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 relative ${
+                activeTab === 'my-appointments'
+                  ? 'bg-brand-green-800 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              <span>My Consultations</span>
+              {myAppointments.length > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-brand-gold-400 text-brand-green-950 text-[11px] font-extrabold ml-0.5 shadow-2xs">
+                  {myAppointments.length}
+                </span>
+              )}
+            </button>
 
-              <button
-                onClick={() => setActiveTab('my-appointments')}
-                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer relative ${
-                  activeTab === 'my-appointments'
-                    ? 'bg-brand-green-800 text-white shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <Clock className="w-4 h-4" />
-                <span>My Consultations</span>
-                {myAppointments.length > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-brand-gold-500 text-brand-green-950 text-[10px] font-bold">
-                    {myAppointments.length}
-                  </span>
-                )}
-              </button>
-            </div>
+            <button
+              id="tab-about-doctor"
+              type="button"
+              onClick={() => setActiveTab('about-doctor')}
+              className={`px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+                activeTab === 'about-doctor'
+                  ? 'bg-brand-green-800 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <User className="w-4 h-4 text-brand-gold-400" />
+              <span>About Doctor</span>
+            </button>
 
-            {/* Quick Fee Callout */}
-            <div className="hidden md:flex items-center gap-2 text-xs">
-              <span className="text-slate-500">First Consult:</span>
-              <span className="line-through text-slate-400">₹{doctor.originalFee}</span>
-              <span className="font-bold text-brand-green-800 text-sm">₹{doctor.fee}</span>
-              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold text-[10px]">58% OFF</span>
-            </div>
+            <button
+              id="tab-fees-chart"
+              type="button"
+              onClick={() => setActiveTab('fees-chart')}
+              className={`px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+                activeTab === 'fees-chart'
+                  ? 'bg-brand-green-800 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <FileText className="w-4 h-4 text-brand-gold-400" />
+              <span>Fees Chart</span>
+              <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                ₹{doctor.fee}
+              </span>
+            </button>
+          </div>
+
+          {/* STATUS CREDENTIAL STRIP & DOCTOR DASHBOARD SHORTCUT */}
+          <div className="flex items-center gap-2 pr-1 text-xs">
+            <span className="hidden lg:flex items-center gap-1.5 text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 font-semibold">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>AYUSH Certified Vaidya</span>
+            </span>
+            <span className="hidden sm:inline-block bg-brand-green-50 text-brand-green-900 px-3 py-1 rounded-full border border-brand-green-200 font-bold">
+              Fee: ₹{doctor.fee}
+            </span>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* 3. MAIN WORKSPACE CONTENT */}
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      {/* 3. MAIN WORKSPACE */}
+      <main id="quick-book-container" className="max-w-[1240px] mx-auto px-4 mt-6">
         
-        {/* TAB 1: BOOKING WORKSPACE */}
+        {/* VIEW 1: INSTANT BOOKING WORKSPACE */}
         {activeTab === 'book' && (
-          <div id="book-slot-section" className="space-y-10">
-            
-            {/* Booking Confirmed Banner */}
+          <div className="space-y-4">
+
+            {/* QUICK DOCTOR STRIP WITH SHORTCUTS TO ABOUT DOCTOR & FEES CHART */}
+            <div className="max-w-4xl mx-auto bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <img
+                  src={doctor.image}
+                  alt={doctor.name}
+                  className="w-11 h-11 rounded-full object-cover object-top border-2 border-brand-gold-400"
+                />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-slate-900">{doctor.name}</span>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Available Today
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {doctor.qualification} • Subsidized Fee: <strong className="text-brand-green-900 font-extrabold">₹{doctor.fee}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('about-doctor')}
+                  className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold border border-slate-200 transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <User className="w-3.5 h-3.5 text-brand-green-800" />
+                  <span>About Doctor</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('fees-chart')}
+                  className="px-3 py-1.5 rounded-lg bg-brand-green-50 hover:bg-brand-green-100 text-brand-green-900 font-semibold border border-brand-green-200 transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <FileText className="w-3.5 h-3.5 text-brand-green-800" />
+                  <span>Fees Chart</span>
+                </button>
+              </div>
+            </div>
+
+            {/* CONFIRMED NOTIFICATION IF JUST BOOKED */}
             {bookingConfirmed && (
-              <div className="bg-gradient-to-br from-brand-green-900 to-brand-green-950 text-white p-6 sm:p-8 rounded-3xl border-2 border-brand-gold-400 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-300">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-brand-gold-500/30 pb-4">
+              <div 
+                id="booking-confirmed-card"
+                className="bg-brand-green-900 text-white p-5 sm:p-7 rounded-2xl border-2 border-brand-gold-400 shadow-xl space-y-4 animate-in fade-in duration-300"
+              >
+                <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-4">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-full bg-brand-gold-500 text-brand-green-950 flex items-center justify-center font-bold shadow-md">
+                    <div className="w-11 h-11 rounded-full bg-brand-gold-400 text-brand-green-950 flex items-center justify-center font-bold shadow-md">
                       <CheckCircle className="w-7 h-7" />
                     </div>
                     <div>
-                      <span className="text-xs text-brand-gold-300 font-bold uppercase tracking-wider">Slot Confirmed & Scheduled</span>
-                      <h3 className="font-serif text-xl sm:text-2xl font-bold">Appointment ID: {bookingConfirmed.id}</h3>
+                      <span className="text-[11px] uppercase tracking-wider font-bold text-brand-gold-300">Appointment Confirmed</span>
+                      <h3 className="font-serif text-lg sm:text-xl font-bold">Appointment ID: #{bookingConfirmed.id}</h3>
                     </div>
                   </div>
                   <button 
                     onClick={() => setBookingConfirmed(null)}
-                    className="p-2 rounded-full hover:bg-white/10 text-brand-cream-300 hover:text-white transition-colors"
+                    className="p-1 text-slate-300 hover:text-white cursor-pointer"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-                  <div className="bg-white/5 p-3.5 rounded-2xl border border-white/10">
-                    <p className="text-brand-cream-300/80">Assigned Vaidya</p>
-                    <p className="font-bold text-sm text-brand-gold-300 mt-0.5">{bookingConfirmed.doctorName}</p>
-                    <p className="text-[11px] text-brand-cream-300">{bookingConfirmed.doctorQualification}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="bg-white/10 p-3 rounded-xl">
+                    <span className="text-slate-300">Consulting Vaidya</span>
+                    <p className="font-bold text-white mt-0.5">{bookingConfirmed.doctorName}</p>
+                    <p className="text-[10px] text-brand-gold-300">BHU Gold Medalist</p>
                   </div>
-
-                  <div className="bg-white/5 p-3.5 rounded-2xl border border-white/10">
-                    <p className="text-brand-cream-300/80">Scheduled Date & Time</p>
-                    <p className="font-bold text-sm text-white mt-0.5">{bookingConfirmed.date}</p>
-                    <p className="text-[11px] text-brand-gold-300 font-semibold">{bookingConfirmed.timeSlot}</p>
+                  <div className="bg-white/10 p-3 rounded-xl">
+                    <span className="text-slate-300">Date & Slot</span>
+                    <p className="font-bold text-brand-gold-300 mt-0.5">{bookingConfirmed.date} • {bookingConfirmed.timeSlot}</p>
                   </div>
-
-                  <div className="bg-white/5 p-3.5 rounded-2xl border border-white/10">
-                    <p className="text-brand-cream-300/80">Patient Details</p>
-                    <p className="font-bold text-sm text-white mt-0.5">{bookingConfirmed.patientName} ({bookingConfirmed.patientAge} yrs)</p>
-                    <p className="text-[11px] text-brand-cream-300">{bookingConfirmed.patientPhone}</p>
+                  <div className="bg-white/10 p-3 rounded-xl">
+                    <span className="text-slate-300">Patient Details</span>
+                    <p className="font-bold text-white mt-0.5">{bookingConfirmed.patientName}</p>
+                    <p className="text-[10px] text-slate-300">{bookingConfirmed.patientPhone}</p>
                   </div>
-
-                  <div className="bg-white/5 p-3.5 rounded-2xl border border-white/10">
-                    <p className="text-brand-cream-300/80">Consultation Mode</p>
-                    <p className="font-bold text-sm text-white capitalize mt-0.5">{bookingConfirmed.consultationMode} Call</p>
-                    <p className="text-[11px] text-emerald-400 font-semibold">WhatsApp reminder sent</p>
+                  <div className="bg-white/10 p-3 rounded-xl">
+                    <span className="text-slate-300">Consultation Format</span>
+                    <p className="font-bold text-white mt-0.5 capitalize">{bookingConfirmed.consultationMode} Call</p>
+                    <p className="text-[10px] text-emerald-400 font-semibold">Confirmed on WhatsApp</p>
                   </div>
                 </div>
 
-                {bookingConfirmed.medicalReports && bookingConfirmed.medicalReports.length > 0 && (
-                  <div className="bg-white/5 p-3.5 rounded-2xl border border-white/10 space-y-2">
-                    <p className="text-brand-cream-300 font-bold text-xs flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-brand-gold-400" />
-                      <span>Uploaded Medical Reports ({bookingConfirmed.medicalReports.length} PDF{bookingConfirmed.medicalReports.length > 1 ? 's' : ''}):</span>
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {bookingConfirmed.medicalReports.map((rep, rIdx) => (
-                        <div key={rIdx} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 text-white text-xs border border-white/10">
-                          <span className="font-semibold truncate max-w-[200px]">{rep.name}</span>
-                          <span className="text-[10px] text-brand-cream-300">({rep.size})</span>
-                          {rep.dataUrl && (
-                            <button
-                              type="button"
-                              onClick={() => openPdfPreview(rep)}
-                              className="text-[10px] text-brand-gold-300 hover:underline font-bold ml-1 cursor-pointer flex items-center gap-1"
-                            >
-                              <Eye className="w-3 h-3" />
-                              <span>View PDF</span>
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {bookingConfirmed.meetingLink && (
-                  <div className="pt-2 flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  {bookingConfirmed.meetingLink && (
                     <a
                       href={bookingConfirmed.meetingLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-6 py-3 rounded-xl bg-brand-gold-500 hover:bg-brand-gold-400 text-brand-green-950 font-bold text-xs flex items-center gap-2 shadow-lg transition-transform hover:scale-105"
+                      className="px-5 py-2.5 rounded-xl bg-brand-gold-400 hover:bg-brand-gold-300 text-brand-green-950 font-bold text-xs flex items-center gap-2 shadow-md transition-transform hover:scale-102"
                     >
                       <Video className="w-4 h-4" />
-                      <span>Join Live Video Consultation Room</span>
+                      <span>Join Live Video Room</span>
                     </a>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('my-appointments')}
-                      className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-colors"
-                    >
-                      View in My Appointments
-                    </button>
-                  </div>
-                )}
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('my-appointments')}
+                    className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs cursor-pointer"
+                  >
+                    View in My Appointments
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Booking Wizard Section */}
-            <div className="space-y-8">
+            {/* MULTI-STEP INSTANT BOOKING WORKSPACE */}
+            <div id="booking-step-container" className="max-w-4xl mx-auto bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-8 shadow-xs">
               
-              {/* Step Progress Tracker */}
-              <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200 shadow-xs">
-                <div className="flex items-center justify-between gap-2 max-w-3xl mx-auto">
+              {/* 4-STEP WIZARD PROGRESS BAR */}
+              <div className="mb-8">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                   
-                  {/* Step 1 Pill */}
+                  {/* Step 1 Tab Indicator */}
                   <button
                     type="button"
-                    onClick={() => setBookingStep(1)}
-                    className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-2 py-2.5 px-2 sm:px-3 rounded-2xl transition-all cursor-pointer text-center ${
-                      bookingStep === 1
-                        ? 'bg-brand-green-800 text-white shadow-sm ring-2 ring-brand-green-800/20'
-                        : bookingStep > 1
-                        ? 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100/80 border border-emerald-200'
-                        : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                    onClick={() => setBookingStep('format')}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
+                      bookingStep === 'format'
+                        ? 'border-brand-green-800 bg-brand-green-50/80 text-brand-green-950 ring-1 ring-brand-green-800'
+                        : selectedMode
+                        ? 'border-emerald-200 bg-emerald-50/40 text-emerald-900 hover:bg-emerald-50'
+                        : 'border-slate-200 bg-slate-50/60 text-slate-500'
                     }`}
                   >
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                      bookingStep === 1
-                        ? 'bg-brand-gold-400 text-brand-green-950'
-                        : bookingStep > 1
+                    <span className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
+                      selectedMode && bookingStep !== 'format'
                         ? 'bg-emerald-600 text-white'
+                        : bookingStep === 'format'
+                        ? 'bg-brand-green-800 text-white'
                         : 'bg-slate-200 text-slate-600'
                     }`}>
-                      {bookingStep > 1 ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : '1'}
-                    </div>
-                    <div className="text-left hidden sm:block">
-                      <p className="text-[10px] uppercase tracking-wider font-semibold opacity-75">Step 1</p>
+                      {selectedMode && bookingStep !== 'format' ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : '1'}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Step 1</p>
                       <p className="text-xs font-bold truncate">Format</p>
                     </div>
                   </button>
 
-                  <div className={`w-4 sm:w-8 h-0.5 rounded-full ${bookingStep > 1 ? 'bg-emerald-500' : 'bg-slate-200'}`} />
-
-                  {/* Step 2 Pill */}
+                  {/* Step 2 Tab Indicator */}
                   <button
                     type="button"
-                    onClick={() => setBookingStep(2)}
-                    className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-2 py-2.5 px-2 sm:px-3 rounded-2xl transition-all cursor-pointer text-center ${
-                      bookingStep === 2
-                        ? 'bg-brand-green-800 text-white shadow-sm ring-2 ring-brand-green-800/20'
-                        : bookingStep > 2
-                        ? 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100/80 border border-emerald-200'
-                        : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                    onClick={() => { if (selectedMode) setBookingStep('datetime'); }}
+                    disabled={!selectedMode}
+                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-2.5 ${
+                      !selectedMode ? 'opacity-50 cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400' : 'cursor-pointer'
+                    } ${
+                      bookingStep === 'datetime'
+                        ? 'border-brand-green-800 bg-brand-green-50/80 text-brand-green-950 ring-1 ring-brand-green-800'
+                        : (bookingStep === 'information' || bookingStep === 'payment')
+                        ? 'border-emerald-200 bg-emerald-50/40 text-emerald-900 hover:bg-emerald-50'
+                        : 'border-slate-200 bg-slate-50/60 text-slate-500'
                     }`}
                   >
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                      bookingStep === 2
-                        ? 'bg-brand-gold-400 text-brand-green-950'
-                        : bookingStep > 2
+                    <span className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
+                      (bookingStep === 'information' || bookingStep === 'payment')
                         ? 'bg-emerald-600 text-white'
+                        : bookingStep === 'datetime'
+                        ? 'bg-brand-green-800 text-white'
                         : 'bg-slate-200 text-slate-600'
                     }`}>
-                      {bookingStep > 2 ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : '2'}
-                    </div>
-                    <div className="text-left hidden sm:block">
-                      <p className="text-[10px] uppercase tracking-wider font-semibold opacity-75">Step 2</p>
+                      {(bookingStep === 'information' || bookingStep === 'payment') ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : '2'}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Step 2</p>
                       <p className="text-xs font-bold truncate">Date & Time</p>
                     </div>
                   </button>
 
-                  <div className={`w-4 sm:w-8 h-0.5 rounded-full ${bookingStep > 2 ? 'bg-emerald-500' : 'bg-slate-200'}`} />
-
-                  {/* Step 3 Pill */}
+                  {/* Step 3 Tab Indicator */}
                   <button
                     type="button"
-                    onClick={() => setBookingStep(3)}
-                    className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-2 py-2.5 px-2 sm:px-3 rounded-2xl transition-all cursor-pointer text-center ${
-                      bookingStep === 3
-                        ? 'bg-brand-green-800 text-white shadow-sm ring-2 ring-brand-green-800/20'
-                        : bookingStep > 3
-                        ? 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100/80 border border-emerald-200'
-                        : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                    onClick={() => { if (selectedMode && selectedDate && selectedTimeSlot) setBookingStep('information'); }}
+                    disabled={!selectedMode || !selectedDate}
+                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-2.5 ${
+                      (!selectedMode || !selectedDate) ? 'opacity-50 cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400' : 'cursor-pointer'
+                    } ${
+                      bookingStep === 'information'
+                        ? 'border-brand-green-800 bg-brand-green-50/80 text-brand-green-950 ring-1 ring-brand-green-800'
+                        : bookingStep === 'payment'
+                        ? 'border-emerald-200 bg-emerald-50/40 text-emerald-900 hover:bg-emerald-50'
+                        : 'border-slate-200 bg-slate-50/60 text-slate-500'
                     }`}
                   >
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                      bookingStep === 3
-                        ? 'bg-brand-gold-400 text-brand-green-950'
-                        : bookingStep > 3
+                    <span className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
+                      bookingStep === 'payment'
                         ? 'bg-emerald-600 text-white'
+                        : bookingStep === 'information'
+                        ? 'bg-brand-green-800 text-white'
                         : 'bg-slate-200 text-slate-600'
                     }`}>
-                      {bookingStep > 3 ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : '3'}
-                    </div>
-                    <div className="text-left hidden sm:block">
-                      <p className="text-[10px] uppercase tracking-wider font-semibold opacity-75">Step 3</p>
-                      <p className="text-xs font-bold truncate">Patient Details</p>
+                      {bookingStep === 'payment' ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : '3'}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Step 3</p>
+                      <p className="text-xs font-bold truncate">Patient Info</p>
                     </div>
                   </button>
 
-                  <div className={`w-4 sm:w-8 h-0.5 rounded-full ${bookingStep > 3 ? 'bg-emerald-500' : 'bg-slate-200'}`} />
-
-                  {/* Step 4 Pill */}
+                  {/* Step 4 Tab Indicator */}
                   <button
                     type="button"
-                    onClick={() => {
-                      if (!patientName.trim() || !patientPhone.trim()) {
-                        setBookingStep(3);
-                      } else {
-                        setBookingStep(4);
-                      }
-                    }}
-                    className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-2 py-2.5 px-2 sm:px-3 rounded-2xl transition-all cursor-pointer text-center ${
-                      bookingStep === 4
-                        ? 'bg-brand-green-800 text-white shadow-sm ring-2 ring-brand-green-800/20'
-                        : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                    onClick={() => { if (patientName && patientPhone && selectedMode) setBookingStep('payment'); }}
+                    disabled={!patientName || !patientPhone || !selectedMode}
+                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-2.5 ${
+                      (!patientName || !patientPhone || !selectedMode) ? 'opacity-50 cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400' : 'cursor-pointer'
+                    } ${
+                      bookingStep === 'payment'
+                        ? 'border-brand-green-800 bg-brand-green-50/80 text-brand-green-950 ring-1 ring-brand-green-800'
+                        : 'border-slate-200 bg-slate-50/60 text-slate-500'
                     }`}
                   >
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                      bookingStep === 4
-                        ? 'bg-brand-gold-400 text-brand-green-950'
+                    <span className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
+                      bookingStep === 'payment'
+                        ? 'bg-brand-green-800 text-white'
                         : 'bg-slate-200 text-slate-600'
                     }`}>
                       4
-                    </div>
-                    <div className="text-left hidden sm:block">
-                      <p className="text-[10px] uppercase tracking-wider font-semibold opacity-75">Step 4</p>
-                      <p className="text-xs font-bold truncate">Confirm & Pay</p>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Step 4</p>
+                      <p className="text-xs font-bold truncate">Pay & Confirm</p>
                     </div>
                   </button>
 
                 </div>
               </div>
 
-              {/* Step Content Form */}
-              <form onSubmit={handleBookSlot}>
-                
-                {/* STEP 1: CHOOSE FORMAT */}
-                {bookingStep === 1 && (
-                  <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6 animate-in fade-in duration-200">
-                    
-                    {/* Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                      <div>
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-brand-green-800 bg-brand-green-50 px-2.5 py-1 rounded-full border border-brand-green-200">
-                          Step 1 of 4
-                        </span>
-                        <h3 className="font-serif text-xl sm:text-2xl font-bold text-slate-900 mt-2">
-                          Select Your Consultation Format
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Choose how you would like to connect with Dr. Arundhati Shekhar
-                        </p>
-                      </div>
-                      
-                      {/* Doctor mini-tag */}
-                      <div className="flex items-center gap-3 bg-brand-cream-50 p-2.5 rounded-2xl border border-brand-gold-300/40">
-                        <img 
-                          src={doctor.image} 
-                          alt={doctor.name} 
-                          className="w-10 h-10 rounded-xl object-cover border border-brand-gold-400" 
-                        />
-                        <div className="text-xs">
-                          <p className="font-bold text-slate-900">{doctor.name}</p>
-                          <p className="text-[10px] text-brand-green-800 font-semibold">{doctor.title}</p>
-                        </div>
-                      </div>
-                    </div>
+              {/* ======================================================== */}
+              {/* STEP 1: SELECT FORMAT (WITH BOOK NOW ON ALL THREE OPTIONS) */}
+              {/* ======================================================== */}
+              {bookingStep === 'format' && (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  <div className="text-center max-w-lg mx-auto space-y-1">
+                    <h3 className="font-serif text-xl sm:text-2xl font-bold text-slate-900">
+                      Choose Consultation Format
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Select your preferred mode of consultation with <strong>Dr. Sanjeev Rastogi</strong>. Click <strong>Book Now</strong> to choose your preferred date and time.
+                    </p>
+                  </div>
 
-                    {/* Formats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMode('video')}
-                        className={`p-5 rounded-2xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between gap-4 ${
-                          selectedMode === 'video'
-                            ? 'border-brand-green-800 bg-brand-green-50/80 shadow-md ring-2 ring-brand-green-800/20'
-                            : 'border-slate-200 hover:border-brand-gold-400 bg-white hover:bg-slate-50'
-                        }`}
-                      >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                    
+                    {/* OPTION 1: 1-on-1 Video Call */}
+                    <div className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-4 relative ${
+                      selectedMode === 'video'
+                        ? 'border-brand-green-800 bg-brand-green-50/50 shadow-md ring-2 ring-brand-green-800/20'
+                        : 'border-slate-200 hover:border-brand-green-700/60 bg-white shadow-2xs hover:shadow-sm'
+                    }`}>
+                      <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${selectedMode === 'video' ? 'bg-brand-green-800 text-brand-gold-300' : 'bg-slate-100 text-slate-700'}`}>
+                          <div className="w-12 h-12 rounded-xl bg-brand-green-800 text-brand-gold-300 flex items-center justify-center shadow-xs">
                             <Video className="w-6 h-6" />
                           </div>
-                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">Recommended</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-full border border-emerald-300">
+                            Recommended
+                          </span>
                         </div>
+
                         <div>
-                          <p className="font-bold text-sm text-slate-900">1-on-1 Video Call</p>
-                          <p className="text-xs text-slate-600 mt-1">High-definition face-to-face video consultation. Best for visual pulse, tongue analysis, skin and scalp evaluation.</p>
-                          <p className="text-[11px] text-brand-green-800 font-bold mt-2 flex items-center gap-1">
-                            <Check className="w-3 h-3 stroke-[3]" /> Private encrypted room
-                          </p>
+                          <h4 className="font-serif text-lg font-bold text-slate-900">1-on-1 Video Call</h4>
+                          <p className="text-xs text-slate-500 mt-0.5">Direct HD video room with doctor</p>
                         </div>
-                      </button>
+
+                        <div className="flex items-baseline gap-2 pt-1">
+                          <span className="text-2xl font-black text-brand-green-950">₹{doctor.fee}</span>
+                          <span className="text-xs text-slate-400 line-through">₹{doctor.originalFee}</span>
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">58% OFF</span>
+                        </div>
+
+                        <ul className="space-y-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                            <span>Visual facial, tongue & skin diagnosis</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                            <span>AYUSH certified digital prescription</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                            <span>7 Days free WhatsApp follow-up care</span>
+                          </li>
+                        </ul>
+                      </div>
 
                       <button
+                        id="btn-book-video-call"
                         type="button"
-                        onClick={() => setSelectedMode('audio')}
-                        className={`p-5 rounded-2xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between gap-4 ${
-                          selectedMode === 'audio'
-                            ? 'border-brand-green-800 bg-brand-green-50/80 shadow-md ring-2 ring-brand-green-800/20'
-                            : 'border-slate-200 hover:border-brand-gold-400 bg-white hover:bg-slate-50'
-                        }`}
+                        onClick={() => handleSelectFormatAndProceed('video')}
+                        className="w-full py-3 px-4 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer group hover:scale-101"
                       >
+                        <span>Book Video Call Now</span>
+                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                      </button>
+                    </div>
+
+                    {/* OPTION 2: Direct Phone Call */}
+                    <div className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-4 relative ${
+                      selectedMode === 'audio'
+                        ? 'border-brand-green-800 bg-brand-green-50/50 shadow-md ring-2 ring-brand-green-800/20'
+                        : 'border-slate-200 hover:border-brand-green-700/60 bg-white shadow-2xs hover:shadow-sm'
+                    }`}>
+                      <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${selectedMode === 'audio' ? 'bg-brand-green-800 text-brand-gold-300' : 'bg-slate-100 text-slate-700'}`}>
+                          <div className="w-12 h-12 rounded-xl bg-brand-green-800 text-brand-gold-300 flex items-center justify-center shadow-xs">
                             <Phone className="w-6 h-6" />
                           </div>
-                          <span className="text-[10px] bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-full">Voice Only</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full border border-slate-300">
+                            Direct Voice
+                          </span>
                         </div>
+
                         <div>
-                          <p className="font-bold text-sm text-slate-900">Direct Phone Call</p>
-                          <p className="text-xs text-slate-600 mt-1">Direct private phone call to your mobile number. Ideal for patients with low internet bandwidth or on the go.</p>
-                          <p className="text-[11px] text-brand-green-800 font-bold mt-2 flex items-center gap-1">
-                            <Check className="w-3 h-3 stroke-[3]" /> No app required
-                          </p>
+                          <h4 className="font-serif text-lg font-bold text-slate-900">Direct Phone Call</h4>
+                          <p className="text-xs text-slate-500 mt-0.5">Doctor calls your mobile number</p>
                         </div>
-                      </button>
+
+                        <div className="flex items-baseline gap-2 pt-1">
+                          <span className="text-2xl font-black text-brand-green-950">₹{doctor.fee}</span>
+                          <span className="text-xs text-slate-400 line-through">₹{doctor.originalFee}</span>
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">58% OFF</span>
+                        </div>
+
+                        <ul className="space-y-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                            <span>No app or high internet required</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                            <span>Detailed vocal symptom assessment</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                            <span>WhatsApp prescription & 7-day care</span>
+                          </li>
+                        </ul>
+                      </div>
 
                       <button
+                        id="btn-book-phone-call"
                         type="button"
-                        onClick={() => setSelectedMode('clinic')}
-                        className={`p-5 rounded-2xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between gap-4 ${
-                          selectedMode === 'clinic'
-                            ? 'border-brand-green-800 bg-brand-green-50/80 shadow-md ring-2 ring-brand-green-800/20'
-                            : 'border-slate-200 hover:border-brand-gold-400 bg-white hover:bg-slate-50'
-                        }`}
+                        onClick={() => handleSelectFormatAndProceed('audio')}
+                        className="w-full py-3 px-4 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer group hover:scale-101"
                       >
+                        <span>Book Phone Call Now</span>
+                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                      </button>
+                    </div>
+
+                    {/* OPTION 3: WhatsApp Audio */}
+                    <div className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-4 relative ${
+                      selectedMode === 'clinic'
+                        ? 'border-brand-green-800 bg-brand-green-50/50 shadow-md ring-2 ring-brand-green-800/20'
+                        : 'border-slate-200 hover:border-brand-green-700/60 bg-white shadow-2xs hover:shadow-sm'
+                    }`}>
+                      <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${selectedMode === 'clinic' ? 'bg-brand-green-800 text-brand-gold-300' : 'bg-slate-100 text-slate-700'}`}>
+                          <div className="w-12 h-12 rounded-xl bg-brand-green-800 text-brand-gold-300 flex items-center justify-center shadow-xs">
                             <MessageSquare className="w-6 h-6" />
                           </div>
-                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">WhatsApp</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-full border border-emerald-300">
+                            WhatsApp Connect
+                          </span>
                         </div>
+
                         <div>
-                          <p className="font-bold text-sm text-slate-900">WhatsApp & Audio</p>
-                          <p className="text-xs text-slate-600 mt-1">WhatsApp audio consultation with instant prescription and diet charts delivered directly to your chat.</p>
-                          <p className="text-[11px] text-brand-green-800 font-bold mt-2 flex items-center gap-1">
-                            <Check className="w-3 h-3 stroke-[3]" /> Direct chat support
-                          </p>
+                          <h4 className="font-serif text-lg font-bold text-slate-900">WhatsApp Audio</h4>
+                          <p className="text-xs text-slate-500 mt-0.5">Call & instant chart on WhatsApp</p>
                         </div>
+
+                        <div className="flex items-baseline gap-2 pt-1">
+                          <span className="text-2xl font-black text-brand-green-950">₹{doctor.fee}</span>
+                          <span className="text-xs text-slate-400 line-through">₹{doctor.originalFee}</span>
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">58% OFF</span>
+                        </div>
+
+                        <ul className="space-y-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                            <span>Instant WhatsApp audio connect</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                            <span>Easy instant photo/report sharing</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                            <span>7 Days free follow-up on chat</span>
+                          </li>
+                        </ul>
+                      </div>
+
+                      <button
+                        id="btn-book-whatsapp-audio"
+                        type="button"
+                        onClick={() => handleSelectFormatAndProceed('clinic')}
+                        className="w-full py-3 px-4 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer group hover:scale-101"
+                      >
+                        <span>Book WhatsApp Audio Now</span>
+                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                       </button>
                     </div>
 
-                    {/* Step 1 Actions */}
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                      <div className="text-xs text-slate-500">
-                        Selected: <strong className="text-brand-green-800 font-bold capitalize">{selectedMode === 'video' ? '1-on-1 Video Call' : selectedMode === 'audio' ? 'Direct Phone Call' : 'WhatsApp & Audio'}</strong>
+                  </div>
+
+                  {/* TRUST FOOTER STRIP */}
+                  <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-center gap-5 text-xs text-slate-500">
+                    <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>AYUSH Certified Senior Vaidya</span>
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="flex items-center gap-1.5 text-slate-600">
+                      <Lock className="w-4 h-4 text-brand-green-800" />
+                      <span>100% Private & Confidential</span>
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="flex items-center gap-1.5 text-slate-600">
+                      <Sparkles className="w-4 h-4 text-brand-gold-600" />
+                      <span>Subsidized Fee: ₹{doctor.fee} Only</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* STEP 2: SELECT PREFERRED DATE & TIME (WITH CONTINUE BUTTON) */}
+              {/* ======================================================== */}
+              {bookingStep === 'datetime' && (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  
+                  {/* SELECTED FORMAT BANNER */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 gap-3">
+                    <div className="flex items-center gap-2.5 text-xs text-emerald-950">
+                      <div className="w-8 h-8 rounded-lg bg-brand-green-800 text-brand-gold-300 flex items-center justify-center">
+                        {selectedMode === 'video' ? <Video className="w-4 h-4" /> : selectedMode === 'audio' ? <Phone className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setBookingStep(2)}
-                        className="px-6 py-3 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
-                      >
-                        <span>Continue to Date & Time</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+                      <div>
+                        <p className="font-bold">
+                          Format: {selectedMode === 'video' ? '1-on-1 Video Call' : selectedMode === 'audio' ? 'Direct Phone Call' : 'WhatsApp Audio'}
+                        </p>
+                        <p className="text-[11px] text-emerald-700">Fee: ₹{doctor.fee} • 20-30 Mins Consultation</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setBookingStep('format')}
+                      className="text-xs font-bold text-brand-green-900 hover:text-brand-green-950 hover:underline cursor-pointer px-3 py-1 rounded-lg bg-white border border-emerald-300 shadow-2xs"
+                    >
+                      Change Format
+                    </button>
+                  </div>
+
+                  {/* SELECT DATE */}
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5 mb-2.5">
+                      <Calendar className="w-4 h-4 text-brand-green-800" />
+                      <span>1. Select Preferred Date</span>
+                    </label>
+
+                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                      {next7Days.map((d) => {
+                        const isSelected = selectedDate === d.fullIso;
+                        return (
+                          <button
+                            key={d.fullIso}
+                            type="button"
+                            onClick={() => setSelectedDate(d.fullIso)}
+                            className={`py-3 px-2 rounded-xl text-center border-2 transition-all cursor-pointer flex flex-col items-center justify-center ${
+                              isSelected
+                                ? 'border-brand-green-800 bg-brand-green-800 text-white shadow-xs ring-2 ring-brand-green-800/30'
+                                : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100'
+                            }`}
+                          >
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${isSelected ? 'text-brand-gold-300' : 'text-slate-500'}`}>
+                              {d.dayName}
+                            </span>
+                            <span className="text-xs sm:text-sm font-extrabold mt-0.5">
+                              {d.dateString}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                )}
 
-                {/* STEP 2: CHOOSE DATE & TIME */}
-                {bookingStep === 2 && (
-                  <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6 animate-in fade-in duration-200">
-                    
-                    {/* Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                      <div>
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-brand-green-800 bg-brand-green-50 px-2.5 py-1 rounded-full border border-brand-green-200">
-                          Step 2 of 4
-                        </span>
-                        <h3 className="font-serif text-xl sm:text-2xl font-bold text-slate-900 mt-2">
-                          Select Consultation Date & Time Slot
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Slots are reserved exclusively for 45 minutes of detailed Ayurvedic analysis
-                        </p>
-                      </div>
+                  {/* SELECT TIME SLOT */}
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5 mb-2.5">
+                      <Clock className="w-4 h-4 text-brand-green-800" />
+                      <span>2. Select Preferred Time Slot</span>
+                    </label>
 
-                      {/* Live Selected Pill */}
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-gold-50 border border-brand-gold-300 text-brand-green-950 text-xs font-bold self-start sm:self-auto">
-                        <Calendar className="w-3.5 h-3.5 text-brand-green-800" />
-                        <span>{selectedDate || 'Today'}</span>
-                        <span className="text-slate-400">•</span>
-                        <Clock className="w-3.5 h-3.5 text-brand-green-800" />
-                        <span>{selectedTimeSlot}</span>
-                      </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                      {timeSlots.map((slot) => {
+                        const isSelected = selectedTimeSlot === slot;
+                        return (
+                          <button
+                            key={slot}
+                            type="button"
+                            onClick={() => setSelectedTimeSlot(slot)}
+                            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center justify-center gap-1 ${
+                              isSelected
+                                ? 'bg-brand-green-800 text-brand-gold-300 border-brand-green-800 shadow-xs ring-2 ring-brand-green-800/30'
+                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            <span>{slot}</span>
+                          </button>
+                        );
+                      })}
                     </div>
+                  </div>
 
-                    {/* Date Selector */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-2">
-                        1. Select Preferred Date
-                      </label>
-                      <div className="grid grid-cols-3 sm:grid-cols-7 gap-2.5">
-                        {next7Days.map((d) => {
-                          const isSelected = selectedDate === d.fullIso;
-                          return (
-                            <button
-                              key={d.fullIso}
-                              type="button"
-                              onClick={() => setSelectedDate(d.fullIso)}
-                              className={`py-3.5 px-2 rounded-2xl text-center border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
-                                isSelected
-                                  ? 'border-brand-green-800 bg-brand-green-800 text-white shadow-md ring-2 ring-brand-green-800/30'
-                                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-brand-gold-400 hover:bg-brand-cream-50'
-                              }`}
-                            >
-                              <span className={`text-[10px] font-bold uppercase tracking-wider ${isSelected ? 'text-brand-gold-300' : 'text-slate-500'}`}>
-                                {d.dayName}
-                              </span>
-                              <span className="text-sm font-extrabold">
-                                {d.dateString}
-                              </span>
-                            </button>
-                          );
-                        })}
+                  {/* SELECTION SUMMARY & CONTINUE BUTTON */}
+                  <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setBookingStep('format')}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back to Formats</span>
+                    </button>
+
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div className="text-right hidden sm:block">
+                        <p className="text-[11px] text-slate-500">Selected Slot:</p>
+                        <p className="text-xs font-bold text-slate-800">{selectedDate} at {selectedTimeSlot}</p>
                       </div>
-
-                      {/* Custom Date Input for Future Dates */}
-                      <div className="mt-3 flex items-center gap-2 text-xs text-slate-600">
-                        <span>Or select a later calendar date:</span>
-                        <input
-                          type="date"
-                          value={selectedDate}
-                          min={next7Days[0]?.fullIso}
-                          onChange={(e) => setSelectedDate(e.target.value)}
-                          className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-800 font-medium focus:outline-none focus:border-brand-green-800 cursor-pointer"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Time Slots Section */}
-                    <div className="space-y-4 pt-2 border-t border-slate-100">
-                      <label className="block text-xs font-bold text-slate-700">
-                        2. Select Time Slot
-                      </label>
-
-                      {/* Morning */}
-                      <div className="space-y-1.5">
-                        <p className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
-                          <span>🌅 Morning Sessions (09:30 AM – 12:30 PM)</span>
-                        </p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                          {morningSlots.map((slot) => {
-                            const isSelected = selectedTimeSlot === slot;
-                            return (
-                              <button
-                                key={slot}
-                                type="button"
-                                onClick={() => setSelectedTimeSlot(slot)}
-                                className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center justify-center gap-1.5 ${
-                                  isSelected
-                                    ? 'bg-brand-green-800 text-brand-gold-300 border-brand-green-800 shadow-sm ring-1 ring-brand-green-800'
-                                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-brand-cream-50 hover:border-brand-gold-300'
-                                }`}
-                              >
-                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                                <span>{slot}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Afternoon */}
-                      <div className="space-y-1.5">
-                        <p className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
-                          <span>☀️ Afternoon Sessions (02:30 PM – 05:30 PM)</span>
-                        </p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                          {afternoonSlots.map((slot) => {
-                            const isSelected = selectedTimeSlot === slot;
-                            return (
-                              <button
-                                key={slot}
-                                type="button"
-                                onClick={() => setSelectedTimeSlot(slot)}
-                                className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center justify-center gap-1.5 ${
-                                  isSelected
-                                    ? 'bg-brand-green-800 text-brand-gold-300 border-brand-green-800 shadow-sm ring-1 ring-brand-green-800'
-                                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-brand-cream-50 hover:border-brand-gold-300'
-                                }`}
-                              >
-                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                                <span>{slot}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Evening */}
-                      <div className="space-y-1.5">
-                        <p className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
-                          <span>🌙 Evening Sessions (06:00 PM – 08:45 PM)</span>
-                        </p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                          {eveningSlots.map((slot) => {
-                            const isSelected = selectedTimeSlot === slot;
-                            return (
-                              <button
-                                key={slot}
-                                type="button"
-                                onClick={() => setSelectedTimeSlot(slot)}
-                                className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center justify-center gap-1.5 ${
-                                  isSelected
-                                    ? 'bg-brand-green-800 text-brand-gold-300 border-brand-green-800 shadow-sm ring-1 ring-brand-green-800'
-                                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-brand-cream-50 hover:border-brand-gold-300'
-                                }`}
-                              >
-                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                                <span>{slot}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Step 2 Actions */}
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                      <button
-                        type="button"
-                        onClick={() => setBookingStep(1)}
-                        className="px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-2 cursor-pointer transition-colors"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        <span>Back to Format</span>
-                      </button>
 
                       <button
+                        id="btn-continue-to-patient-info"
                         type="button"
-                        onClick={() => setBookingStep(3)}
-                        className="px-6 py-3 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
+                        onClick={handleProceedToInformation}
+                        className="flex-1 sm:flex-none px-7 py-3 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
                       >
                         <span>Continue to Patient Details</span>
                         <ArrowRight className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
-                )}
 
-                {/* STEP 3: PATIENT DETAILS & HEALTH CONCERN */}
-                {bookingStep === 3 && (
-                  <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6 animate-in fade-in duration-200">
-                    
-                    {/* Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* STEP 3: PATIENT INFORMATION (WITH PROCEED TO PAY BUTTON) */}
+              {/* ======================================================== */}
+              {bookingStep === 'information' && (
+                <form onSubmit={handleProceedToPayment} className="space-y-6 animate-in fade-in duration-300">
+                  
+                  {/* APPOINTMENT QUICK SUMMARY CARD */}
+                  <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-brand-gold-300/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={doctor.image}
+                        alt={doctor.name}
+                        className="w-9 h-9 rounded-full object-cover border border-brand-gold-400"
+                      />
                       <div>
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-brand-green-800 bg-brand-green-50 px-2.5 py-1 rounded-full border border-brand-green-200">
-                          Step 3 of 4
-                        </span>
-                        <h3 className="font-serif text-xl sm:text-2xl font-bold text-slate-900 mt-2">
-                          Patient Information & Health Concerns
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Please provide accurate details so Dr. Arundhati can review prior to your session
+                        <p className="font-bold text-slate-900">{doctor.name}</p>
+                        <p className="text-[11px] text-slate-500">
+                          {selectedMode === 'video' ? '1-on-1 Video Call' : selectedMode === 'audio' ? 'Direct Phone Call' : 'WhatsApp Audio'} • <strong className="text-slate-800">{selectedDate} at {selectedTimeSlot}</strong>
                         </p>
-                      </div>
-
-                      <div className="text-xs bg-brand-green-50 text-brand-green-800 font-bold px-3 py-1.5 rounded-xl border border-brand-green-200">
-                        100% Confidential
                       </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-sm text-brand-green-900">₹{doctor.fee}</span>
+                      <button
+                        type="button"
+                        onClick={() => setBookingStep('datetime')}
+                        className="text-[11px] text-brand-green-800 font-bold underline cursor-pointer"
+                      >
+                        Change Time
+                      </button>
+                    </div>
+                  </div>
+
+                  {formError && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{formError}</span>
+                    </div>
+                  )}
+
+                  {/* FORM INPUTS */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                          Patient Full Name <span className="text-rose-500">*</span>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Patient Full Name *
                         </label>
-                        <input 
-                          type="text" 
-                          required 
-                          value={patientName} 
-                          onChange={(e) => setPatientName(e.target.value)}
-                          placeholder="e.g. Radhika Sharma" 
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50 font-medium"
+                        <input
+                          id="input-patient-name"
+                          type="text"
+                          required
+                          placeholder="e.g. Ramesh Sharma"
+                          value={patientName}
+                          onChange={(e) => {
+                            setPatientName(e.target.value);
+                            if (formError) setFormError(null);
+                          }}
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50/50"
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          WhatsApp / Phone Number *
+                        </label>
+                        <input
+                          id="input-patient-phone"
+                          type="tel"
+                          required
+                          placeholder="e.g. 9876543210"
+                          value={patientPhone}
+                          onChange={(e) => {
+                            setPatientPhone(e.target.value);
+                            if (formError) setFormError(null);
+                          }}
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50/50"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Age</label>
-                          <input 
-                            type="number" 
-                            min="1" 
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Age
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
                             max="120"
-                            value={patientAge} 
+                            value={patientAge}
                             onChange={(e) => setPatientAge(e.target.value ? Number(e.target.value) : '')}
-                            placeholder="e.g. 29" 
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50 font-medium"
+                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50/50"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Gender</label>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Gender
+                          </label>
                           <select
                             value={patientGender}
-                            onChange={(e: any) => setPatientGender(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50 font-medium cursor-pointer"
+                            onChange={(e) => setPatientGender(e.target.value as any)}
+                            className="w-full px-2 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-white"
                           >
                             <option value="Female">Female</option>
                             <option value="Male">Male</option>
@@ -1088,703 +1246,496 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                           </select>
                         </div>
                       </div>
+                    </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                            WhatsApp Mobile Number <span className="text-rose-500">*</span>
-                          </label>
-                          <input 
-                            type="tel" 
-                            required 
-                            value={patientPhone} 
-                            onChange={(e) => setPatientPhone(e.target.value)}
-                            placeholder="+91 98765 43210" 
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50 font-medium"
-                          />
-                          <p className="text-[10px] text-slate-500 mt-1">Consultation link and reminders will be sent to this WhatsApp number</p>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 mb-1.5">Email Address</label>
-                          <input 
-                            type="email" 
-                            value={patientEmail} 
-                            onChange={(e) => setPatientEmail(e.target.value)}
-                            placeholder="patient@example.com" 
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50 font-medium"
-                          />
-                          <p className="text-[10px] text-slate-500 mt-1">Digital prescription will be emailed after call</p>
-                        </div>
+                    {/* Primary Health Concern */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1.5">
+                        Primary Reason / Health Concern
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {HEALTH_CONCERNS.map((item) => {
+                          const isSelected = healthConcern === item && !customConcern;
+                          return (
+                            <button
+                              key={item}
+                              type="button"
+                              onClick={() => {
+                                setHealthConcern(item);
+                                setCustomConcern('');
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-xs transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-brand-green-800 text-white font-bold'
+                                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                              }`}
+                            >
+                              {item}
+                            </button>
+                          );
+                        })}
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Primary Health Concern</label>
-                        <select
-                          value={healthConcern}
-                          onChange={(e) => setHealthConcern(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50 font-medium cursor-pointer"
-                        >
-                          <option value="Chronic Digestion / Acidity & Bloating">Chronic Digestion / Acidity & Bloating</option>
-                          <option value="PCOS / Female Hormonal Imbalance">PCOS / Female Hormonal Imbalance</option>
-                          <option value="Hair Fall, Dandruff & Scalp Thinning">Hair Fall, Dandruff & Scalp Thinning</option>
-                          <option value="Skin Pigmentation, Melasma & Acne">Skin Pigmentation, Melasma & Acne</option>
-                          <option value="Joint Pain, Arthritis & Stiffness">Joint Pain, Arthritis & Stiffness</option>
-                          <option value="Stress, Insomnia & Mental Exhaustion">Stress, Insomnia & Mental Exhaustion</option>
-                          <option value="Men's Stamina, Energy & Vitality">Men's Stamina, Energy & Vitality</option>
-                          <option value="Immunity, Respiratory & Seasonal Allergies">Immunity, Respiratory & Seasonal Allergies</option>
-                          <option value="Weight & Metabolic Detox (Ama Pachana)">Weight & Metabolic Detox (Ama Pachana)</option>
-                          <option value="General Preventive Ayurveda & Rasayana">General Preventive Ayurveda & Rasayana</option>
-                        </select>
-                      </div>
+                      <input
+                        type="text"
+                        placeholder="Or briefly describe symptoms (optional)..."
+                        value={customConcern}
+                        onChange={(e) => setCustomConcern(e.target.value)}
+                        className="w-full mt-2 px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50/50"
+                      />
+                    </div>
 
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Medical Notes & Existing Medications (Optional)</label>
-                        <textarea
-                          rows={2}
-                          value={previousHistory}
-                          onChange={(e) => setPreviousHistory(e.target.value)}
-                          placeholder="Mention any ongoing treatments, blood reports, allergies, or questions..."
-                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50 font-medium resize-none"
-                        />
-                      </div>
+                    {/* Medical Reports Upload (Optional) */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowReportUpload(!showReportUpload)}
+                        className="text-xs text-brand-green-800 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>{showReportUpload ? 'Hide Report Attachment' : '+ Have previous medical or blood reports? (Optional PDF)'}</span>
+                      </button>
 
-                      {/* PDF Medical Report Upload Section */}
-                      <div className="pt-2 border-t border-slate-100 space-y-3">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                          <div>
-                            <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                              <FileText className="w-4 h-4 text-rose-600" />
-                              <span>Previous Medical Reports & Prescriptions (PDF)</span>
-                              <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">Optional</span>
+                      {showReportUpload && (
+                        <div className="mt-2.5 p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <label className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer inline-flex items-center gap-1.5">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>Select PDF Report</span>
+                              <input
+                                type="file"
+                                accept="application/pdf"
+                                className="hidden"
+                                onChange={(e) => {
+                                  if (e.target.files) handleReportUpload(e.target.files);
+                                }}
+                              />
                             </label>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                              Upload previous doctor prescriptions, blood tests, ultrasound/MRI, or lab reports for Dr. Arundhati's review.
-                            </p>
+                            <span className="text-[11px] text-slate-500">PDF only (Max 10MB)</span>
                           </div>
-                          {uploadedReports.length > 0 && (
-                            <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full self-start sm:self-auto flex items-center gap-1">
-                              <CheckCircle className="w-3.5 h-3.5" />
-                              <span>{uploadedReports.length} PDF{uploadedReports.length > 1 ? 's' : ''} Attached</span>
-                            </span>
+
+                          {reportError && (
+                            <p className="text-[11px] text-red-600 font-semibold">{reportError}</p>
                           )}
-                        </div>
 
-                        {/* Drag & Drop or Click Upload Box */}
-                        <div
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            setIsDraggingReports(true);
-                          }}
-                          onDragLeave={(e) => {
-                            e.preventDefault();
-                            setIsDraggingReports(false);
-                          }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            setIsDraggingReports(false);
-                            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                              handleReportUpload(e.dataTransfer.files);
-                            }
-                          }}
-                          className={`relative border-2 border-dashed rounded-2xl p-4 sm:p-5 text-center transition-all cursor-pointer ${
-                            isDraggingReports
-                              ? 'border-brand-green-800 bg-brand-green-50/80 scale-[1.01]'
-                              : 'border-slate-300 hover:border-brand-gold-400 bg-slate-50/70 hover:bg-brand-cream-50/40'
-                          }`}
-                        >
-                          <input
-                            id="pdf-report-upload-input"
-                            type="file"
-                            multiple
-                            accept=".pdf,application/pdf"
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files.length > 0) {
-                                handleReportUpload(e.target.files);
-                              }
-                            }}
-                            className="hidden"
-                          />
-
-                          <label htmlFor="pdf-report-upload-input" className="cursor-pointer block space-y-2">
-                            <div className="w-10 h-10 mx-auto rounded-full bg-brand-green-100 text-brand-green-800 flex items-center justify-center shadow-xs">
-                              <Upload className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-slate-800">
-                                <span className="text-brand-green-800 underline underline-offset-2">Click to browse</span> or drag & drop PDF files
-                              </p>
-                              <p className="text-[10px] text-slate-500 mt-1">
-                                Supported: <strong>.PDF format</strong> (Max 5 files, 15MB each) • 100% Medical Privacy Guaranteed
-                              </p>
-                            </div>
-                          </label>
-                        </div>
-
-                        {/* Error Message */}
-                        {reportUploadError && (
-                          <p className="text-xs text-rose-600 font-medium flex items-center gap-1">
-                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                            <span>{reportUploadError}</span>
-                          </p>
-                        )}
-
-                        {/* Uploaded PDF List */}
-                        {uploadedReports.length > 0 && (
-                          <div className="space-y-2 pt-1">
-                            <p className="text-[11px] font-bold text-slate-700">Uploaded PDF Documents ({uploadedReports.length}):</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {uploadedReports.map((report, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs hover:border-brand-gold-400 transition-colors"
-                                >
-                                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                    <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 flex items-center justify-center font-bold text-[10px] shrink-0">
-                                      PDF
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-xs font-bold text-slate-800 truncate" title={report.name}>
-                                        {report.name}
-                                      </p>
-                                      <p className="text-[10px] text-slate-500">
-                                        {report.size} • {report.uploadedAt}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-1 shrink-0 ml-2">
-                                    {report.dataUrl && (
-                                      <button
-                                        type="button"
-                                        onClick={() => openPdfPreview(report)}
-                                        title="View PDF"
-                                        className="p-1.5 rounded-lg text-slate-500 hover:text-brand-green-800 hover:bg-slate-100 transition-colors cursor-pointer"
-                                      >
-                                        <Eye className="w-4 h-4" />
-                                      </button>
-                                    )}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleRemoveReport(idx)}
-                                      title="Remove File"
-                                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
+                          {uploadedReports.length > 0 && (
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {uploadedReports.map((rep, idx) => (
+                                <div key={idx} className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-xs">
+                                  <span className="truncate max-w-[150px] font-medium">{rep.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setUploadedReports(prev => prev.filter((_, i) => i !== idx))}
+                                    className="text-slate-400 hover:text-red-500"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Step 3 Actions */}
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                      <button
-                        type="button"
-                        onClick={() => setBookingStep(2)}
-                        className="px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-2 cursor-pointer transition-colors"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        <span>Back to Date & Time</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!patientName.trim()) {
-                            alert('Please enter the patient full name.');
-                            return;
-                          }
-                          if (!patientPhone.trim()) {
-                            alert('Please enter your WhatsApp mobile number.');
-                            return;
-                          }
-                          setBookingStep(4);
-                        }}
-                        className="px-6 py-3 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs flex items-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
-                      >
-                        <span>Continue to Review & Pay</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
 
-                {/* STEP 4: REVIEW & CONFIRM BOOKING */}
-                {bookingStep === 4 && (
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in duration-200">
+                  {/* NAVIGATION TO PAYMENT */}
+                  <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setBookingStep('datetime')}
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back to Date & Time</span>
+                    </button>
+
+                    <button
+                      id="btn-proceed-to-payment"
+                      type="submit"
+                      className="w-full sm:w-auto px-7 py-3 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <span>Proceed to Payment • ₹{doctor.fee}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                </form>
+              )}
+
+              {/* ======================================================== */}
+              {/* STEP 4: SECURE PAYMENT ("THEN PAY") */}
+              {/* ======================================================== */}
+              {bookingStep === 'payment' && (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  
+                  <div className="text-center max-w-md mx-auto space-y-1">
+                    <h3 className="font-serif text-xl sm:text-2xl font-bold text-slate-900">
+                      Secure Consultation Payment
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Complete your subsidized consultation fee of <strong>₹{doctor.fee}</strong> to immediately confirm your appointment slot.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                     
-                    {/* Left 7 cols: Appointment Summary Details */}
-                    <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
-                      
-                      {/* Header */}
-                      <div className="border-b border-slate-100 pb-4">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-brand-green-800 bg-brand-green-50 px-2.5 py-1 rounded-full border border-brand-green-200">
-                          Step 4 of 4
-                        </span>
-                        <h3 className="font-serif text-xl sm:text-2xl font-bold text-slate-900 mt-2">
-                          Review Consultation Summary
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Please verify your appointment information before final confirmation
+                    {/* LEFT COLUMN: ORDER SUMMARY */}
+                    <div className="md:col-span-5 bg-slate-50/90 rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-4">
+                      <div className="border-b border-slate-200 pb-3">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Booking Summary</span>
+                        <h4 className="font-serif font-bold text-slate-900 text-base mt-0.5">{doctor.name}</h4>
+                        <p className="text-xs text-emerald-800 font-semibold">
+                          {selectedMode === 'video' ? '1-on-1 Video Call' : selectedMode === 'audio' ? 'Direct Phone Call' : 'WhatsApp Audio'}
                         </p>
                       </div>
 
-                      {/* Doctor Profile Mini Card */}
-                      <div className="bg-brand-cream-50/80 p-4 sm:p-5 rounded-2xl border border-brand-green-600/15 flex items-center gap-4">
-                        <img 
-                          src={doctor.image} 
-                          alt={doctor.name} 
-                          className="w-16 h-16 rounded-2xl object-cover border-2 border-brand-gold-400 shadow-sm" 
-                        />
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-serif text-base font-bold text-slate-900 truncate">{doctor.name}</h4>
-                            <span className="text-[9px] font-bold px-2 py-0.5 bg-brand-green-800 text-brand-gold-300 rounded">
-                              BHU Gold Medalist
-                            </span>
-                          </div>
-                          <p className="text-xs font-semibold text-brand-green-800">{doctor.title}</p>
-                          <p className="text-[11px] text-slate-500">{doctor.qualification}</p>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between text-slate-600">
+                          <span>Scheduled Date:</span>
+                          <strong className="text-slate-900">{selectedDate}</strong>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Scheduled Time:</span>
+                          <strong className="text-slate-900">{selectedTimeSlot}</strong>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Patient:</span>
+                          <strong className="text-slate-900">{patientName}</strong>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Contact:</span>
+                          <strong className="text-slate-900">{patientPhone}</strong>
                         </div>
                       </div>
 
-                      {/* Review Table / Key Details */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                          <p className="text-slate-500 font-medium">Consultation Format</p>
-                          <p className="font-bold text-sm text-slate-900 capitalize flex items-center gap-1.5">
-                            {selectedMode === 'video' ? <Video className="w-4 h-4 text-brand-green-800" /> : <Phone className="w-4 h-4 text-brand-green-800" />}
-                            {selectedMode === 'video' ? '1-on-1 Video Call' : selectedMode === 'audio' ? 'Direct Phone Call' : 'WhatsApp & Audio'}
-                          </p>
+                      <div className="pt-3 border-t border-slate-200 space-y-1.5 text-xs">
+                        <div className="flex justify-between text-slate-500">
+                          <span>Standard Consultation:</span>
+                          <span className="line-through">₹{doctor.originalFee}</span>
                         </div>
-
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                          <p className="text-slate-500 font-medium">Scheduled Date & Time</p>
-                          <p className="font-bold text-sm text-brand-green-950 flex items-center gap-1.5">
-                            <Calendar className="w-4 h-4 text-brand-green-800" />
-                            {selectedDate || 'Today'} @ {selectedTimeSlot}
-                          </p>
+                        <div className="flex justify-between text-emerald-700 font-semibold">
+                          <span>AYUSH Care Subsidy:</span>
+                          <span>-₹{(doctor.originalFee || 1200) - doctor.fee}</span>
                         </div>
-
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                          <p className="text-slate-500 font-medium">Patient Information</p>
-                          <p className="font-bold text-sm text-slate-900">
-                            {patientName} {patientAge ? `(${patientAge} yrs, ${patientGender})` : ''}
-                          </p>
-                          <p className="text-[11px] text-slate-600">{patientPhone}</p>
+                        <div className="flex justify-between items-baseline pt-2 border-t border-slate-200 text-slate-900">
+                          <span className="font-bold text-sm">Total Payable:</span>
+                          <span className="text-xl font-black text-brand-green-950">₹{doctor.fee}</span>
                         </div>
+                        <p className="text-[10px] text-slate-400 text-right">All taxes & 7-day WhatsApp care included</p>
+                      </div>
+                    </div>
 
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                          <p className="text-slate-500 font-medium">Primary Health Concern</p>
-                          <p className="font-bold text-xs text-brand-green-900">
-                            {healthConcern}
-                          </p>
+                    {/* RIGHT COLUMN: PAYMENT METHODS & PAY BUTTON */}
+                    <div className="md:col-span-7 space-y-4">
+                      
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
+                          Select Payment Method
+                        </label>
+                        
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('upi')}
+                            className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                              paymentMethod === 'upi'
+                                ? 'border-brand-green-800 bg-brand-green-50 text-brand-green-950 font-bold ring-1 ring-brand-green-800'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            <Smartphone className="w-5 h-5 text-brand-green-800" />
+                            <span className="text-xs">UPI / QR</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('card')}
+                            className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                              paymentMethod === 'card'
+                                ? 'border-brand-green-800 bg-brand-green-50 text-brand-green-950 font-bold ring-1 ring-brand-green-800'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            <CreditCard className="w-5 h-5 text-brand-green-800" />
+                            <span className="text-xs">Cards</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('netbanking')}
+                            className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                              paymentMethod === 'netbanking'
+                                ? 'border-brand-green-800 bg-brand-green-50 text-brand-green-950 font-bold ring-1 ring-brand-green-800'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            <Building2 className="w-5 h-5 text-brand-green-800" />
+                            <span className="text-xs">Net Banking</span>
+                          </button>
                         </div>
                       </div>
 
-                      {/* Attached Medical Reports Summary in Step 4 */}
-                      {uploadedReports.length > 0 && (
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                              <FileText className="w-4 h-4 text-rose-600" />
-                              <span>Attached Medical Reports ({uploadedReports.length} PDF{uploadedReports.length > 1 ? 's' : ''})</span>
-                            </p>
-                            <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
-                              PDF Uploaded
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {uploadedReports.map((r, i) => (
-                              <div
-                                key={i}
-                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 shadow-2xs"
+                      {/* UPI PAYMENT FORM */}
+                      {paymentMethod === 'upi' && (
+                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in duration-200">
+                          <p className="text-xs font-bold text-slate-700">Choose Instant UPI App:</p>
+                          <div className="grid grid-cols-4 gap-2">
+                            {(['gpay', 'phonepe', 'paytm', 'other'] as const).map((app) => (
+                              <button
+                                key={app}
+                                type="button"
+                                onClick={() => setUpiApp(app)}
+                                className={`py-2 px-1 rounded-lg border text-center text-xs font-bold transition-all cursor-pointer ${
+                                  upiApp === app
+                                    ? 'bg-brand-green-800 text-brand-gold-300 border-brand-green-800 shadow-2xs'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                                }`}
                               >
-                                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                                <span className="font-semibold truncate max-w-[160px]">{r.name}</span>
-                                <span className="text-[10px] text-slate-500">({r.size})</span>
-                                {r.dataUrl && (
-                                  <button
-                                    type="button"
-                                    onClick={() => openPdfPreview(r)}
-                                    className="text-brand-green-800 hover:underline font-bold text-[10px] ml-1 flex items-center gap-0.5 cursor-pointer"
-                                  >
-                                    <Eye className="w-3 h-3" />
-                                    <span>Preview</span>
-                                  </button>
-                                )}
-                              </div>
+                                {app === 'gpay' ? 'GPay' : app === 'phonepe' ? 'PhonePe' : app === 'paytm' ? 'Paytm' : 'UPI ID'}
+                              </button>
                             ))}
+                          </div>
+
+                          {upiApp === 'other' ? (
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-600 mb-1">Enter UPI ID / VPA</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. yourname@okhdfcbank"
+                                value={upiId}
+                                onChange={(e) => setUpiId(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-brand-green-800"
+                              />
+                            </div>
+                          ) : (
+                            <div className="p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200 text-[11px] text-emerald-800 flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-emerald-700 shrink-0" />
+                              <span>Instant UPI collect request will be sent to your {upiApp === 'gpay' ? 'Google Pay' : upiApp === 'phonepe' ? 'PhonePe' : 'Paytm'} app.</span>
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setShowUpiQr(!showUpiQr)}
+                            className="text-xs text-brand-green-800 hover:underline font-semibold flex items-center gap-1 cursor-pointer pt-1"
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                            <span>{showUpiQr ? 'Hide UPI QR Code' : 'Or Scan UPI QR Code'}</span>
+                          </button>
+
+                          {showUpiQr && (
+                            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center space-y-2">
+                              <div className="w-32 h-32 mx-auto bg-slate-100 border-2 border-slate-300 rounded-lg flex items-center justify-center p-2">
+                                <img
+                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=bvlife@ayush&pn=BVLifeDoctor&am=${doctor.fee}&cu=INR`}
+                                  alt="UPI QR Code"
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                              <p className="text-[11px] text-slate-500">Scan using any UPI App (₹{doctor.fee})</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* CARD PAYMENT FORM */}
+                      {paymentMethod === 'card' && (
+                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in duration-200">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Card Number</label>
+                            <input
+                              type="text"
+                              maxLength={19}
+                              placeholder="4111 2222 3333 4444"
+                              value={cardNumber}
+                              onChange={(e) => setCardNumber(e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-brand-green-800 font-mono"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-600 mb-1">Expiry (MM/YY)</label>
+                              <input
+                                type="text"
+                                maxLength={5}
+                                placeholder="12/28"
+                                value={cardExpiry}
+                                onChange={(e) => setCardExpiry(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-brand-green-800"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-600 mb-1">CVV</label>
+                              <input
+                                type="password"
+                                maxLength={4}
+                                placeholder="•••"
+                                value={cardCvv}
+                                onChange={(e) => setCardCvv(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-brand-green-800"
+                              />
+                            </div>
                           </div>
                         </div>
                       )}
 
-                      {/* Included Benefits Strip */}
-                      <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 space-y-2">
-                        <p className="font-bold text-xs text-emerald-950 flex items-center gap-1.5">
-                          <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                          <span>Included in your Consultation:</span>
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-emerald-900">
-                          <span className="flex items-center gap-1.5">✓ 45-Min Live Deep-Root Consultation</span>
-                          <span className="flex items-center gap-1.5">✓ Digital Ayurvedic Rx (BHU Verified)</span>
-                          <span className="flex items-center gap-1.5">✓ Personalized Diet & Ahar-Vihar Chart</span>
-                          <span className="flex items-center gap-1.5">✓ 7 Days Free Follow-Up over WhatsApp</span>
+                      {/* NET BANKING FORM */}
+                      {paymentMethod === 'netbanking' && (
+                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in duration-200">
+                          <label className="block text-[11px] font-semibold text-slate-600">Select Your Bank:</label>
+                          <select
+                            value={selectedBank}
+                            onChange={(e) => setSelectedBank(e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-brand-green-800"
+                          >
+                            <option value="State Bank of India">State Bank of India (SBI)</option>
+                            <option value="HDFC Bank">HDFC Bank</option>
+                            <option value="ICICI Bank">ICICI Bank</option>
+                            <option value="Axis Bank">Axis Bank</option>
+                            <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
+                            <option value="Punjab National Bank">Punjab National Bank</option>
+                          </select>
                         </div>
+                      )}
+
+                      {/* TRUST STRIP */}
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500 pt-1">
+                        <Lock className="w-3.5 h-3.5 text-brand-green-800 shrink-0" />
+                        <span>256-Bit SSL Encrypted & 100% Safe Banking Gateway</span>
                       </div>
 
-                      {/* Back button */}
-                      <div className="pt-2">
+                      {/* PAY BUTTON & BACK BUTTON */}
+                      <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
                         <button
                           type="button"
-                          onClick={() => setBookingStep(3)}
-                          className="px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs flex items-center gap-2 cursor-pointer transition-colors"
+                          onClick={() => setBookingStep('information')}
+                          disabled={isPaymentProcessing}
+                          className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 flex items-center justify-center gap-1.5 cursor-pointer"
                         >
-                          <ChevronLeft className="w-4 h-4" />
-                          <span>Edit Patient Info</span>
+                          <ArrowLeft className="w-3.5 h-3.5" />
+                          <span>Back to Patient Info</span>
+                        </button>
+
+                        <button
+                          id="btn-pay-and-confirm-consultation"
+                          type="button"
+                          onClick={handleExecutePayment}
+                          disabled={isPaymentProcessing || isSubmitting}
+                          className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-extrabold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+                        >
+                          {isPaymentProcessing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin text-brand-gold-300" />
+                              <span>Authorizing ₹{doctor.fee}...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-4 h-4 text-brand-gold-300" />
+                              <span>Pay ₹{doctor.fee} & Confirm Consultation</span>
+                            </>
+                          )}
                         </button>
                       </div>
-                    </div>
-
-                    {/* Right 5 cols: Payment Box & Direct Confirm */}
-                    <div className="lg:col-span-5 bg-gradient-to-br from-brand-green-950 via-brand-green-900 to-brand-green-950 text-brand-cream-50 rounded-3xl p-6 sm:p-8 border-2 border-brand-gold-500/30 shadow-xl space-y-5">
-                      
-                      <div className="flex items-center justify-between border-b border-brand-gold-500/20 pb-3">
-                        <h4 className="font-serif text-base font-bold text-white">
-                          Final Price Breakdown
-                        </h4>
-                        <span className="text-[10px] text-brand-gold-300 font-bold uppercase tracking-wider bg-brand-gold-500/20 px-2 py-0.5 rounded-full">
-                          AYUSH Subsidized
-                        </span>
-                      </div>
-
-                      <div className="space-y-3 text-xs">
-                        <div className="flex justify-between text-brand-cream-200">
-                          <span>Standard Consultation Fee:</span>
-                          <span className="line-through text-brand-cream-300/60">₹{doctor.originalFee}</span>
-                        </div>
-                        <div className="flex justify-between text-emerald-400 font-semibold">
-                          <span>First-time Patient Grant:</span>
-                          <span>-₹{doctor.originalFee - doctor.fee}</span>
-                        </div>
-                        <div className="flex justify-between text-brand-cream-200">
-                          <span>Digital Prescription & Diet Plan:</span>
-                          <span className="text-emerald-400 font-bold">FREE</span>
-                        </div>
-                        <div className="flex justify-between text-brand-cream-200">
-                          <span>7-Day WhatsApp Follow-up:</span>
-                          <span className="text-emerald-400 font-bold">FREE</span>
-                        </div>
-                        <div className="flex justify-between text-brand-cream-200 border-t border-white/15 pt-4 font-bold text-white">
-                          <span className="text-sm">Total Payable:</span>
-                          <span className="text-2xl text-brand-gold-300">₹{doctor.fee}</span>
-                        </div>
-                      </div>
-
-                      {/* Confirm & Book Button */}
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full py-4 px-4 rounded-xl bg-gradient-to-r from-brand-gold-500 to-brand-gold-600 hover:from-brand-gold-400 hover:to-brand-gold-500 disabled:opacity-70 text-brand-green-950 font-bold text-sm shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin text-brand-green-950" />
-                            <span>Confirming Slot with Dr. Arundhati...</span>
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="w-4 h-4 text-brand-green-950" />
-                            <span>Confirm & Book Consultation (₹{doctor.fee})</span>
-                          </>
-                        )}
-                      </button>
-
-                      <div className="pt-2 flex items-center justify-center gap-4 text-[11px] text-brand-cream-300/80">
-                        <span className="flex items-center gap-1">
-                          <ShieldCheck className="w-3.5 h-3.5 text-brand-gold-400" />
-                          100% Safe & Encrypted
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <RefreshCw className="w-3.5 h-3.5 text-brand-gold-400" />
-                          Reschedule anytime
-                        </span>
-                      </div>
 
                     </div>
 
                   </div>
-                )}
 
-              </form>
-            </div>
-
-            {/* 4. VALUE PROPOSITIONS, 4-STEP ROADMAP, INCLUSIONS */}
-            <ConsultationFeatures
-              doctorFee={doctor.fee}
-              onBookClick={() => {
-                const el = document.getElementById('book-slot-section');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }}
-            />
-          </div>
-        )}
-
-        {/* TAB 2: DOCTOR PROFILE & LINEAGE DEEP-DIVE */}
-        {activeTab === 'doctor-profile' && (
-          <div className="space-y-10">
-            
-            {/* Spotlight Card */}
-            <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                
-                <div className="lg:col-span-4">
-                  <div className="relative mx-auto max-w-sm rounded-2xl overflow-hidden border-2 border-brand-gold-400/50 shadow-xl bg-brand-green-950 p-2">
-                    <img 
-                      src={doctor.image} 
-                      alt={doctor.name} 
-                      className="w-full aspect-[4/5] object-cover rounded-xl"
-                    />
-                    <div className="mt-3 text-center text-white pb-1">
-                      <h4 className="font-serif text-lg font-bold">{doctor.name}</h4>
-                      <p className="text-xs text-brand-gold-300 font-medium">Gold Medalist • Banaras Hindu University</p>
-                    </div>
-                  </div>
                 </div>
+              )}
 
-                <div className="lg:col-span-8 space-y-5">
-                  <div className="space-y-2">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-gold-100 text-brand-green-950 text-xs font-bold">
-                      <Award className="w-3.5 h-3.5 text-brand-gold-600" />
-                      <span>4-Generation Classical Vaidya Parampara</span>
-                    </div>
-                    <h3 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900">
-                      Meet Vaidya Ratna Dr. Arundhati Sharma
-                    </h3>
-                    <p className="text-xs text-brand-green-800 font-bold">
-                      BAMS, MD (Ayurveda), Fellow of All India Institute of Ayurveda (AIIA), AYUSH Reg. #AY-24890
-                    </p>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                    {doctor.bio}
-                  </p>
-
-                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                    Having trained under master Vaidyas across Varanasi, Kerala, and the Himalayan foothills, Dr. Arundhati blends rigorous classical texts (Charaka Samhita, Sushruta Samhita, and Ashtanga Hridaya) with modern clinical precision. She has successfully consulted over 18,500 patients worldwide, helping them reverse lifelong ailments through individualized botanical regimens and circadian rhythm alignment.
-                  </p>
-
-                  {/* Core Clinical Specialties */}
-                  <div className="space-y-2 pt-2">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Core Clinical Specialties</p>
-                    <div className="flex flex-wrap gap-2">
-                      {doctor.specialties.map((spec, i) => (
-                        <span key={i} className="px-3 py-1.5 rounded-full bg-brand-green-50 text-brand-green-900 border border-brand-green-200 text-xs font-bold">
-                          ✓ {spec}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('book')}
-                      className="px-6 py-3 bg-brand-green-800 hover:bg-brand-green-900 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm cursor-pointer"
-                    >
-                      <Calendar className="w-4 h-4" />
-                      <span>Book Consultation Slot with Dr. Arundhati</span>
-                    </button>
-                    <span className="text-xs text-slate-500">
-                      Standard slot: 25 minutes live consultation
-                    </span>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* 5 Pillars of Healing */}
-            <div className="bg-brand-green-950 text-brand-cream-50 rounded-3xl p-6 sm:p-10 border border-brand-gold-500/20 shadow-xl space-y-6">
-              <div className="text-center max-w-2xl mx-auto space-y-2">
-                <span className="text-xs font-bold uppercase tracking-widest text-brand-gold-400">Dr. Arundhati's Clinical Framework</span>
-                <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-                  The 5 Classical Pillars of Healing
-                </h3>
-                <p className="text-xs text-brand-cream-200">
-                  Every consultation is guided by these sacred diagnostic disciplines to eliminate root-cause pathology
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-                <div className="bg-white/5 border border-white/10 p-5 rounded-2xl space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-brand-gold-500/20 text-brand-gold-300 flex items-center justify-center font-bold">
-                    <Activity className="w-5 h-5" />
-                  </div>
-                  <h4 className="font-bold text-sm text-white">1. Classical Nadi Pariksha</h4>
-                  <p className="text-xs text-brand-cream-200/80 leading-relaxed">
-                    Reading the deep and superficial arterial pulse waves to detect organ toxicity, sub-dosha imbalances, and impending disease patterns.
-                  </p>
-                </div>
-
-                <div className="bg-white/5 border border-white/10 p-5 rounded-2xl space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-brand-gold-500/20 text-brand-gold-300 flex items-center justify-center font-bold">
-                    <Zap className="w-5 h-5" />
-                  </div>
-                  <h4 className="font-bold text-sm text-white">2. Agni & Deepana Therapy</h4>
-                  <p className="text-xs text-brand-cream-200/80 leading-relaxed">
-                    Re-igniting the digestive fire (Jatharagni) to completely break down metabolic toxins (Ama) that clog tissue channels (Srotas).
-                  </p>
-                </div>
-
-                <div className="bg-white/5 border border-white/10 p-5 rounded-2xl space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-brand-gold-500/20 text-brand-gold-300 flex items-center justify-center font-bold">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <h4 className="font-bold text-sm text-white">3. Dravyaguna Botanical Formulation</h4>
-                  <p className="text-xs text-brand-cream-200/80 leading-relaxed">
-                    Pairing potent wild-harvested herbs (like Shilajit, Kesar, Ashwagandha, and Triphala) with natural catalytic carriers (Anupanas) for deep cell absorption.
-                  </p>
-                </div>
-              </div>
             </div>
 
           </div>
         )}
 
-        {/* TAB 3: MY APPOINTMENTS */}
+        {/* VIEW 2: MY CONSULTATIONS APPOINTMENTS LIST */}
         {activeTab === 'my-appointments' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-              <div>
-                <h3 className="font-serif text-2xl font-bold text-slate-900">My Consultation Sessions</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Manage your upcoming and past doctor consultation appointments</p>
-              </div>
-
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-2">
+              <h2 className="text-base font-bold text-slate-900">Your Consultations</h2>
               <button
                 type="button"
-                onClick={() => setActiveTab('book')}
-                className="px-4 py-2 bg-brand-green-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-brand-green-900 cursor-pointer shadow-xs"
+                onClick={() => handleNavigateToBook()}
+                className="text-xs font-bold text-brand-green-800 hover:underline cursor-pointer"
               >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>Book New Session</span>
+                + Book New Consultation
               </button>
             </div>
 
             {myAppointments.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 space-y-4 max-w-md mx-auto">
-                <div className="w-16 h-16 rounded-full bg-brand-green-50 text-brand-green-800 flex items-center justify-center mx-auto">
-                  <Stethoscope className="w-8 h-8" />
+              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3 shadow-xs">
+                <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                  <Calendar className="w-6 h-6" />
                 </div>
-                <h4 className="font-serif text-lg font-bold text-slate-800">No Consultations Scheduled Yet</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  You haven't scheduled any consultations with Dr. Arundhati Sharma yet. Book a session to get your customized health diagnosis and herbal prescription.
+                <h3 className="font-bold text-slate-800 text-sm">No consultations booked yet</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Schedule your private consultation with Dr. Sanjeev Rastogi for personalized Ayurvedic guidance and pulse analysis.
                 </p>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('book')}
-                  className="px-6 py-2.5 bg-brand-green-800 text-white rounded-xl text-xs font-bold shadow-sm hover:bg-brand-green-900 cursor-pointer"
+                  onClick={() => handleNavigateToBook()}
+                  className="px-5 py-2.5 rounded-xl bg-brand-green-800 text-brand-gold-300 font-bold text-xs shadow-xs cursor-pointer"
                 >
-                  Schedule Your Initial Session
+                  Book Slot Now (₹499)
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-3">
                 {myAppointments.map((app) => (
-                  <div 
+                  <div
                     key={app.id}
-                    className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs space-y-4 hover:shadow-md transition-shadow"
+                    className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                   >
-                    <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
-                      <div className="flex items-center gap-3">
-                        <img 
-                          src={app.doctorImage || doctor.image} 
-                          alt={app.doctorName} 
-                          className="w-12 h-12 rounded-2xl object-cover border border-brand-gold-400" 
-                        />
-                        <div>
-                          <p className="font-bold text-sm text-slate-900">{app.doctorName}</p>
-                          <p className="text-[11px] text-brand-green-800 font-medium">{app.doctorSpecialty} • {app.doctorQualification}</p>
+                    <div className="flex items-start gap-3.5">
+                      <img
+                        src={app.doctorImage || legendaryDoctorImg}
+                        alt={app.doctorName}
+                        className="w-14 h-14 rounded-xl object-cover object-top border border-slate-200 shrink-0"
+                      />
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-slate-900">{app.doctorName}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            app.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                          }`}>
+                            {app.status}
+                          </span>
                         </div>
-                      </div>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        app.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {app.status}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-slate-50 p-2.5 rounded-xl">
-                        <span className="text-[10px] text-slate-400 block">Appointment Date</span>
-                        <span className="font-bold text-slate-800">{app.date}</span>
-                      </div>
-
-                      <div className="bg-slate-50 p-2.5 rounded-xl">
-                        <span className="text-[10px] text-slate-400 block">Time Slot</span>
-                        <span className="font-bold text-brand-green-800">{app.timeSlot}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-xs space-y-1 text-slate-600">
-                      <p><span className="font-bold text-slate-700">Patient:</span> {app.patientName} ({app.patientAge} yrs, {app.patientGender})</p>
-                      <p><span className="font-bold text-slate-700">Concern:</span> {app.healthConcern}</p>
-                    </div>
-
-                    {/* Attached Medical Reports */}
-                    {app.medicalReports && app.medicalReports.length > 0 && (
-                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/80 space-y-1.5">
-                        <p className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                          <FileText className="w-3.5 h-3.5 text-rose-600" />
-                          <span>Attached Reports ({app.medicalReports.length} PDF{app.medicalReports.length > 1 ? 's' : ''}):</span>
+                        <p className="text-xs text-brand-green-800 font-semibold">
+                          {app.date} • {app.timeSlot} ({app.consultationMode} call)
                         </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {app.medicalReports.map((r, i) => (
-                            <div key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-medium text-slate-800">
-                              <span className="truncate max-w-[130px]">{r.name}</span>
-                              {r.dataUrl && (
-                                <button
-                                  type="button"
-                                  onClick={() => openPdfPreview(r)}
-                                  className="text-brand-green-800 hover:underline font-bold text-[10px] cursor-pointer"
-                                >
-                                  View
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          Patient: {app.patientName} ({app.patientPhone})
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          Ref: #{app.id} • Booked on {app.bookingDate}
+                        </p>
                       </div>
-                    )}
+                    </div>
 
-                    <div className="border-t border-slate-100 pt-3 flex items-center justify-between">
-                      {app.meetingLink && app.status === 'Confirmed' ? (
+                    <div className="flex items-center gap-2 self-end sm:self-center">
+                      {app.status === 'Confirmed' && app.meetingLink && (
                         <a
                           href={app.meetingLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-4 py-2 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                          className="px-4 py-2 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs flex items-center gap-1.5 shadow-xs"
                         >
                           <Video className="w-3.5 h-3.5" />
-                          <span>Join Live Video Room</span>
+                          <span>Join Video Room</span>
                         </a>
-                      ) : (
-                        <span className="text-xs text-slate-400">Consultation {app.status}</span>
                       )}
 
                       {app.status === 'Confirmed' && (
                         <button
                           type="button"
                           onClick={() => handleCancelAppointment(app.id)}
-                          className="text-xs text-red-600 hover:underline font-semibold cursor-pointer"
+                          className="px-3 py-2 rounded-xl border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600 text-xs font-semibold cursor-pointer"
                         >
-                          Cancel Slot
+                          Cancel
                         </button>
                       )}
                     </div>
@@ -1795,118 +1746,421 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
           </div>
         )}
 
-        {/* 4. REAL PATIENT TESTIMONIALS FOR DR. ARUNDHATI */}
-        <section className="mt-16 bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-xs space-y-8">
-          <div className="text-center max-w-xl mx-auto space-y-2">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-gold-600">Verified Patient Results</span>
-            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900">
-              Transformative Healing Stories
-            </h3>
-            <p className="text-xs text-slate-500">
-              Read how patients regained vital health through Dr. Arundhati Sharma’s precision Ayurvedic regimens
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-brand-cream-50/70 p-6 rounded-2xl border border-slate-200 flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="flex text-amber-400 gap-1">
-                  {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
-                </div>
-                <p className="text-xs text-slate-700 italic leading-relaxed">
-                  "I was suffering from severe chronic acidity, bloating, and IBS for over 4 years. Allopathic antacids only provided 2-hour relief. Dr. Arundhati listened patiently for 30 minutes, explained my Pitta Agni imbalance, and prescribed a simple herbal churnam + warm water routine. In 3 weeks, my digestion is completely normal!"
-                </p>
-              </div>
-              <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Meenakshi Sundaram</p>
-                  <p className="text-[10px] text-slate-500">Bangalore • Gut Health</p>
-                </div>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Verified</span>
-              </div>
-            </div>
-
-            <div className="bg-brand-cream-50/70 p-6 rounded-2xl border border-slate-200 flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="flex text-amber-400 gap-1">
-                  {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
-                </div>
-                <p className="text-xs text-slate-700 italic leading-relaxed">
-                  "Struggled with irregular cycles and cystic acne from PCOS. Dr. Arundhati’s holistic protocol combined Shatavari Rasayana, Kanchanar Guggulu, and circadian food timings. My cycles normalized naturally within 3 months, and my skin cleared up without any hormones."
-                </p>
-              </div>
-              <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Pooja Deshmukh</p>
-                  <p className="text-[10px] text-slate-500">Pune • PCOS & Hormones</p>
-                </div>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Verified</span>
-              </div>
-            </div>
-
-            <div className="bg-brand-cream-50/70 p-6 rounded-2xl border border-slate-200 flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="flex text-amber-400 gap-1">
-                  {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
-                </div>
-                <p className="text-xs text-slate-700 italic leading-relaxed">
-                  "My 68-year-old mother could barely climb stairs due to knee osteoarthritis. Dr. Arundhati recommended Shallaki Guggul and Mahanarayan oil taila basti. Today she walks in the park every morning without painkillers. True blessing to have a doctor of this stature."
-                </p>
-              </div>
-              <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Ravi Shankar Verma</p>
-                  <p className="text-[10px] text-slate-500">Delhi NCR • Joint Care</p>
-                </div>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Verified</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 5. FREQUENTLY ASKED QUESTIONS */}
-        <section className="mt-16 bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-xs space-y-6">
-          <div className="text-center max-w-xl mx-auto space-y-2">
-            <span className="text-xs font-bold uppercase tracking-widest text-brand-gold-600">Got Questions?</span>
-            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900">
-              Doctor Consultation FAQs
-            </h3>
-            <p className="text-xs text-slate-500">
-              Everything you need to know about scheduling and experiencing your session
-            </p>
-          </div>
-
-          <div className="max-w-3xl mx-auto space-y-3 pt-2">
-            {FAQS.map((faq, index) => {
-              const isOpen = activeFaq === index;
-              return (
-                <div 
-                  key={index}
-                  className="rounded-2xl border border-slate-200 overflow-hidden transition-all"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setActiveFaq(isOpen ? null : index)}
-                    className="w-full p-4 sm:p-5 text-left bg-slate-50 hover:bg-slate-100/80 flex items-center justify-between gap-4 cursor-pointer"
-                  >
-                    <span className="text-xs sm:text-sm font-bold text-slate-900">{faq.q}</span>
-                    <span className={`w-6 h-6 rounded-full bg-brand-green-800 text-white flex items-center justify-center text-xs font-bold shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}>
-                      ↓
-                    </span>
-                  </button>
-
-                  {isOpen && (
-                    <div className="p-4 sm:p-5 bg-white border-t border-slate-100 text-xs text-slate-600 leading-relaxed">
-                      {faq.a}
+        {/* VIEW 3: ABOUT DOCTOR PROFILE & SPECIALTIES */}
+        {activeTab === 'about-doctor' && (
+          <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-300">
+            
+            {/* HERO PROFILE CARD */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-8 shadow-xs">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                
+                {/* AVATAR & QUICK STATS */}
+                <div className="md:col-span-4 flex flex-col items-center text-center gap-3.5">
+                  <div className="relative">
+                    <img
+                      src={doctor.image}
+                      alt={doctor.name}
+                      className="w-36 h-36 sm:w-40 sm:h-40 rounded-2xl object-cover object-top border-3 border-brand-gold-400 shadow-md"
+                    />
+                    <div className="absolute -bottom-2 -right-2 bg-brand-green-800 text-brand-gold-300 p-2 rounded-full shadow-lg border-2 border-white">
+                      <ShieldCheck className="w-5 h-5" />
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
+                  </div>
 
-      </div>
+                  <div className="space-y-1">
+                    <span className="inline-flex items-center gap-1.5 text-xs uppercase font-bold tracking-wider text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Available Today
+                    </span>
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-slate-700 pt-1">
+                      <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                      <span className="font-extrabold text-slate-900 text-sm">4.98</span>
+                      <span className="text-slate-400">•</span>
+                      <span className="text-slate-500 font-medium">2,450+ Consults</span>
+                    </div>
+                  </div>
+
+                  <div className="w-full bg-[#FAF8F5] p-3 rounded-xl border border-brand-gold-300/40 text-center space-y-1">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">AYUSH Verified ID</span>
+                    <p className="text-xs font-mono font-bold text-brand-green-950">AYUSH-IND-8842-SR</p>
+                  </div>
+                </div>
+
+                {/* DOCTOR BIO & CREDENTIALS */}
+                <div className="md:col-span-8 space-y-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-brand-gold-700 bg-brand-gold-50 px-3 py-1 rounded-md border border-brand-gold-300/60 inline-block mb-1.5">
+                      Chief Ayurvedic Physician & Master Nadi Vaidya
+                    </span>
+                    <h2 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
+                      {doctor.name}
+                    </h2>
+                    <p className="text-sm font-bold text-brand-green-800 mt-1">
+                      {doctor.qualification}
+                    </p>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                      Former Head of Dept. Kaya Chikitsa & Panchakarma at State Ayurvedic College, Lucknow
+                    </p>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    {doctor.bio} With over three decades of clinical practice and scholarly mentorship, Dr. Rastogi has successfully guided thousands of patients through chronic metabolic disorders, autoimmune joint conditions, and digestive imbalances by pairing authentic Charaka Samhita pulse diagnostics with clinical evidence.
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Experience</span>
+                      <p className="font-extrabold text-sm text-slate-800 mt-0.5">30+ Years</p>
+                      <p className="text-[10px] text-slate-500">Clinical Mastery</p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Education</span>
+                      <p className="font-extrabold text-sm text-slate-800 mt-0.5">BHU Gold Medalist</p>
+                      <p className="text-[10px] text-slate-500">MD & Ph.D</p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 col-span-2 sm:col-span-1">
+                      <span className="text-[10px] uppercase font-bold text-slate-400">Consultation Fee</span>
+                      <p className="font-extrabold text-sm text-brand-green-900 mt-0.5">₹{doctor.fee} Only</p>
+                      <p className="text-[10px] text-emerald-700 font-bold">Subsidized</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleNavigateToBook()}
+                      className="px-6 py-3 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      <span>Book Consultation Now (₹{doctor.fee})</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('fees-chart')}
+                      className="px-4 py-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      View Fees Chart
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* CLINICAL SPECIALTIES & PRACTICE DOMAINS */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-4">
+              <div>
+                <span className="text-[11px] uppercase tracking-wider font-bold text-brand-green-800">
+                  Areas of Clinical Expertise
+                </span>
+                <h3 className="font-serif text-lg sm:text-xl font-bold text-slate-900">
+                  Root-Cause Healing Across Major Health Domains
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-brand-gold-300/50 space-y-1.5">
+                  <div className="flex items-center gap-2 text-brand-green-900 font-bold text-xs sm:text-sm">
+                    <CheckCircle className="w-4 h-4 text-brand-gold-600 shrink-0" />
+                    <span>Classical Nadi Pariksha (Pulse Diagnosis)</span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Decoding subtle imbalances across Vata, Pitta, and Kapha sub-doshas, cellular metabolic toxins (Ama), and early organ stress.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-brand-gold-300/50 space-y-1.5">
+                  <div className="flex items-center gap-2 text-brand-green-900 font-bold text-xs sm:text-sm">
+                    <CheckCircle className="w-4 h-4 text-brand-gold-600 shrink-0" />
+                    <span>Gut Dysbiosis, Acidity & Agni Reversal</span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Personalized protocol for chronic IBS, GERD, gas, constipation, and sluggish digestive fire using classical herbal teas and churnas.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-brand-gold-300/50 space-y-1.5">
+                  <div className="flex items-center gap-2 text-brand-green-900 font-bold text-xs sm:text-sm">
+                    <CheckCircle className="w-4 h-4 text-brand-gold-600 shrink-0" />
+                    <span>PCOS, Thyroid & Hormonal Balance</span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Natural endocrine realignment addressing insulin sensitivity, irregular cycles, and thyroid sluggishness without synthetic hormones.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-brand-gold-300/50 space-y-1.5">
+                  <div className="flex items-center gap-2 text-brand-green-900 font-bold text-xs sm:text-sm">
+                    <CheckCircle className="w-4 h-4 text-brand-gold-600 shrink-0" />
+                    <span>Chronic Joint & Arthritis Care</span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Reducing deep Vata inflammation, joint pain, stiffness, and cervical/lumbar discomfort through classical anti-inflammatory herbs.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-brand-gold-300/50 space-y-1.5 sm:col-span-2">
+                  <div className="flex items-center gap-2 text-brand-green-900 font-bold text-xs sm:text-sm">
+                    <CheckCircle className="w-4 h-4 text-brand-gold-600 shrink-0" />
+                    <span>Rasayana Cellular Rejuvenation & Vitality</span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Strengthening Ojas (natural immunity), reversing biological fatigue, improving sleep quality, and promoting longevity.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* HOW CONSULTATION WORKS */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-4">
+              <div>
+                <span className="text-[11px] uppercase tracking-wider font-bold text-brand-green-800">
+                  Patient Consultation Process
+                </span>
+                <h3 className="font-serif text-lg sm:text-xl font-bold text-slate-900">
+                  What Happens During Your 1-on-1 Session
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <div className="w-8 h-8 rounded-full bg-brand-green-800 text-white font-bold flex items-center justify-center text-xs">
+                    1
+                  </div>
+                  <h4 className="font-bold text-slate-900 text-sm">20-30 Min Evaluation</h4>
+                  <p className="text-slate-600 leading-relaxed">
+                    Dr. Sanjeev conducts an unhurried evaluation of your pulse markers, tongue indicators, medical reports, and current symptoms.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <div className="w-8 h-8 rounded-full bg-brand-green-800 text-white font-bold flex items-center justify-center text-xs">
+                    2
+                  </div>
+                  <h4 className="font-bold text-slate-900 text-sm">Digital Prescription</h4>
+                  <p className="text-slate-600 leading-relaxed">
+                    Receive an official AYUSH certified digital prescription along with a personalized Pathya-Apathya (diet and daily lifestyle) chart on WhatsApp.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                  <div className="w-8 h-8 rounded-full bg-brand-green-800 text-white font-bold flex items-center justify-center text-xs">
+                    3
+                  </div>
+                  <h4 className="font-bold text-slate-900 text-sm">7 Days Free Follow-Up</h4>
+                  <p className="text-slate-600 leading-relaxed">
+                    Stay directly connected for 7 days via WhatsApp for herb dosage questions, dietary adjustments, and recovery monitoring at zero extra cost.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => handleNavigateToBook()}
+                  className="px-8 py-3.5 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer inline-flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>Book Consultation with Dr. Sanjeev • ₹{doctor.fee}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* VIEW 4: FEES CHART & DELIVERABLES BREAKDOWN */}
+        {activeTab === 'fees-chart' && (
+          <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-300">
+            
+            {/* PRICING HERO CARD */}
+            <div className="bg-gradient-to-br from-brand-green-900 to-brand-green-950 text-white rounded-2xl border-2 border-brand-gold-400 p-6 sm:p-8 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <span className="text-xs uppercase tracking-wider font-bold text-brand-gold-300 bg-white/10 px-3 py-1 rounded-full inline-block">
+                    BV Life AYUSH Subsidized Initiative
+                  </span>
+                  <h2 className="font-serif text-2xl sm:text-3xl font-bold">
+                    Transparent Consultation Fees
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-300 max-w-lg">
+                    High-touch, senior Ayurvedic clinical care made affordable with zero hidden charges and complete transparency.
+                  </p>
+                </div>
+
+                <div className="bg-white/10 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/20 text-center sm:text-right shrink-0">
+                  <span className="text-[11px] uppercase font-bold text-brand-gold-300">Total Consultation Fee</span>
+                  <div className="flex items-baseline justify-center sm:justify-end gap-2 mt-1">
+                    <span className="text-3xl sm:text-4xl font-black text-white">₹{doctor.fee}</span>
+                    <span className="text-sm line-through text-slate-400 font-bold">₹{doctor.originalFee}</span>
+                  </div>
+                  <span className="inline-block mt-1 text-[11px] font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
+                    58% Subsidy Applied
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-5 border-t border-white/10 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300">
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>No Booking Fees</span>
+                  </span>
+                  <span className="text-white/30">•</span>
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    <span>Free 7-Day Follow-Up</span>
+                  </span>
+                  <span className="text-white/30">•</span>
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    <span>Instant WhatsApp Prescription</span>
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleNavigateToBook()}
+                  className="px-6 py-2.5 rounded-xl bg-brand-gold-400 hover:bg-brand-gold-300 text-brand-green-950 font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>Book Slot (₹{doctor.fee})</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* COMPREHENSIVE INCLUSIONS TABLE */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs">
+              <div className="p-5 border-b border-slate-100 bg-slate-50/70">
+                <h3 className="font-serif text-lg font-bold text-slate-900">
+                  What is Included in Your ₹{doctor.fee} Consultation
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Comparison between BV Life Doctor Consultation and standard private clinics
+                </p>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 font-bold">
+                      <th className="p-3.5 pl-5">Deliverable / Feature</th>
+                      <th className="p-3.5 bg-brand-green-50 text-brand-green-950 border-x border-brand-green-100">
+                        BV Life Consultation (₹{doctor.fee})
+                      </th>
+                      <th className="p-3.5 pr-5 text-slate-500">Standard Private Clinic (₹1,200 - ₹2,500)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    <tr className="hover:bg-slate-50/50">
+                      <td className="p-3.5 pl-5 font-semibold text-slate-900">Senior Doctor Experience</td>
+                      <td className="p-3.5 bg-brand-green-50/40 font-bold text-brand-green-900 border-x border-brand-green-100">
+                        ✓ 30+ Years MD (Ayurveda) BHU Gold Medalist
+                      </td>
+                      <td className="p-3.5 pr-5 text-slate-500">Often Junior or Assistant Vaidya</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/50">
+                      <td className="p-3.5 pl-5 font-semibold text-slate-900">Consultation Duration</td>
+                      <td className="p-3.5 bg-brand-green-50/40 font-bold text-brand-green-900 border-x border-brand-green-100">
+                        ✓ 20 to 30 Mins Unhurried 1-on-1
+                      </td>
+                      <td className="p-3.5 pr-5 text-slate-500">5 to 10 Mins Rushed Visit</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/50">
+                      <td className="p-3.5 pl-5 font-semibold text-slate-900">Consultation Format</td>
+                      <td className="p-3.5 bg-brand-green-50/40 font-bold text-brand-green-900 border-x border-brand-green-100">
+                        ✓ Video Call, Direct Phone, or WhatsApp
+                      </td>
+                      <td className="p-3.5 pr-5 text-slate-500">In-person Waiting Queue (1-2 Hrs)</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/50">
+                      <td className="p-3.5 pl-5 font-semibold text-slate-900">Digital AYUSH Prescription</td>
+                      <td className="p-3.5 bg-brand-green-50/40 font-bold text-brand-green-900 border-x border-brand-green-100">
+                        ✓ Included Free (Digital PDF on WhatsApp)
+                      </td>
+                      <td className="p-3.5 pr-5 text-slate-500">Handwritten Paper Slip</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/50">
+                      <td className="p-3.5 pl-5 font-semibold text-slate-900">Personalized Diet & Herb Chart</td>
+                      <td className="p-3.5 bg-brand-green-50/40 font-bold text-brand-green-900 border-x border-brand-green-100">
+                        ✓ Included Free (Custom Pathya-Apathya)
+                      </td>
+                      <td className="p-3.5 pr-5 text-slate-500">Extra Fee (₹500 - ₹1,000)</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/50">
+                      <td className="p-3.5 pl-5 font-semibold text-slate-900">WhatsApp Follow-Up Care</td>
+                      <td className="p-3.5 bg-brand-green-50/40 font-bold text-brand-green-900 border-x border-brand-green-100">
+                        ✓ 7 Days Free Continuous Support
+                      </td>
+                      <td className="p-3.5 pr-5 text-slate-500">Full Repeat Fee per Visit</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/50">
+                      <td className="p-3.5 pl-5 font-semibold text-slate-900">Blood / Medical Report Review</td>
+                      <td className="p-3.5 bg-brand-green-50/40 font-bold text-brand-green-900 border-x border-brand-green-100">
+                        ✓ Included Free (Upload up to 3 PDFs)
+                      </td>
+                      <td className="p-3.5 pr-5 text-slate-500">Additional Specialist Fee</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/50">
+                      <td className="p-3.5 pl-5 font-semibold text-slate-900">Rescheduling Flexibility</td>
+                      <td className="p-3.5 bg-brand-green-50/40 font-bold text-brand-green-900 border-x border-brand-green-100">
+                        ✓ 1-Click Free Reschedule Anytime
+                      </td>
+                      <td className="p-3.5 pr-5 text-slate-500">Non-refundable / Fixed Slots</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* FREQUENTLY ASKED QUESTIONS ABOUT FEES */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-4">
+              <h3 className="font-serif text-lg font-bold text-slate-900">
+                Frequently Asked Questions
+              </h3>
+
+              <div className="space-y-3 text-xs">
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <h4 className="font-bold text-slate-900 mb-1">Are there any hidden charges or medicines forced on me?</h4>
+                  <p className="text-slate-600">
+                    No. The ₹{doctor.fee} consultation fee is completely transparent and all-inclusive. You will receive an authentic prescription with dietary herbs and classical medicines that you may source from any certified Ayurvedic pharmacy or directly from BV Life.
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <h4 className="font-bold text-slate-900 mb-1">How do I connect for my consultation?</h4>
+                  <p className="text-slate-600">
+                    Depending on your choice (Video Call, Direct Phone, or WhatsApp Audio), you will receive an instant confirmation on your WhatsApp with the direct room link or doctor call details 15 minutes before the slot.
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <h4 className="font-bold text-slate-900 mb-1">Can I reschedule my appointment if something comes up?</h4>
+                  <p className="text-slate-600">
+                    Yes, you can easily reschedule your consultation to any other available day or time slot directly from your "My Consultations" tab at no penalty.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => handleNavigateToBook()}
+                  className="px-8 py-3.5 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer inline-flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>Confirm & Book Consultation Slot • ₹{doctor.fee}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+      </main>
     </div>
   );
 };

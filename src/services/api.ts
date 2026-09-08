@@ -1,4 +1,4 @@
-import { Product, ProductVariant, Blog, FAQ, Coupon, Review, WebsiteSettings, User, Order, Address, Doctor, DoctorAppointment } from '../types';
+import { Product, ProductVariant, Blog, FAQ, Coupon, Review, WebsiteSettings, User, Order, Address, Doctor, DoctorAppointment, DoctorPrescription } from '../types';
 
 export const api = {
   async getBaselineData(): Promise<{ products: Product[]; settings: WebsiteSettings | null }> {
@@ -96,9 +96,12 @@ export const api = {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: credentials.email, password: credentials.password || 'password123' })
+      body: JSON.stringify({ email: (credentials.email || '').trim(), password: (credentials.password || '').trim() || 'password123' })
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.error || errData?.message || 'Authentication failed. Please check credentials.');
+    }
     return await res.json();
   },
 
@@ -315,6 +318,88 @@ export const api = {
     } catch (err) {
       console.error('Error cancelling doctor appointment:', err);
       return false;
+    }
+  },
+
+  async getAllDoctorAppointments(token?: string): Promise<DoctorAppointment[]> {
+    try {
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch('/api/doctor-appointments', { headers });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch (err) {
+      console.error('Error fetching all appointments:', err);
+      return [];
+    }
+  },
+
+  async updateDoctorAppointmentStatus(id: string, status: string, token?: string): Promise<{ success: boolean; appointment?: DoctorAppointment }> {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/doctor-appointments/${id}/status`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ status })
+      });
+      const data = await res.json();
+      return { success: res.ok, appointment: data.appointment };
+    } catch (err) {
+      console.error('Error updating appointment status:', err);
+      return { success: false };
+    }
+  },
+
+  async saveDoctorPrescription(id: string, prescription: Partial<DoctorPrescription>, token?: string): Promise<{ success: boolean; appointment?: DoctorAppointment }> {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/doctor-appointments/${id}/prescription`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(prescription)
+      });
+      const data = await res.json();
+      return { success: res.ok, appointment: data.appointment };
+    } catch (err) {
+      console.error('Error saving prescription:', err);
+      return { success: false };
+    }
+  },
+
+  async updateAppointmentMeetingLink(id: string, meetingLink: string, meetingPlatform?: 'jitsi' | 'google-meet', token?: string): Promise<{ success: boolean; appointment?: DoctorAppointment }> {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/doctor-appointments/${id}/meeting-link`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ meetingLink, meetingPlatform })
+      });
+      const data = await res.json();
+      return { success: res.ok, appointment: data.appointment };
+    } catch (err) {
+      console.error('Error updating meeting link:', err);
+      return { success: false };
+    }
+  },
+
+  async updateAppointmentRoomStatus(id: string, roomStatus: 'waiting' | 'in-progress' | 'completed', token?: string): Promise<{ success: boolean; appointment?: DoctorAppointment }> {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/doctor-appointments/${id}/room-status`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ roomStatus })
+      });
+      const data = await res.json();
+      return { success: res.ok, appointment: data.appointment };
+    } catch (err) {
+      console.error('Error updating room status:', err);
+      return { success: false };
     }
   }
 };
