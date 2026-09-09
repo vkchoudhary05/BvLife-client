@@ -208,6 +208,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
 
   // Doctor Online/Available status
   const [isDoctorAvailable, setIsDoctorAvailable] = useState<boolean>(true);
+  const [activeDoctorProfile, setActiveDoctorProfile] = useState<any>(null);
 
   // Load appointments
   const fetchAppointments = async () => {
@@ -496,6 +497,13 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
 
   useEffect(() => {
     fetchAppointments();
+    api.getDoctors().then(docs => {
+      if (docs && docs.length > 0) {
+        setActiveDoctorProfile(docs[0]);
+      }
+    }).catch(err => {
+      console.warn('Doctor profile fetch warning:', err);
+    });
   }, []);
 
   // Update local storage and state helper
@@ -943,8 +951,8 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
             <div className="flex items-center gap-4">
               <div className="relative">
                 <img 
-                  src="/images/legendary_doctor.jpg" 
-                  alt="Dr. Arundhati Sharma"
+                  src={activeDoctorProfile?.image || "/images/legendary_doctor.jpg"} 
+                  alt={activeDoctorProfile?.name || "Doctor"}
                   className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl object-cover border-2 border-brand-gold-400 shadow-md"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300';
@@ -956,17 +964,17 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl sm:text-2xl font-bold font-serif text-brand-gold-300">
-                    Dr. Arundhati Sharma
+                    {activeDoctorProfile?.name || localDoctorUser?.fullName || "Dr. Arundhati Sharma"}
                   </h1>
                   <span className="px-2.5 py-0.5 rounded-full bg-brand-gold-400/20 text-brand-gold-300 text-[11px] font-semibold tracking-wide border border-brand-gold-400/30">
                     Doctor Portal
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-brand-cream-200/90 font-medium">
-                  BAMS, MD (Ayurveda - BHU Gold Medalist) • Reg. #AY-24890
+                  {activeDoctorProfile?.qualification || "BAMS, MD (Ayurveda - BHU Gold Medalist) • Reg. #AY-24890"}
                 </p>
                 <p className="text-[11px] text-brand-gold-400/80 mt-0.5">
-                  Chief Ayurvedic Vaidya & Nadi Pariksha Master • Grams Life Clinic
+                  {activeDoctorProfile?.title || "Chief Ayurvedic Vaidya & Nadi Pariksha Master"} • Grams Life Clinic
                 </p>
               </div>
             </div>
@@ -1479,7 +1487,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                                   <div className="flex items-center gap-2">
                                     <span className="text-[11px] text-emerald-700 font-medium">WhatsApp:</span>
                                     <a
-                                      href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Namaste ${app.patientName}, this is Dr. Sanjeev Rastogi's Ayurvedic Consultation desk. We are connected for your appointment #${app.id}.`)}`}
+                                      href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Namaste ${app.patientName}, this is ${activeDoctorProfile?.name || "Dr. Arundhati Sharma"}'s Ayurvedic Consultation desk. We are connected for your appointment #${app.id}.`)}`}
                                       target="_blank"
                                       rel="noreferrer"
                                       className="font-mono font-bold text-xs bg-[#25D366] px-2.5 py-1 rounded-lg text-white hover:bg-[#1EBE5D] inline-flex items-center gap-1.5 transition-colors shadow-2xs"
@@ -1623,7 +1631,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                             {isChat && (
                               <div className="flex items-center gap-1.5">
                                 <a
-                                  href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Namaste ${app.patientName}, this is Dr. Sanjeev Rastogi. We are connected for your Ayurvedic Consultation #${app.id}.`)}`}
+                                  href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Namaste ${app.patientName}, this is ${activeDoctorProfile?.name || "Dr. Arundhati Sharma"}. We are connected for your Ayurvedic Consultation #${app.id}.`)}`}
                                   target="_blank"
                                   rel="noreferrer"
                                   onClick={() => {

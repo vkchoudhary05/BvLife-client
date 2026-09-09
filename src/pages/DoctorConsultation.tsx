@@ -16,7 +16,7 @@ import { Language } from '../lib/translations';
 import { api } from '../services/api';
 import { ConsultationFeatures } from '../components/ConsultationFeatures';
 import { loadRazorpayScript } from '../utils/razorpay';
-import drImage from "@/assets/DrSanjeev.png";
+import drImage from "@/assets/DrSanjeev3.png";
 
 const legendaryDoctorImg = drImage;
 const doctorBannerDesktop = drImage;
@@ -156,7 +156,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
         const found = data[0];
         setDoctor({
           ...found,
-          image: legendaryDoctorImg || found.image || LEGEND_DOCTOR.image
+          image: found.image || legendaryDoctorImg || LEGEND_DOCTOR.image
         });
       }
     }).catch(err => {
@@ -333,7 +333,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
       fee: doctor.fee,
       status: 'Confirmed',
       bookingDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      meetingLink: selectedMode === 'video' ? `https://meet.jit.si/BVLife-DrSanjeevRastogi-${appointmentId}` : undefined,
+      meetingLink: selectedMode === 'video' ? `https://meet.jit.si/BVLife-${encodeURIComponent((doctor.name || 'Doctor').replace(/[^a-zA-Z0-9]/g, ''))}-${appointmentId}` : undefined,
       paymentMethod: paymentDetails.paymentMethod,
       paymentStatus: paymentDetails.paymentStatus,
       paymentId: paymentDetails.paymentId,
@@ -393,7 +393,6 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
       });
 
       const data = await res.json();
-      console.log("Razorpay order response:", data);
       const finalKey = data.keyId || activeKey;
 
       if (!finalKey) {
@@ -558,11 +557,11 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
             <picture>
               <source
                 media="(max-width:768px)"
-                srcSet={doctorHeroSlides[currentSlide].mobileImage}
+                srcSet={doctor.image || doctorHeroSlides[currentSlide].mobileImage}
               />
               <img
-                src={doctorHeroSlides[currentSlide].desktopImage}
-                alt="Consult with Dr. Sanjeev Rastogi"
+                src={doctor.image || doctorHeroSlides[currentSlide].desktopImage}
+                alt={`Consult with ${doctor.name}`}
                 className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-700"
               />
             </picture>
@@ -851,7 +850,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                   )}
                   {bookingConfirmed.consultationMode === 'chat' && (
                     <a
-                      href={`https://wa.me/918882001122?text=${encodeURIComponent(`Namaste Dr. Sanjeev Rastogi, I have booked a WhatsApp Consultation (ID: #${bookingConfirmed.id}). Patient: ${bookingConfirmed.patientName}. Looking forward to discussing my health concerns.`)}`}
+                      href={`https://wa.me/918882001122?text=${encodeURIComponent(`Namaste ${doctor.name}, I have booked a WhatsApp Consultation (ID: #${bookingConfirmed.id}). Patient: ${bookingConfirmed.patientName}. Looking forward to discussing my health concerns.`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs flex items-center gap-2 shadow-md transition-transform hover:scale-102"
@@ -1008,7 +1007,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                       Select How You'd Like to Consult
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
-                      Consult with <strong>Dr. Sanjeev Rastogi</strong> (Chief Ayurvedic Physician, MD Ayurveda, BHU). Pick the format best suited to your preference and comfort.
+                      Consult with <strong>{doctor.name}</strong> ({doctor.title || doctor.qualification}). Pick the format best suited to your preference and comfort.
                     </p>
                   </div>
 
@@ -1932,7 +1931,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                                     </span>
                                   </div>
                                   <p className="text-slate-600">
-                                    Book your consultation slot now with zero advance. Pay ₹{doctor.fee} via UPI or cash after your consultation call with Dr. Sanjeev Rastogi.
+                                    Book your consultation slot now with zero advance. Pay ₹{doctor.fee} via UPI or cash after your consultation call with {doctor.name}.
                                   </p>
                                 </div>
                               </div>
@@ -2021,7 +2020,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                 </div>
                 <h3 className="font-bold text-slate-800 text-sm">No consultations booked yet</h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  Schedule your private consultation with Dr. Sanjeev Rastogi for personalized Ayurvedic guidance and pulse analysis.
+                  Schedule your private consultation with {doctor.name} for personalized Ayurvedic guidance and pulse analysis.
                 </p>
                 <button
                   type="button"
@@ -2102,7 +2101,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
 
                       {app.status === 'Confirmed' && app.consultationMode === 'chat' && (
                         <a
-                          href={`https://wa.me/918882001122?text=${encodeURIComponent(`Namaste Dr. Sanjeev Rastogi, following up on my booked WhatsApp Consultation #${app.id}. Patient: ${app.patientName}.`)}`}
+                          href={`https://wa.me/918882001122?text=${encodeURIComponent(`Namaste ${doctor.name}, following up on my booked WhatsApp Consultation #${app.id}. Patient: ${app.patientName}.`)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs"
@@ -2173,7 +2172,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                 <div className="md:col-span-8 space-y-4">
                   <div>
                     <span className="text-xs font-bold uppercase tracking-wider text-brand-gold-700 bg-brand-gold-50 px-3 py-1 rounded-md border border-brand-gold-300/60 inline-block mb-1.5">
-                      Chief Ayurvedic Physician & Master Nadi Vaidya
+                      {doctor.title || 'Chief Ayurvedic Physician & Master Nadi Vaidya'}
                     </span>
                     <h2 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
                       {doctor.name}
@@ -2181,25 +2180,22 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                     <p className="text-sm font-bold text-brand-green-800 mt-1">
                       {doctor.qualification}
                     </p>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Former Head of Dept. Kaya Chikitsa & Panchakarma at State Ayurvedic College, Lucknow
-                    </p>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                    {doctor.bio} With over three decades of clinical practice and scholarly mentorship, Dr. Rastogi has successfully guided thousands of patients through chronic metabolic disorders, autoimmune joint conditions, and digestive imbalances by pairing authentic Charaka Samhita pulse diagnostics with clinical evidence.
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                    {doctor.bio}
                   </p>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
                       <span className="text-[10px] uppercase font-bold text-slate-400">Experience</span>
-                      <p className="font-extrabold text-sm text-slate-800 mt-0.5">30+ Years</p>
+                      <p className="font-extrabold text-sm text-slate-800 mt-0.5">{doctor.experienceYears}+ Years</p>
                       <p className="text-[10px] text-slate-500">Clinical Mastery</p>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
                       <span className="text-[10px] uppercase font-bold text-slate-400">Education</span>
-                      <p className="font-extrabold text-sm text-slate-800 mt-0.5">BHU Gold Medalist</p>
-                      <p className="text-[10px] text-slate-500">MD & Ph.D</p>
+                      <p className="font-extrabold text-sm text-slate-800 mt-0.5">{doctor.qualification.split(',')[0] || 'Ayurvedic Physician'}</p>
+                      <p className="text-[10px] text-slate-500">AYUSH Recognized</p>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 col-span-2 sm:col-span-1">
                       <span className="text-[10px] uppercase font-bold text-slate-400">Consultation Fee</span>

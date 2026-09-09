@@ -265,7 +265,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-[1440px] mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex items-center justify-between h-14 sm:h-18 gap-2 sm:gap-4">
           
-          {/* Left Corner: Mobile Menu Button + Grams Life Logo */}
+          {/* Left Corner: Mobile Menu Button + Bv Life Logo */}
           <div className="flex items-center gap-1.5 sm:gap-2 mr-auto md:mr-0 shrink-0">
             {/* Mobile Menu Button - In LEFT Corner next to logo */}
             <button 

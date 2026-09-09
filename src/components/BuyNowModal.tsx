@@ -473,7 +473,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
             key: finalKey,
             amount: data.amount,
             currency: data.currency || 'INR',
-            name: 'Grams Life',
+            name: 'Bv Life',
             description: product.name,
             image: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
             order_id: data.orderId,

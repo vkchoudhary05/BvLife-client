@@ -557,7 +557,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
             </div>
             <div className="text-right space-y-0.5 shrink-0">
               <span className="text-[9px] text-brand-green-700 font-bold uppercase tracking-wider block">
-                {product.brand || 'Grams Life'}
+                {product.brand || 'Bv Life'}
               </span>
               <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
                 activeStock > 5 

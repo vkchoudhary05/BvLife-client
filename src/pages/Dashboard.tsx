@@ -345,7 +345,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [prodImg4, setProdImg4] = useState('');
   const [prodBenefits, setProdBenefits] = useState('');
   const [prodDosage, setProdDosage] = useState('');
-  const [prodBrand, setProdBrand] = useState('Grams Life');
+  const [prodBrand, setProdBrand] = useState('Bv Life');
   const [prodSubcategory, setProdSubcategory] = useState('');
   const [prodUsageInstructions, setProdUsageInstructions] = useState('As directed');
   const [prodFeatured, setProdFeatured] = useState(false);
@@ -924,7 +924,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg4(prod.images?.[2] || '');
     setProdBenefits(prod.benefits.join(', '));
     setProdDosage(prod.dosage);
-    setProdBrand(prod.brand || 'Grams Life');
+    setProdBrand(prod.brand || 'Bv Life');
     setProdSubcategory(prod.subcategory || '');
     setProdUsageInstructions(prod.usageInstructions || 'As directed');
     setProdFeatured(prod.featured || false);
@@ -957,7 +957,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg4('');
     setProdBenefits('');
     setProdDosage('');
-    setProdBrand('Grams Life');
+    setProdBrand('Bv Life');
     setProdSubcategory('');
     setProdUsageInstructions('As directed');
     setProdFeatured(false);
@@ -992,7 +992,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdFormulation(targetForm);
     setProdFormLabel(targetLabel);
     setProdCategory(sourceProd.category);
-    setProdBrand(sourceProd.brand || 'Grams Life');
+    setProdBrand(sourceProd.brand || 'Bv Life');
     setProdPrice(sourceProd.price);
     setProdOrigPrice(sourceProd.originalPrice);
     setProdStock(sourceProd.stock);
@@ -1302,7 +1302,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <Building2 className="w-3.5 h-3.5 text-green-600" />
                 <span>Admin Management Gateway</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Grams Life Admin Panel</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Bv Life Admin Panel</h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
                 Director: <span className="font-semibold text-slate-900">{user.fullName}</span> ({user.email})
               </p>
@@ -4766,7 +4766,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
                 const updatedSettings: WebsiteSettings = {
-                  logoName: fd.get('logoName') as string || 'Grams Life',
+                  logoName: fd.get('logoName') as string || 'Bv Life',
                   logoUrl: fd.get('logoUrl') as string || '',
                   contactEmail: fd.get('contactEmail') as string || '',
                   contactPhone: fd.get('contactPhone') as string || '',
@@ -4999,7 +4999,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     G
                   </div>
                   <div>
-                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Grams Life</h2>
+                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Bv Life</h2>
                     <span className="text-[10px] uppercase tracking-widest text-brand-gold-700 font-extrabold mt-1 block">Ayurvedic Sanctuary</span>
                   </div>
                 </div>
@@ -5100,7 +5100,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </p>
                 <div className="space-y-0.5">
                   <p className="text-[10px] font-bold text-brand-gold-700 uppercase tracking-widest">Aacharya Dhanvantari</p>
-                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Grams Life Sanctuary</p>
+                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Bv Life Sanctuary</p>
                 </div>
               </div>
 
@@ -5260,7 +5260,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       RETURN ADDRESS (SHIPPER / SELLER)
                     </p>
                     <div className="text-[11px] font-bold leading-tight text-gray-800">
-                      <p className="font-black">Grams Life Ayurvedic Sanctuary</p>
+                      <p className="font-black">Bv Life Ayurvedic Sanctuary</p>
                       <p>Plot 42, Veda Heritage Enclave, Mansarovar</p>
                       <p>Jaipur, Rajasthan - 302020</p>
                       <p className="font-mono text-[10px] pt-0.5">Seller Care: +91 98765 43210 | care@gramslife.com</p>
