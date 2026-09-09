@@ -452,6 +452,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
           })
         });
         const data = await res.json();
+        console.log("Razorpay order response:", data);
         const finalKey = data.keyId || activeKey;
 
         if (!finalKey) {

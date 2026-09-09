@@ -5,11 +5,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Video, Calendar, Clock, User, Phone, PhoneCall, PhoneForwarded, Mail, FileText, CheckCircle2, 
+  Video, Calendar, Clock, User, Phone, PhoneCall, PhoneForwarded, Mail, FileText, CheckCircle2, CheckCircle,
   X, ExternalLink, Copy, Check, Search, Filter, Stethoscope, 
   Plus, Trash2, Printer, Download, Sparkles, Shield, AlertCircle,
-  MessageSquare, RefreshCw, ChevronRight, Activity, ArrowLeft,
-  Settings, Link as LinkIcon, Eye, EyeOff, Lock, LogOut
+  MessageSquare, RefreshCw, ChevronLeft, ChevronRight, Activity, ArrowLeft,
+  Settings, Link as LinkIcon, Eye, EyeOff, Lock, LogOut, Building2, MapPin, Users
 } from 'lucide-react';
 import { DoctorAppointment, DoctorPrescription, PrescribedMedicine, User as UserType } from '../types';
 import { api } from '../services/api';
@@ -152,9 +152,19 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   // State for appointments
   const [appointments, setAppointments] = useState<DoctorAppointment[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'schedule' | 'video' | 'calls' | 'prescriptions' | 'settings'>('schedule');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'video' | 'calls' | 'clinic' | 'prescriptions' | 'settings'>('schedule');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Pagination states for all views
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(6);
+  const [videoPage, setVideoPage] = useState<number>(1);
+  const [videoPageSize, setVideoPageSize] = useState<number>(4);
+  const [callsPage, setCallsPage] = useState<number>(1);
+  const [callsPageSize, setCallsPageSize] = useState<number>(4);
+  const [clinicPage, setClinicPage] = useState<number>(1);
+  const [clinicPageSize, setClinicPageSize] = useState<number>(4);
 
   // Active appointment for in-call or prescription writing
   const [selectedAppointment, setSelectedAppointment] = useState<DoctorAppointment | null>(null);
@@ -218,24 +228,15 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
         }
       }
 
-      // Ensure that Priya Sundaram or sample data reflects direct phone call (audio) if present
-      if (combined.length > 0) {
-        combined = combined.map(a => {
-          if (a.id === 'BVL-DOC-551829') {
-            return { ...a, consultationMode: 'audio' };
-          }
-          return a;
-        });
-      }
-
-      // If empty, generate realistic seed appointments for immediate rich doctor experience
-      if (combined.length === 0) {
+      // If empty or lacking in-person clinic visits, generate realistic seed appointments covering all 3 formats
+      const hasClinicMode = combined.some(a => a.consultationMode === 'clinic');
+      if (combined.length === 0 || !hasClinicMode) {
         const todayIso = new Date().toISOString().split('T')[0];
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowIso = tomorrow.toISOString().split('T')[0];
 
-        combined = [
+        const seedList: DoctorAppointment[] = [
           {
             id: 'BVL-DOC-772910',
             doctorId: 'doc-legend-1',
@@ -257,7 +258,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
             roomStatus: 'waiting',
             bookingDate: 'Today',
             meetingPlatform: 'google-meet',
-            meetingLink: 'https://meet.google.com/bvl-ayur-demo'
+            meetingLink: 'https://meet.jit.si/BVLife-Consult-BVL-DOC-772910'
           },
           {
             id: 'BVL-DOC-551829',
@@ -275,6 +276,27 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
             timeSlot: '11:45 AM',
             consultationMode: 'audio',
             healthConcern: 'PCOS hormonal imbalance, erratic sleep patterns, stress fatigue',
+            fee: 499,
+            status: 'Confirmed',
+            roomStatus: 'waiting',
+            bookingDate: 'Today'
+          },
+          {
+            id: 'BVL-DOC-663820',
+            doctorId: 'doc-legend-1',
+            doctorName: 'Dr. Arundhati Sharma',
+            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
+            doctorImage: '/images/legendary_doctor.jpg',
+            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
+            patientName: 'Meera Nambiar',
+            patientAge: 42,
+            patientGender: 'Female',
+            patientPhone: '+91 97120 44921',
+            patientEmail: 'meera.nambiar@example.com',
+            date: todayIso,
+            timeSlot: '01:30 PM',
+            consultationMode: 'clinic',
+            healthConcern: 'Cervical spondylosis & neck stiffness, seeking Panchakarma & Marma therapy evaluation',
             fee: 499,
             status: 'Confirmed',
             roomStatus: 'waiting',
@@ -300,8 +322,6 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
             status: 'Completed',
             roomStatus: 'completed',
             bookingDate: 'Today',
-            meetingPlatform: 'google-meet',
-            meetingLink: 'https://meet.google.com/bvl-ayur-demo',
             prescription: {
               id: 'RX-99410',
               appointmentId: 'BVL-DOC-442190',
@@ -366,9 +386,100 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
             roomStatus: 'waiting',
             bookingDate: 'Yesterday',
             meetingPlatform: 'google-meet',
-            meetingLink: 'https://meet.google.com/bvl-ayur-demo'
+            meetingLink: 'https://meet.jit.si/BVLife-Consult-BVL-DOC-889123'
+          },
+          {
+            id: 'BVL-DOC-992384',
+            doctorId: 'doc-legend-1',
+            doctorName: 'Dr. Arundhati Sharma',
+            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
+            doctorImage: '/images/legendary_doctor.jpg',
+            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
+            patientName: 'Rajesh Gupta',
+            patientAge: 53,
+            patientGender: 'Male',
+            patientPhone: '+91 98450 12984',
+            patientEmail: 'rajesh.gupta@example.com',
+            date: tomorrowIso,
+            timeSlot: '04:00 PM',
+            consultationMode: 'clinic',
+            healthConcern: 'Knee osteoarthritis and joint inflammation, seeking herbal taila massage & basti',
+            fee: 499,
+            status: 'Confirmed',
+            roomStatus: 'waiting',
+            bookingDate: 'Today'
+          },
+          {
+            id: 'BVL-DOC-331298',
+            doctorId: 'doc-legend-1',
+            doctorName: 'Dr. Arundhati Sharma',
+            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
+            doctorImage: '/images/legendary_doctor.jpg',
+            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
+            patientName: 'Vikram Malhotra',
+            patientAge: 38,
+            patientGender: 'Male',
+            patientPhone: '+91 98230 77112',
+            patientEmail: 'vikram.malhotra@example.com',
+            date: todayIso,
+            timeSlot: '03:15 PM',
+            consultationMode: 'clinic',
+            healthConcern: 'Severe migraine headaches & Pitta flare-ups during work stress',
+            fee: 499,
+            status: 'Confirmed',
+            roomStatus: 'waiting',
+            bookingDate: 'Today'
+          },
+          {
+            id: 'BVL-DOC-229415',
+            doctorId: 'doc-legend-1',
+            doctorName: 'Dr. Arundhati Sharma',
+            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
+            doctorImage: '/images/legendary_doctor.jpg',
+            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
+            patientName: 'Kavita Joshi',
+            patientAge: 31,
+            patientGender: 'Female',
+            patientPhone: '+91 99114 66200',
+            patientEmail: 'kavita.joshi@example.com',
+            date: tomorrowIso,
+            timeSlot: '11:00 AM',
+            consultationMode: 'audio',
+            healthConcern: 'Post-viral chronic weakness and low immunity, requests Chyawanprash & herbal rasayana',
+            fee: 499,
+            status: 'Confirmed',
+            roomStatus: 'waiting',
+            bookingDate: 'Today'
+          },
+          {
+            id: 'BVL-DOC-118472',
+            doctorId: 'doc-legend-1',
+            doctorName: 'Dr. Arundhati Sharma',
+            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
+            doctorImage: '/images/legendary_doctor.jpg',
+            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
+            patientName: 'Arjun Nair',
+            patientAge: 45,
+            patientGender: 'Male',
+            patientPhone: '+91 98840 33219',
+            patientEmail: 'arjun.nair@example.com',
+            date: tomorrowIso,
+            timeSlot: '05:30 PM',
+            consultationMode: 'video',
+            healthConcern: 'Elevated fasting blood sugar and metabolic lethargy, seeking herbal diet chart',
+            fee: 499,
+            status: 'Confirmed',
+            roomStatus: 'waiting',
+            bookingDate: 'Yesterday',
+            meetingPlatform: 'google-meet',
+            meetingLink: 'https://meet.jit.si/BVLife-Consult-BVL-DOC-118472'
           }
         ];
+
+        // Merge existing with seedList avoiding ID collision
+        const existingIds = new Set(combined.map(a => a.id));
+        const newSeeds = seedList.filter(s => !existingIds.has(s.id));
+        combined = [...combined, ...newSeeds];
 
         if (typeof window !== 'undefined') {
           localStorage.setItem('bvlife_doctor_appointments', JSON.stringify(combined));
@@ -398,19 +509,25 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   // Today's ISO date string
   const todayDate = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  // Stats calculation
+  // Stats calculation covering all 3 formats distinctly
   const stats = useMemo(() => {
     const todayAppointments = appointments.filter(a => a.date === todayDate);
     const videoToday = todayAppointments.filter(a => a.consultationMode === 'video');
-    const audioToday = todayAppointments.filter(a => a.consultationMode !== 'video');
+    const audioToday = todayAppointments.filter(a => a.consultationMode === 'audio');
+    const clinicToday = todayAppointments.filter(a => a.consultationMode === 'clinic');
     const completedCount = appointments.filter(a => a.status === 'Completed').length;
-    const totalAudioCount = appointments.filter(a => a.consultationMode !== 'video' && a.status !== 'Cancelled').length;
+    const totalVideoCount = appointments.filter(a => a.consultationMode === 'video' && a.status !== 'Cancelled').length;
+    const totalAudioCount = appointments.filter(a => a.consultationMode === 'audio' && a.status !== 'Cancelled').length;
+    const totalClinicCount = appointments.filter(a => a.consultationMode === 'clinic' && a.status !== 'Cancelled').length;
 
     return {
       todayCount: todayAppointments.length,
       videoToday: videoToday.length,
       audioToday: audioToday.length,
+      clinicToday: clinicToday.length,
+      totalVideoCount,
       totalAudioCount,
+      totalClinicCount,
       completedCount
     };
   }, [appointments, todayDate]);
@@ -423,7 +540,8 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
       if (filterStatus === 'confirmed' && app.status !== 'Confirmed') return false;
       if (filterStatus === 'completed' && app.status !== 'Completed') return false;
       if (filterStatus === 'video' && app.consultationMode !== 'video') return false;
-      if (filterStatus === 'audio' && app.consultationMode === 'video') return false;
+      if (filterStatus === 'audio' && app.consultationMode !== 'audio') return false;
+      if (filterStatus === 'clinic' && app.consultationMode !== 'clinic') return false;
 
       // Search query
       if (searchQuery.trim()) {
@@ -439,15 +557,61 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     });
   }, [appointments, filterStatus, searchQuery, todayDate]);
 
-  // Video calls list
-  const videoCallsList = useMemo(() => {
-    return appointments.filter(a => a.consultationMode === 'video' && a.status !== 'Cancelled');
-  }, [appointments]);
+  // Reset pagination on filter / tab change or search
+  useEffect(() => {
+    setCurrentPage(1);
+    setVideoPage(1);
+    setCallsPage(1);
+    setClinicPage(1);
+  }, [filterStatus, searchQuery, activeTab]);
 
-  // Direct phone calls list (Simple calls)
+  // Helper matcher for search query
+  const matchesSearch = (app: DoctorAppointment, q: string) => {
+    if (!q.trim()) return true;
+    const term = q.toLowerCase();
+    const matchName = (app.patientName || '').toLowerCase().includes(term);
+    const matchPhone = (app.patientPhone || '').includes(term);
+    const matchId = (app.id || '').toLowerCase().includes(term);
+    const matchConcern = (app.healthConcern || '').toLowerCase().includes(term);
+    return matchName || matchPhone || matchId || matchConcern;
+  };
+
+  // Pagination for main schedule list
+  const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / pageSize));
+  const paginatedAppointments = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredAppointments.slice(start, start + pageSize);
+  }, [filteredAppointments, currentPage, pageSize]);
+
+  // 1. Video calls list & pagination (Show 1: Video Consultations)
+  const videoCallsList = useMemo(() => {
+    return appointments.filter(a => a.consultationMode === 'video' && a.status !== 'Cancelled' && matchesSearch(a, searchQuery));
+  }, [appointments, searchQuery]);
+  const totalVideoPages = Math.max(1, Math.ceil(videoCallsList.length / videoPageSize));
+  const paginatedVideoCalls = useMemo(() => {
+    const start = (videoPage - 1) * videoPageSize;
+    return videoCallsList.slice(start, start + videoPageSize);
+  }, [videoCallsList, videoPage, videoPageSize]);
+
+  // 2. Direct phone calls list & pagination (Show 2: Direct Phone Calls)
   const phoneCallsList = useMemo(() => {
-    return appointments.filter(a => a.consultationMode !== 'video' && a.status !== 'Cancelled');
-  }, [appointments]);
+    return appointments.filter(a => a.consultationMode === 'audio' && a.status !== 'Cancelled' && matchesSearch(a, searchQuery));
+  }, [appointments, searchQuery]);
+  const totalCallsPages = Math.max(1, Math.ceil(phoneCallsList.length / callsPageSize));
+  const paginatedPhoneCalls = useMemo(() => {
+    const start = (callsPage - 1) * callsPageSize;
+    return phoneCallsList.slice(start, start + callsPageSize);
+  }, [phoneCallsList, callsPage, callsPageSize]);
+
+  // 3. In-Person Clinic OPD list & pagination (Show 3: In-Person Clinic OPD)
+  const clinicVisitsList = useMemo(() => {
+    return appointments.filter(a => a.consultationMode === 'clinic' && a.status !== 'Cancelled' && matchesSearch(a, searchQuery));
+  }, [appointments, searchQuery]);
+  const totalClinicPages = Math.max(1, Math.ceil(clinicVisitsList.length / clinicPageSize));
+  const paginatedClinicVisits = useMemo(() => {
+    const start = (clinicPage - 1) * clinicPageSize;
+    return clinicVisitsList.slice(start, start + clinicPageSize);
+  }, [clinicVisitsList, clinicPage, clinicPageSize]);
 
   // Copy meeting link
   const handleCopyLink = (url: string, id: string) => {
@@ -473,6 +637,16 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
     const message = encodeURIComponent(
       `Namaste ${app.patientName}, this is Dr. Arundhati Sharma from GramsLife Ayurvedic Clinic. I am calling you for your scheduled Telephonic Consultation (${app.date} at ${app.timeSlot}). Please let me know if you are ready to speak on ${app.patientPhone}.`
+    );
+    window.open(`https://wa.me/${phoneWithCountry}?text=${message}`, '_blank');
+  };
+
+  // Send WhatsApp OPD Directions and Token to In-Person Clinic Patient
+  const handleWhatsAppClinicVisit = (app: DoctorAppointment, tokenIndex: number) => {
+    const cleanPhone = (app.patientPhone || '').replace(/\D/g, '');
+    const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const message = encodeURIComponent(
+      `Namaste ${app.patientName}, this is Grams Life Ayurvedic Wellness Center. Your In-Person Clinic Visit (OPD) with Dr. Arundhati Sharma is confirmed for ${app.date} at ${app.timeSlot}.\n\n🏥 OPD Token: #OPD-${tokenIndex}\n📍 Location: Grams Life Center, Chamber 102, Ground Floor, Ayur Marg, New Delhi.\n\nKindly arrive 10 minutes before your slot and bring your previous health reports.`
     );
     window.open(`https://wa.me/${phoneWithCountry}?text=${message}`, '_blank');
   };
@@ -850,60 +1024,118 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
-        {/* Metric Cards Banner */}
-        <section aria-label="Daily Statistics" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-brand-green-900/10 shadow-xs flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-              <Calendar className="w-6 h-6" />
+        {/* Metric Cards Banner - Interactive quick switch to the 3 shows */}
+        <section aria-label="Daily Statistics" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          <button
+            type="button"
+            onClick={() => { setActiveTab('schedule'); setFilterStatus('today'); }}
+            className={`p-4 sm:p-5 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3.5 hover:scale-[1.02] hover:shadow-md ${
+              activeTab === 'schedule' && filterStatus === 'today'
+                ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-500/20 shadow-xs'
+                : 'bg-white border-brand-green-900/10 shadow-xs hover:border-emerald-300'
+            }`}
+          >
+            <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+              <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Today's Slots</p>
-              <p className="text-2xl font-black text-slate-900 font-serif">{stats.todayCount}</p>
-              <p className="text-[11px] text-emerald-700 font-medium">Scheduled for today</p>
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Today's Slots</p>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 font-serif">{stats.todayCount}</p>
+              <p className="text-[10px] text-emerald-700 font-medium">All modes today</p>
             </div>
-          </div>
+          </button>
 
-          <div className="bg-white p-5 rounded-2xl border border-brand-green-900/10 shadow-xs flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-800 flex items-center justify-center shrink-0">
-              <Video className="w-6 h-6" />
+          {/* Show 1 Card: Video Calls */}
+          <button
+            type="button"
+            onClick={() => { setActiveTab('video'); setFilterStatus('all'); }}
+            className={`p-4 sm:p-5 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3.5 hover:scale-[1.02] hover:shadow-md ${
+              activeTab === 'video'
+                ? 'bg-blue-50/80 border-blue-400 ring-2 ring-blue-500/20 shadow-xs'
+                : 'bg-white border-brand-green-900/10 shadow-xs hover:border-blue-300'
+            }`}
+          >
+            <div className="w-11 h-11 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center shrink-0">
+              <Video className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Video Calls</p>
-              <p className="text-2xl font-black text-slate-900 font-serif">{stats.videoToday}</p>
-              <p className="text-[11px] text-blue-700 font-medium">Google Meet / Jitsi</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Show 1: Video</p>
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+              </div>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 font-serif">{videoCallsList.length}</p>
+              <p className="text-[10px] text-blue-700 font-medium">Meet / Jitsi room</p>
             </div>
-          </div>
+          </button>
 
-          <div className="bg-white p-5 rounded-2xl border border-brand-green-900/10 shadow-xs flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-800 flex items-center justify-center shrink-0">
-              <PhoneCall className="w-6 h-6" />
+          {/* Show 2 Card: Direct Calls */}
+          <button
+            type="button"
+            onClick={() => { setActiveTab('calls'); setFilterStatus('all'); }}
+            className={`p-4 sm:p-5 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3.5 hover:scale-[1.02] hover:shadow-md ${
+              activeTab === 'calls'
+                ? 'bg-teal-50/80 border-teal-400 ring-2 ring-teal-500/20 shadow-xs'
+                : 'bg-white border-brand-green-900/10 shadow-xs hover:border-teal-300'
+            }`}
+          >
+            <div className="w-11 h-11 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center shrink-0">
+              <PhoneCall className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Direct Phone Calls</p>
-              <p className="text-2xl font-black text-slate-900 font-serif">{stats.audioToday}</p>
-              <p className="text-[11px] text-teal-700 font-medium">Simple voice consultations</p>
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Show 2: Calls</p>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 font-serif">{phoneCallsList.length}</p>
+              <p className="text-[10px] text-teal-700 font-medium">Phone calls queue</p>
             </div>
-          </div>
+          </button>
 
-          <div className="bg-white p-5 rounded-2xl border border-brand-green-900/10 shadow-xs flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-6 h-6" />
+          {/* Show 3 Card: Clinic OPD */}
+          <button
+            type="button"
+            onClick={() => { setActiveTab('clinic'); setFilterStatus('all'); }}
+            className={`p-4 sm:p-5 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3.5 hover:scale-[1.02] hover:shadow-md ${
+              activeTab === 'clinic'
+                ? 'bg-amber-50/80 border-amber-400 ring-2 ring-amber-500/20 shadow-xs'
+                : 'bg-white border-brand-green-900/10 shadow-xs hover:border-amber-300'
+            }`}
+          >
+            <div className="w-11 h-11 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+              <Building2 className="w-5 h-5 text-amber-700" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Prescriptions Issued</p>
-              <p className="text-2xl font-black text-slate-900 font-serif">{stats.completedCount}</p>
-              <p className="text-[11px] text-amber-700 font-medium">Treated & signed</p>
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Show 3: Clinic</p>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 font-serif">{clinicVisitsList.length}</p>
+              <p className="text-[10px] text-amber-700 font-medium">In-person OPD chamber</p>
             </div>
-          </div>
+          </button>
+
+          {/* Prescriptions Card */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('prescriptions')}
+            className={`p-4 sm:p-5 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3.5 hover:scale-[1.02] hover:shadow-md ${
+              activeTab === 'prescriptions'
+                ? 'bg-emerald-50/80 border-emerald-400 ring-2 ring-emerald-500/20 shadow-xs'
+                : 'bg-white border-brand-green-900/10 shadow-xs hover:border-emerald-300'
+            }`}
+          >
+            <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Prescriptions</p>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 font-serif">{stats.completedCount}</p>
+              <p className="text-[10px] text-emerald-700 font-medium">Digital Rx pad</p>
+            </div>
+          </button>
         </section>
 
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs - Highlighting the Three Different Shows */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-2">
           <div className="flex items-center gap-2 overflow-x-auto">
             <button
               type="button"
               onClick={() => setActiveTab('schedule')}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+              className={`px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
                 activeTab === 'schedule'
                   ? 'bg-brand-green-900 text-brand-gold-300 shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -916,49 +1148,74 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
               </span>
             </button>
 
+            {/* SHOW 1: Video Consultations */}
             <button
               type="button"
               onClick={() => setActiveTab('video')}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+              className={`px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
                 activeTab === 'video'
-                  ? 'bg-brand-green-900 text-brand-gold-300 shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-blue-700 text-white shadow-xs ring-2 ring-blue-500/30'
+                  : 'text-blue-800 bg-blue-50/70 hover:bg-blue-100 border border-blue-200/60'
               }`}
             >
-              <Video className="w-4 h-4 text-blue-400" />
-              <span>Video Hub (Option B)</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-700 text-[10px]">
+              <Video className="w-4 h-4" />
+              <span>Show 1: Video Hub</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                activeTab === 'video' ? 'bg-white/20 text-white' : 'bg-blue-200/70 text-blue-900'
+              }`}>
                 {videoCallsList.length}
               </span>
             </button>
 
+            {/* SHOW 2: Direct Phone Calls */}
             <button
               type="button"
               onClick={() => setActiveTab('calls')}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+              className={`px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
                 activeTab === 'calls'
-                  ? 'bg-brand-green-900 text-brand-gold-300 shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-teal-700 text-white shadow-xs ring-2 ring-teal-500/30'
+                  : 'text-teal-800 bg-teal-50/70 hover:bg-teal-100 border border-teal-200/60'
               }`}
             >
-              <PhoneCall className="w-4 h-4 text-emerald-500" />
-              <span>Phone Calls Hub (Simple Calls)</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 text-[10px]">
+              <PhoneCall className="w-4 h-4" />
+              <span>Show 2: Phone Calls Hub</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                activeTab === 'calls' ? 'bg-white/20 text-white' : 'bg-teal-200/70 text-teal-900'
+              }`}>
                 {phoneCallsList.length}
+              </span>
+            </button>
+
+            {/* SHOW 3: Clinic In-Person OPD */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('clinic')}
+              className={`px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === 'clinic'
+                  ? 'bg-amber-700 text-white shadow-xs ring-2 ring-amber-500/30'
+                  : 'text-amber-900 bg-amber-50/70 hover:bg-amber-100 border border-amber-200/60'
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>Show 3: Clinic OPD Hub</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                activeTab === 'clinic' ? 'bg-white/20 text-white' : 'bg-amber-200/70 text-amber-900'
+              }`}>
+                {clinicVisitsList.length}
               </span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('prescriptions')}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
+              className={`px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
                 activeTab === 'prescriptions'
                   ? 'bg-brand-green-900 text-brand-gold-300 shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               <FileText className="w-4 h-4 text-amber-400" />
-              <span>Digital Prescription Pad</span>
+              <span>Prescriptions ({stats.completedCount})</span>
             </button>
           </div>
 
@@ -968,7 +1225,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search patient, phone, ID..."
+                placeholder="Search patient, phone, concern..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-brand-green-700"
@@ -976,7 +1233,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
               {searchQuery && (
                 <button 
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -986,12 +1243,13 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-brand-green-700"
+              className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-brand-green-700 cursor-pointer"
             >
-              <option value="all">All Records ({appointments.length})</option>
+              <option value="all">All Modes ({appointments.length})</option>
               <option value="today">Today's Only ({stats.todayCount})</option>
-              <option value="audio">Direct Phone Calls (Simple Calls) ({phoneCallsList.length})</option>
-              <option value="video">Video Calls ({videoCallsList.length})</option>
+              <option value="video">📹 Video Calls ({videoCallsList.length})</option>
+              <option value="audio">📞 Direct Phone Calls ({phoneCallsList.length})</option>
+              <option value="clinic">🏥 In-Person Clinic OPD ({clinicVisitsList.length})</option>
               <option value="confirmed">Confirmed Slots</option>
               <option value="completed">Completed ({stats.completedCount})</option>
             </select>
@@ -1001,15 +1259,83 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
         {/* TAB 1: CONSULTATION SCHEDULE LIST */}
         {activeTab === 'schedule' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            {/* Quick 3-Show Switcher Pills */}
+            <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-100 rounded-2xl border border-slate-200">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-2">Show Filters:</span>
+              <button
+                type="button"
+                onClick={() => setFilterStatus('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  filterStatus === 'all'
+                    ? 'bg-white text-slate-900 shadow-xs border border-slate-300'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                All Shows ({appointments.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterStatus('video')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filterStatus === 'video'
+                    ? 'bg-blue-700 text-white shadow-xs'
+                    : 'text-blue-800 bg-blue-50/80 hover:bg-blue-100'
+                }`}
+              >
+                <Video className="w-3.5 h-3.5" />
+                <span>Show 1: Video ({videoCallsList.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterStatus('audio')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filterStatus === 'audio'
+                    ? 'bg-teal-700 text-white shadow-xs'
+                    : 'text-teal-800 bg-teal-50/80 hover:bg-teal-100'
+                }`}
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>Show 2: Direct Calls ({phoneCallsList.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterStatus('clinic')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filterStatus === 'clinic'
+                    ? 'bg-amber-700 text-white shadow-xs'
+                    : 'text-amber-800 bg-amber-50/80 hover:bg-amber-100'
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>Show 3: Clinic OPD ({clinicVisitsList.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilterStatus('today')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ml-auto ${
+                  filterStatus === 'today'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Today's Only ({stats.todayCount})</span>
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-serif">
                 <span>Patient Appointments Queue</span>
                 <span className="text-xs font-normal text-slate-500 font-sans">
-                  ({filteredAppointments.length} appointments)
+                  ({filteredAppointments.length} appointments • Page {currentPage} of {totalPages})
                 </span>
               </h2>
 
-              <span className="text-xs text-brand-green-800 font-semibold bg-brand-green-50 px-3 py-1 rounded-full border border-brand-green-200">
+              <span className="text-xs text-brand-green-800 font-semibold bg-brand-green-50 px-3 py-1 rounded-full border border-brand-green-200 w-fit">
                 Today is {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
             </div>
@@ -1023,249 +1349,441 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {filteredAppointments.map((app) => {
-                  const isToday = app.date === todayDate;
-                  const isVideo = app.consultationMode === 'video';
-                  const cleanPhone = (app.patientPhone || '').replace(/[^\d+]/g, '');
-                  const meetLink = app.meetingLink || `https://meet.jit.si/BVLife-Consult-${app.id}`;
-                  const isGoogleMeet = meetLink.includes('meet.google.com');
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  {paginatedAppointments.map((app, index) => {
+                    const isToday = app.date === todayDate;
+                    const isVideo = app.consultationMode === 'video';
+                    const isClinic = app.consultationMode === 'clinic';
+                    const isChat = app.consultationMode === 'chat';
+                    const isAudio = !isVideo && !isClinic && !isChat;
+                    const cleanPhone = (app.patientPhone || '').replace(/[^\d+]/g, '');
+                    const meetLink = app.meetingLink || `https://meet.jit.si/BVLife-Consult-${app.id}`;
+                    const isGoogleMeet = meetLink.includes('meet.google.com');
 
-                  return (
-                    <div 
-                      key={app.id} 
-                      className={`bg-white rounded-2xl border transition-all p-5 shadow-xs ${
-                        isToday ? 'border-brand-green-800/30 ring-1 ring-brand-green-800/10' : 'border-slate-200'
-                      }`}
-                    >
-                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                        
-                        {/* Patient & Slot Info */}
-                        <div className="flex items-start gap-4">
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 font-serif ${
-                            isVideo ? 'bg-blue-100 text-blue-900 border border-blue-200' : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
-                          }`}>
-                            {isVideo ? (
-                              <Video className="w-6 h-6 text-blue-700" />
-                            ) : (
-                              <PhoneCall className="w-6 h-6 text-emerald-700" />
-                            )}
-                          </div>
-
-                          <div className="space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-base font-bold text-slate-900">
-                                {app.patientName}
-                              </h3>
-                              <span className="text-xs text-slate-500 font-medium">
-                                ({app.patientAge}y, {app.patientGender})
-                              </span>
-
-                              {/* Consultation Mode: Video vs Simple Call */}
+                    return (
+                      <div 
+                        key={app.id} 
+                        className={`bg-white rounded-2xl border transition-all p-5 shadow-xs ${
+                          isToday ? 'border-brand-green-800/30 ring-1 ring-brand-green-800/10' : 'border-slate-200'
+                        }`}
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                          
+                          {/* Patient & Slot Info */}
+                          <div className="flex items-start gap-4">
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 font-serif ${
+                              isVideo 
+                                ? 'bg-blue-100 text-blue-900 border border-blue-200' 
+                                : isClinic
+                                ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                                : isChat
+                                ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                                : 'bg-teal-100 text-teal-900 border border-teal-200'
+                            }`}>
                               {isVideo ? (
-                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
-                                  <Video className="w-3 h-3 text-blue-700" />
-                                  <span>Video Call</span>
-                                </span>
+                                <Video className="w-6 h-6 text-blue-700" />
+                              ) : isClinic ? (
+                                <Building2 className="w-6 h-6 text-amber-700" />
+                              ) : isChat ? (
+                                <MessageSquare className="w-6 h-6 text-[#25D366]" />
                               ) : (
-                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-200 flex items-center gap-1">
-                                  <PhoneCall className="w-3 h-3 text-emerald-700" />
-                                  <span>Direct Phone Call (Simple Call)</span>
-                                </span>
-                              )}
-
-                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                app.status === 'Completed' 
-                                  ? 'bg-emerald-100 text-emerald-800' 
-                                  : app.status === 'Cancelled'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}>
-                                {app.status}
-                              </span>
-
-                              {isToday && (
-                                <span className="px-2 py-0.5 rounded-full bg-brand-gold-100 text-brand-green-950 text-[10px] font-bold">
-                                  Today's Slot
-                                </span>
+                                <PhoneCall className="w-6 h-6 text-teal-700" />
                               )}
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
-                              <span className="flex items-center gap-1 font-semibold text-brand-green-900">
-                                <Clock className="w-3.5 h-3.5" />
-                                {app.date} • {app.timeSlot}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Phone className="w-3.5 h-3.5 text-slate-400" />
-                                {app.patientPhone}
-                              </span>
-                              <span className="text-slate-400 font-mono text-[11px]">
-                                ID: {app.id}
-                              </span>
-                            </div>
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-base font-bold text-slate-900">
+                                  {app.patientName}
+                                </h3>
+                                <span className="text-xs text-slate-500 font-medium">
+                                  ({app.patientAge}y, {app.patientGender})
+                                </span>
 
-                            <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100 mt-2">
-                              <strong className="text-slate-900 font-semibold">Chief Health Concern: </strong> 
-                              {app.healthConcern || 'Ayurvedic Wellness Evaluation'}
-                            </p>
+                                {/* Consultation Mode: Video vs Voice vs WhatsApp Chat vs In-Person Clinic */}
+                                {isVideo && (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
+                                    <Video className="w-3 h-3 text-blue-700" />
+                                    <span>Video Call</span>
+                                  </span>
+                                )}
 
-                            {/* Simple Call Guidance Banner */}
-                            {!isVideo && (
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-emerald-50/90 rounded-xl border border-emerald-200 text-xs mt-2">
-                                <div className="flex items-center gap-2 text-emerald-950">
-                                  <PhoneCall className="w-4 h-4 text-emerald-700 shrink-0" />
-                                  <div>
-                                    <span className="font-bold">Simple Telephonic Call: </span>
-                                    <span className="text-emerald-800">Doctor calls patient's mobile directly at <strong>{app.timeSlot}</strong>.</span>
+                                {isAudio && (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-teal-100 text-teal-900 border border-teal-200 flex items-center gap-1">
+                                    <PhoneCall className="w-3 h-3 text-teal-700" />
+                                    <span>Phone Call / WhatsApp Voice</span>
+                                  </span>
+                                )}
+
+                                {isChat && (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                                    <MessageSquare className="w-3 h-3 text-emerald-700" />
+                                    <span>WhatsApp Live Chat</span>
+                                  </span>
+                                )}
+
+                                {isClinic && (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-200 flex items-center gap-1">
+                                    <Building2 className="w-3 h-3 text-amber-700" />
+                                    <span>Clinic In-Person OPD</span>
+                                  </span>
+                                )}
+
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                  app.status === 'Completed' 
+                                    ? 'bg-emerald-100 text-emerald-800' 
+                                    : app.status === 'Cancelled'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {app.status}
+                                </span>
+
+                                {isToday && (
+                                  <span className="px-2 py-0.5 rounded-full bg-brand-gold-100 text-brand-green-950 text-[10px] font-bold">
+                                    Today's Slot
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
+                                <span className="flex items-center gap-1 font-semibold text-brand-green-900">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  {app.date} • {app.timeSlot}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                  {app.patientPhone}
+                                </span>
+                                <span className="text-slate-400 font-mono text-[11px]">
+                                  ID: {app.id}
+                                </span>
+                              </div>
+
+                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100 mt-2">
+                                <strong className="text-slate-900 font-semibold">Chief Health Concern: </strong> 
+                                {app.healthConcern || 'Ayurvedic Wellness Evaluation'}
+                              </p>
+
+                              {/* WhatsApp Chat Guidance Banner */}
+                              {isChat && (
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-emerald-50/90 rounded-xl border border-emerald-300 text-xs mt-2">
+                                  <div className="flex items-center gap-2 text-emerald-950">
+                                    <MessageSquare className="w-4 h-4 text-emerald-700 shrink-0" />
+                                    <div>
+                                      <span className="font-bold">WhatsApp Live Consultation: </span>
+                                      <span className="text-emerald-800">Direct chat consultation booked for <strong>{app.timeSlot}</strong>.</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[11px] text-emerald-700 font-medium">WhatsApp:</span>
+                                    <a
+                                      href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Namaste ${app.patientName}, this is Dr. Sanjeev Rastogi's Ayurvedic Consultation desk. We are connected for your appointment #${app.id}.`)}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="font-mono font-bold text-xs bg-[#25D366] px-2.5 py-1 rounded-lg text-white hover:bg-[#1EBE5D] inline-flex items-center gap-1.5 transition-colors shadow-2xs"
+                                    >
+                                      <MessageSquare className="w-3.5 h-3.5 text-white" />
+                                      <span>{app.patientPhone}</span>
+                                    </a>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[11px] text-emerald-700 font-medium">Patient Mobile:</span>
-                                  <a
-                                    href={`tel:${cleanPhone}`}
-                                    className="font-mono font-bold text-xs bg-white px-2.5 py-1 rounded-lg border border-emerald-300 text-emerald-900 hover:bg-emerald-100 inline-flex items-center gap-1.5 transition-colors shadow-2xs"
-                                  >
-                                    <Phone className="w-3.5 h-3.5 text-emerald-700" />
-                                    <span>{app.patientPhone}</span>
-                                  </a>
+                              )}
+
+                              {/* Simple Call Guidance Banner */}
+                              {isAudio && (
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-teal-50/90 rounded-xl border border-teal-200 text-xs mt-2">
+                                  <div className="flex items-center gap-2 text-teal-950">
+                                    <PhoneCall className="w-4 h-4 text-teal-700 shrink-0" />
+                                    <div>
+                                      <span className="font-bold">Phone / WhatsApp Voice Call: </span>
+                                      <span className="text-teal-800">Doctor calls patient's mobile directly at <strong>{app.timeSlot}</strong>.</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[11px] text-teal-700 font-medium">Patient Mobile:</span>
+                                    <a
+                                      href={`tel:${cleanPhone}`}
+                                      className="font-mono font-bold text-xs bg-white px-2.5 py-1 rounded-lg border border-teal-300 text-teal-900 hover:bg-teal-100 inline-flex items-center gap-1.5 transition-colors shadow-2xs"
+                                    >
+                                      <Phone className="w-3.5 h-3.5 text-teal-700" />
+                                      <span>{app.patientPhone}</span>
+                                    </a>
+                                  </div>
                                 </div>
+                              )}
+
+                              {/* In-Person Clinic OPD Guidance Banner */}
+                              {isClinic && (
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-amber-50/90 rounded-xl border border-amber-200 text-xs mt-2">
+                                  <div className="flex items-center gap-2 text-amber-950">
+                                    <Building2 className="w-4 h-4 text-amber-700 shrink-0" />
+                                    <div>
+                                      <span className="font-bold">In-Person OPD Consultation: </span>
+                                      <span className="text-amber-900">Patient arrives at Grams Life Wellness Center at <strong>{app.timeSlot}</strong>. Chamber 102.</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[11px] font-extrabold uppercase px-2.5 py-1 bg-white text-amber-900 rounded-lg border border-amber-300">
+                                      Token #OPD-{(index % 10) + 1}
+                                    </span>
+                                    <a
+                                      href={`tel:${cleanPhone}`}
+                                      className="font-mono font-bold text-xs bg-white px-2 py-1 rounded-lg border border-amber-300 text-amber-900 hover:bg-amber-100 inline-flex items-center gap-1 transition-colors shadow-2xs"
+                                    >
+                                      <Phone className="w-3 h-3 text-amber-700" />
+                                      <span>{app.patientPhone}</span>
+                                    </a>
+                                  </div>
+                                </div>
+                              )}
+
+                              {app.medicalReports && app.medicalReports.length > 0 && (
+                                <div className="flex items-center gap-2 pt-1">
+                                  <span className="text-[11px] text-slate-500 font-medium">
+                                    Uploaded Reports ({app.medicalReports.length}):
+                                  </span>
+                                  {app.medicalReports.map((report, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={report.dataUrl || '#'}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[11px] font-bold text-brand-green-800 bg-brand-green-50 px-2 py-0.5 rounded border border-brand-green-200 hover:underline flex items-center gap-1"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      <span>{report.name}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action Buttons: Video Call / Simple Phone Call / Clinic OPD & Prescription */}
+                          <div className="flex flex-wrap items-center gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                            
+                            {/* Video Call Actions */}
+                            {isVideo && (
+                              <div className="flex items-center gap-1.5">
+                                <a
+                                  href={meetLink}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={() => {
+                                    api.updateAppointmentRoomStatus(app.id, 'in-progress');
+                                  }}
+                                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:shadow"
+                                >
+                                  <Video className="w-4 h-4" />
+                                  <span>Join {isGoogleMeet ? 'Google Meet' : 'Jitsi Video'}</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyLink(meetLink, app.id)}
+                                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+                                  title="Copy Meeting Link"
+                                >
+                                  {copiedMeetId === app.id ? (
+                                    <Check className="w-4 h-4 text-emerald-600" />
+                                  ) : (
+                                    <Copy className="w-4 h-4" />
+                                  )}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleShareOnWhatsApp(app)}
+                                  className="px-3 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs transition-colors flex items-center gap-1 border border-emerald-200 cursor-pointer"
+                                  title="WhatsApp Link to Patient"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span className="hidden sm:inline">WhatsApp</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditMeetModalAppointment(app);
+                                    setCustomMeetUrlInput(app.meetingLink || '');
+                                    setPreferredPlatform(app.meetingPlatform || 'google-meet');
+                                  }}
+                                  className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-colors cursor-pointer"
+                                  title="Change or Set Google Meet Link"
+                                >
+                                  <LinkIcon className="w-3.5 h-3.5" />
+                                </button>
                               </div>
                             )}
 
-                            {app.medicalReports && app.medicalReports.length > 0 && (
-                              <div className="flex items-center gap-2 pt-1">
-                                <span className="text-[11px] text-slate-500 font-medium">
-                                  Uploaded Reports ({app.medicalReports.length}):
-                                </span>
-                                {app.medicalReports.map((report, idx) => (
-                                  <a
-                                    key={idx}
-                                    href={report.dataUrl || '#'}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-[11px] font-bold text-brand-green-800 bg-brand-green-50 px-2 py-0.5 rounded border border-brand-green-200 hover:underline flex items-center gap-1"
-                                  >
-                                    <FileText className="w-3 h-3" />
-                                    <span>{report.name}</span>
-                                  </a>
-                                ))}
+                            {/* WhatsApp Live Chat Actions */}
+                            {isChat && (
+                              <div className="flex items-center gap-1.5">
+                                <a
+                                  href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Namaste ${app.patientName}, this is Dr. Sanjeev Rastogi. We are connected for your Ayurvedic Consultation #${app.id}.`)}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={() => {
+                                    api.updateAppointmentRoomStatus(app.id, 'in-progress');
+                                  }}
+                                  className="px-4 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:shadow"
+                                  title={`Open WhatsApp chat with ${app.patientName}`}
+                                >
+                                  <MessageSquare className="w-4 h-4" />
+                                  <span>Open WhatsApp Chat</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
                               </div>
+                            )}
+
+                            {/* Direct Phone Call Actions */}
+                            {isAudio && (
+                              <div className="flex items-center gap-1.5">
+                                <a
+                                  href={`tel:${cleanPhone}`}
+                                  onClick={() => {
+                                    api.updateAppointmentRoomStatus(app.id, 'in-progress');
+                                  }}
+                                  className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:shadow"
+                                  title={`Call ${app.patientName} on ${app.patientPhone}`}
+                                >
+                                  <PhoneCall className="w-4 h-4" />
+                                  <span>Call Patient Now</span>
+                                </a>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleWhatsAppPhoneCall(app)}
+                                  className="px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-xs transition-colors flex items-center gap-1.5 border border-emerald-200 cursor-pointer"
+                                  title="WhatsApp Call / Ping"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5 text-emerald-700" />
+                                  <span className="hidden sm:inline">WhatsApp Call</span>
+                                </button>
+                              </div>
+                            )}
+
+                            {/* In-Person Clinic OPD Actions */}
+                            {isClinic && (
+                              <div className="flex items-center gap-1.5">
+                                <a
+                                  href={`tel:${cleanPhone}`}
+                                  className="px-4 py-2.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:shadow"
+                                  title={`Call patient ${app.patientName}`}
+                                >
+                                  <Phone className="w-4 h-4" />
+                                  <span>Call Patient</span>
+                                </a>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleWhatsAppPhoneCall(app)}
+                                  className="px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-colors flex items-center gap-1.5 border border-amber-200 cursor-pointer"
+                                  title="WhatsApp Directions & Token"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5 text-amber-700" />
+                                  <span className="hidden sm:inline">WhatsApp Info</span>
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Write or View Prescription */}
+                            {app.prescription ? (
+                              <button
+                                type="button"
+                                onClick={() => setViewPrescriptionData(app.prescription!)}
+                                className="px-4 py-2.5 rounded-xl bg-brand-green-50 hover:bg-brand-green-100 text-brand-green-900 border border-brand-green-200 font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <FileText className="w-4 h-4 text-brand-green-800" />
+                                <span>View Signed Rx</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenPrescriptionForm(app)}
+                                className="px-4 py-2.5 rounded-xl bg-brand-gold-400 hover:bg-brand-gold-300 text-brand-green-950 font-bold text-xs transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                              >
+                                <FileText className="w-4 h-4" />
+                                <span>Write Prescription</span>
+                              </button>
                             )}
                           </div>
                         </div>
-
-                        {/* Action Buttons: Video Call / Simple Phone Call & Prescription */}
-                        <div className="flex flex-wrap items-center gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
-                          
-                          {/* Option B: Join / Launch Video Call */}
-                          {isVideo && (
-                            <div className="flex items-center gap-1.5">
-                              <a
-                                href={meetLink}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={() => {
-                                  // Set room status to in-progress
-                                  api.updateAppointmentRoomStatus(app.id, 'in-progress');
-                                }}
-                                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:shadow"
-                              >
-                                <Video className="w-4 h-4" />
-                                <span>Join {isGoogleMeet ? 'Google Meet' : 'Jitsi Video'}</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-
-                              <button
-                                type="button"
-                                onClick={() => handleCopyLink(meetLink, app.id)}
-                                className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-                                title="Copy Meeting Link"
-                              >
-                                {copiedMeetId === app.id ? (
-                                  <Check className="w-4 h-4 text-emerald-600" />
-                                ) : (
-                                  <Copy className="w-4 h-4" />
-                                )}
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleShareOnWhatsApp(app)}
-                                className="px-3 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs transition-colors flex items-center gap-1 border border-emerald-200"
-                                title="WhatsApp Link to Patient"
-                              >
-                                <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                                <span className="hidden sm:inline">WhatsApp</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditMeetModalAppointment(app);
-                                  setCustomMeetUrlInput(app.meetingLink || '');
-                                  setPreferredPlatform(app.meetingPlatform || 'google-meet');
-                                }}
-                                className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-colors"
-                                title="Change or Set Google Meet Link"
-                              >
-                                <LinkIcon className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Direct Phone Call Actions */}
-                          {!isVideo && (
-                            <div className="flex items-center gap-1.5">
-                              <a
-                                href={`tel:${cleanPhone}`}
-                                onClick={() => {
-                                  api.updateAppointmentRoomStatus(app.id, 'in-progress');
-                                }}
-                                className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:shadow"
-                                title={`Call ${app.patientName} on ${app.patientPhone}`}
-                              >
-                                <PhoneCall className="w-4 h-4" />
-                                <span>Call Patient Now</span>
-                              </a>
-
-                              <button
-                                type="button"
-                                onClick={() => handleWhatsAppPhoneCall(app)}
-                                className="px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-xs transition-colors flex items-center gap-1.5 border border-emerald-200 cursor-pointer"
-                                title="WhatsApp Call / Ping"
-                              >
-                                <MessageSquare className="w-3.5 h-3.5 text-emerald-700" />
-                                <span className="hidden sm:inline">WhatsApp Call</span>
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Write or View Prescription */}
-                          {app.prescription ? (
-                            <button
-                              type="button"
-                              onClick={() => setViewPrescriptionData(app.prescription!)}
-                              className="px-4 py-2.5 rounded-xl bg-brand-green-50 hover:bg-brand-green-100 text-brand-green-900 border border-brand-green-200 font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <FileText className="w-4 h-4 text-brand-green-800" />
-                              <span>View Signed Rx</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPrescriptionForm(app)}
-                              className="px-4 py-2.5 rounded-xl bg-brand-gold-400 hover:bg-brand-gold-300 text-brand-green-950 font-bold text-xs transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-                            >
-                              <FileText className="w-4 h-4" />
-                              <span>Write Prescription</span>
-                            </button>
-                          )}
-                        </div>
                       </div>
+                    );
+                  })}
+                </div>
+
+                {/* Main Queue Pagination Bar */}
+                {filteredAppointments.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 mt-6 bg-white p-4 rounded-2xl border">
+                    <div className="text-xs text-slate-500 font-medium">
+                      Showing <span className="font-bold text-slate-800">{(currentPage - 1) * pageSize + 1}</span> to{' '}
+                      <span className="font-bold text-slate-800">{Math.min(currentPage * pageSize, filteredAppointments.length)}</span> of{' '}
+                      <span className="font-bold text-slate-800">{filteredAppointments.length}</span> consultations
                     </div>
-                  );
-                })}
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 mr-2 text-xs text-slate-500">
+                        <span>Show</span>
+                        <select
+                          value={pageSize}
+                          onChange={(e) => {
+                            setPageSize(Number(e.target.value));
+                            setCurrentPage(1);
+                          }}
+                          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 cursor-pointer"
+                        >
+                          <option value={3}>3</option>
+                          <option value={6}>6</option>
+                          <option value={12}>12</option>
+                          <option value={24}>24</option>
+                        </select>
+                        <span>per page</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Prev</span>
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              currentPage === pageNum
+                                ? 'bg-brand-green-900 text-brand-gold-300 shadow-xs'
+                                : 'text-slate-600 hover:bg-slate-100'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Next</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1313,12 +1831,19 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
 
             {/* Video Calls Cards */}
             <div className="space-y-4">
-              <h3 className="text-base font-bold text-slate-900 font-serif">
-                Scheduled Video Calls ({videoCallsList.length})
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-slate-900 font-serif">
+                  Scheduled Video Calls ({videoCallsList.length})
+                </h3>
+                {totalVideoPages > 1 && (
+                  <span className="text-xs text-slate-500 font-medium">
+                    Page {videoPage} of {totalVideoPages}
+                  </span>
+                )}
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {videoCallsList.map(app => {
+                {paginatedVideoCalls.map(app => {
                   const meetUrl = app.meetingLink || `https://meet.jit.si/BVLife-Consult-${app.id}`;
                   const isGoogleMeet = meetUrl.includes('meet.google.com');
 
@@ -1370,7 +1895,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                           <button
                             type="button"
                             onClick={() => handleCopyLink(meetUrl, app.id)}
-                            className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1"
+                            className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
                             title="Copy Meet Link"
                           >
                             {copiedMeetId === app.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
@@ -1381,7 +1906,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                           <button
                             type="button"
                             onClick={() => handleShareOnWhatsApp(app)}
-                            className="text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1"
+                            className="text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 cursor-pointer"
                           >
                             <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
                             <span>Send Link on WhatsApp</span>
@@ -1394,7 +1919,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                               setCustomMeetUrlInput(app.meetingLink || '');
                               setPreferredPlatform(app.meetingPlatform || 'google-meet');
                             }}
-                            className="text-slate-500 hover:text-slate-800 font-semibold underline"
+                            className="text-slate-500 hover:text-slate-800 font-semibold underline cursor-pointer"
                           >
                             Configure Meet Link
                           </button>
@@ -1404,6 +1929,72 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                   );
                 })}
               </div>
+
+              {/* Video Calls Pagination Bar */}
+              {videoCallsList.length > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 mt-6 bg-white p-4 rounded-2xl border shadow-xs">
+                  <div className="text-xs text-slate-600 font-medium">
+                    Showing <span className="font-bold text-slate-900">{(videoPage - 1) * videoPageSize + 1}</span> to <span className="font-bold text-slate-900">{Math.min(videoPage * videoPageSize, videoCallsList.length)}</span> of <span className="font-bold text-slate-900">{videoCallsList.length}</span> video calls • Page {videoPage} of {totalVideoPages}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <span>Show</span>
+                      <select
+                        value={videoPageSize}
+                        onChange={(e) => {
+                          setVideoPageSize(Number(e.target.value));
+                          setVideoPage(1);
+                        }}
+                        className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 cursor-pointer"
+                      >
+                        <option value={2}>2</option>
+                        <option value={4}>4</option>
+                        <option value={8}>8</option>
+                        <option value={12}>12</option>
+                      </select>
+                      <span>per page</span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setVideoPage(prev => Math.max(prev - 1, 1))}
+                        disabled={videoPage === 1}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Prev</span>
+                      </button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalVideoPages }, (_, i) => i + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => setVideoPage(pageNum)}
+                            className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              videoPage === pageNum
+                                ? 'bg-blue-700 text-white shadow-xs'
+                                : 'text-slate-600 hover:bg-slate-100'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setVideoPage(prev => Math.min(prev + 1, totalVideoPages))}
+                        disabled={videoPage === totalVideoPages}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Next</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1452,172 +2043,540 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {phoneCallsList.map((app) => {
-                  const isToday = app.date === todayDate;
-                  const cleanPhone = (app.patientPhone || '').replace(/[^\d+]/g, '');
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-slate-900 font-serif">
+                    Direct Phone Call Queue ({phoneCallsList.length})
+                  </h3>
+                  {totalCallsPages > 1 && (
+                    <span className="text-xs text-slate-500 font-medium">
+                      Page {callsPage} of {totalCallsPages}
+                    </span>
+                  )}
+                </div>
 
-                  return (
-                    <div 
-                      key={app.id} 
-                      className={`bg-white rounded-2xl border p-5 shadow-xs flex flex-col justify-between transition-all ${
-                        isToday ? 'border-emerald-700/40 ring-1 ring-emerald-700/20' : 'border-slate-200'
-                      }`}
-                    >
-                      <div className="space-y-4">
-                        {/* Header: Name, Mode Badge, Time */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-200 flex items-center justify-center font-bold text-base font-serif shrink-0">
-                              <PhoneCall className="w-5 h-5 text-emerald-700" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {paginatedPhoneCalls.map((app) => {
+                    const isToday = app.date === todayDate;
+                    const cleanPhone = (app.patientPhone || '').replace(/[^\d+]/g, '');
+
+                    return (
+                      <div 
+                        key={app.id} 
+                        className={`bg-white rounded-2xl border p-5 shadow-xs flex flex-col justify-between transition-all ${
+                          isToday ? 'border-emerald-700/40 ring-1 ring-emerald-700/20' : 'border-slate-200'
+                        }`}
+                      >
+                        <div className="space-y-4">
+                          {/* Header: Name, Mode Badge, Time */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-200 flex items-center justify-center font-bold text-base font-serif shrink-0">
+                                <PhoneCall className="w-5 h-5 text-emerald-700" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-base font-bold text-slate-900 font-serif">
+                                    {app.patientName}
+                                  </h3>
+                                  <span className="text-xs text-slate-500">
+                                    ({app.patientAge}y, {app.patientGender})
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                                  <span className="font-mono text-[11px] text-slate-400">ID: {app.id}</span>
+                                  <span>•</span>
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    app.status === 'Completed'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : 'bg-teal-100 text-teal-800'
+                                  }`}>
+                                    {app.status}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-base font-bold text-slate-900 font-serif">
-                                  {app.patientName}
-                                </h3>
-                                <span className="text-xs text-slate-500">
-                                  ({app.patientAge}y, {app.patientGender})
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                                <span className="font-mono text-[11px] text-slate-400">ID: {app.id}</span>
-                                <span>•</span>
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                  app.status === 'Completed'
-                                    ? 'bg-emerald-100 text-emerald-800'
-                                    : 'bg-teal-100 text-teal-800'
-                                }`}>
-                                  {app.status}
-                                </span>
-                              </div>
+
+                            {isToday && (
+                              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200 text-[11px] font-bold shrink-0">
+                                Today
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Scheduled Slot & Phone Info Box */}
+                          <div className="bg-emerald-50/60 rounded-xl p-3 border border-emerald-100 space-y-2">
+                            <div className="flex items-center justify-between text-xs text-slate-700">
+                              <span className="flex items-center gap-1.5 font-bold text-brand-green-950">
+                                <Clock className="w-4 h-4 text-emerald-700" />
+                                <span>{app.date} at {app.timeSlot}</span>
+                              </span>
+                              <span className="text-[11px] font-medium text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                                Simple Voice Call
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1 border-t border-emerald-100/80">
+                              <span className="text-xs text-slate-600 font-medium">Patient Contact:</span>
+                              <a
+                                href={`tel:${cleanPhone}`}
+                                className="font-mono font-bold text-xs bg-white px-3 py-1 rounded-lg border border-emerald-300 text-emerald-900 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                              >
+                                <Phone className="w-3.5 h-3.5 text-emerald-700" />
+                                <span>{app.patientPhone}</span>
+                              </a>
                             </div>
                           </div>
 
-                          {isToday && (
-                            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200 text-[11px] font-bold shrink-0">
-                              Today
-                            </span>
+                          {/* Chief Health Concern */}
+                          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-700">
+                            <strong className="text-slate-900">Chief Health Concern: </strong>
+                            <span>{app.healthConcern || 'Ayurvedic Wellness Evaluation'}</span>
+                          </div>
+
+                          {/* Uploaded Reports if any */}
+                          {app.medicalReports && app.medicalReports.length > 0 && (
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-slate-500 font-medium text-[11px]">Reports:</span>
+                              {app.medicalReports.map((report, idx) => (
+                                <a
+                                  key={idx}
+                                  href={report.dataUrl || '#'}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 hover:underline flex items-center gap-1"
+                                >
+                                  <FileText className="w-3 h-3" />
+                                  <span>{report.name}</span>
+                                </a>
+                              ))}
+                            </div>
                           )}
                         </div>
 
-                        {/* Scheduled Slot & Phone Info Box */}
-                        <div className="bg-emerald-50/60 rounded-xl p-3 border border-emerald-100 space-y-2">
-                          <div className="flex items-center justify-between text-xs text-slate-700">
-                            <span className="flex items-center gap-1.5 font-bold text-brand-green-950">
-                              <Clock className="w-4 h-4 text-emerald-700" />
-                              <span>{app.date} at {app.timeSlot}</span>
-                            </span>
-                            <span className="text-[11px] font-medium text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md">
-                              Simple Voice Call
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-1 border-t border-emerald-100/80">
-                            <span className="text-xs text-slate-600 font-medium">Patient Contact:</span>
+                        {/* Action Buttons */}
+                        <div className="pt-4 mt-4 border-t border-slate-100 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
                             <a
                               href={`tel:${cleanPhone}`}
-                              className="font-mono font-bold text-xs bg-white px-3 py-1 rounded-lg border border-emerald-300 text-emerald-900 hover:bg-emerald-100 transition-colors inline-flex items-center gap-1.5 shadow-2xs"
+                              onClick={() => {
+                                api.updateAppointmentRoomStatus(app.id, 'in-progress');
+                              }}
+                              className="py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs text-center shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                             >
-                              <Phone className="w-3.5 h-3.5 text-emerald-700" />
-                              <span>{app.patientPhone}</span>
+                              <PhoneCall className="w-4 h-4" />
+                              <span>Call Patient</span>
                             </a>
+
+                            <button
+                              type="button"
+                              onClick={() => handleWhatsAppPhoneCall(app)}
+                              className="py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <MessageSquare className="w-4 h-4 text-emerald-700" />
+                              <span>WhatsApp Call</span>
+                            </button>
                           </div>
-                        </div>
 
-                        {/* Chief Health Concern */}
-                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-700">
-                          <strong className="text-slate-900">Chief Health Concern: </strong>
-                          <span>{app.healthConcern || 'Ayurvedic Wellness Evaluation'}</span>
-                        </div>
-
-                        {/* Uploaded Reports if any */}
-                        {app.medicalReports && app.medicalReports.length > 0 && (
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="text-slate-500 font-medium text-[11px]">Reports:</span>
-                            {app.medicalReports.map((report, idx) => (
-                              <a
-                                key={idx}
-                                href={report.dataUrl || '#'}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 hover:underline flex items-center gap-1"
+                          <div className="flex items-center justify-between pt-1">
+                            {app.prescription ? (
+                              <button
+                                type="button"
+                                onClick={() => setViewPrescriptionData(app.prescription!)}
+                                className="text-xs font-bold text-emerald-800 hover:underline flex items-center gap-1 cursor-pointer"
                               >
-                                <FileText className="w-3 h-3" />
-                                <span>{report.name}</span>
-                              </a>
-                            ))}
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>View Issued Prescription</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenPrescriptionForm(app)}
+                                className="text-xs font-bold text-brand-green-800 hover:underline flex items-center gap-1 cursor-pointer"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>Write Prescription Pad</span>
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newStatus = app.status === 'Completed' ? 'Confirmed' : 'Completed';
+                                api.updateDoctorAppointmentStatus(app.id, newStatus);
+                                setAppointments(prev => prev.map(a => a.id === app.id ? { ...a, status: newStatus } : a));
+                              }}
+                              className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
+                            >
+                              {app.status === 'Completed' ? 'Mark as Pending' : 'Mark as Done'}
+                            </button>
                           </div>
-                        )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Phone Calls Pagination Bar */}
+                {phoneCallsList.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 mt-6 bg-white p-4 rounded-2xl border shadow-xs">
+                    <div className="text-xs text-slate-600 font-medium">
+                      Showing <span className="font-bold text-slate-900">{(callsPage - 1) * callsPageSize + 1}</span> to <span className="font-bold text-slate-900">{Math.min(callsPage * callsPageSize, phoneCallsList.length)}</span> of <span className="font-bold text-slate-900">{phoneCallsList.length}</span> phone calls • Page {callsPage} of {totalCallsPages}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <span>Show</span>
+                        <select
+                          value={callsPageSize}
+                          onChange={(e) => {
+                            setCallsPageSize(Number(e.target.value));
+                            setCallsPage(1);
+                          }}
+                          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 cursor-pointer"
+                        >
+                          <option value={2}>2</option>
+                          <option value={4}>4</option>
+                          <option value={8}>8</option>
+                          <option value={12}>12</option>
+                        </select>
+                        <span>per page</span>
                       </div>
 
-                      {/* Action Buttons */}
-                      <div className="pt-4 mt-4 border-t border-slate-100 space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          <a
-                            href={`tel:${cleanPhone}`}
-                            onClick={() => {
-                              api.updateAppointmentRoomStatus(app.id, 'in-progress');
-                            }}
-                            className="py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs text-center shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                          >
-                            <PhoneCall className="w-4 h-4" />
-                            <span>Call Patient</span>
-                          </a>
-
-                          <button
-                            type="button"
-                            onClick={() => handleWhatsAppPhoneCall(app)}
-                            className="py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                          >
-                            <MessageSquare className="w-4 h-4 text-emerald-700" />
-                            <span>WhatsApp Call</span>
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-1">
-                          {app.prescription ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setCallsPage(prev => Math.max(prev - 1, 1))}
+                          disabled={callsPage === 1}
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                          <span>Prev</span>
+                        </button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: totalCallsPages }, (_, i) => i + 1).map((pageNum) => (
                             <button
+                              key={pageNum}
                               type="button"
-                              onClick={() => setViewPrescriptionData(app.prescription!)}
-                              className="text-xs font-bold text-emerald-800 hover:underline flex items-center gap-1"
+                              onClick={() => setCallsPage(pageNum)}
+                              className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                callsPage === pageNum
+                                  ? 'bg-teal-700 text-white shadow-xs'
+                                  : 'text-slate-600 hover:bg-slate-100'
+                              }`}
                             >
-                              <FileText className="w-3.5 h-3.5" />
-                              <span>View Issued Prescription</span>
+                              {pageNum}
                             </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPrescriptionModal(app)}
-                              className="text-xs font-bold text-brand-green-800 hover:underline flex items-center gap-1"
-                            >
-                              <FileText className="w-3.5 h-3.5" />
-                              <span>Write Prescription Pad</span>
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newStatus = app.status === 'Completed' ? 'Confirmed' : 'Completed';
-                              api.updateAppointmentStatus(app.id, newStatus);
-                              setAppointments(prev => prev.map(a => a.id === app.id ? { ...a, status: newStatus } : a));
-                            }}
-                            className="text-[11px] font-semibold text-slate-500 hover:text-slate-800"
-                          >
-                            {app.status === 'Completed' ? 'Mark as Pending' : 'Mark as Done'}
-                          </button>
+                          ))}
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => setCallsPage(prev => Math.min(prev + 1, totalCallsPages))}
+                          disabled={callsPage === totalCallsPages}
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Next</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {/* TAB 4: DIGITAL PRESCRIPTION PAD */}
+        {/* TAB 4: CLINIC IN-PERSON OPD HUB */}
+        {activeTab === 'clinic' && (
+          <div className="space-y-6">
+            {/* Header / Guide Banner */}
+            <div className="bg-gradient-to-r from-amber-900 via-amber-950 to-brand-green-950 text-white rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
+              <div className="relative z-10 max-w-3xl space-y-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-800/80 text-amber-200 text-xs font-bold border border-amber-700/50">
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>Ayurvedic Wellness OPD Chamber Hub</span>
+                </div>
+                <h2 className="text-2xl font-bold font-serif text-amber-100">
+                  In-Person Clinic Visits (OPD)
+                </h2>
+                <p className="text-sm text-amber-100/90 leading-relaxed">
+                  Patients scheduled for physical OPD visits at Grams Life Wellness Center. Conduct physical <strong>Nadi Pariksha (Pulse Examination)</strong>, tongue and posture analysis, issue electronic OPD tokens, and draft authenticated prescriptions.
+                </p>
+                <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-amber-200">
+                  <span className="flex items-center gap-1.5 font-semibold bg-amber-800/40 px-3 py-1.5 rounded-xl border border-amber-700/40">
+                    <MapPin className="w-4 h-4 text-amber-300" />
+                    Chamber 102, Ground Floor
+                  </span>
+                  <span className="flex items-center gap-1.5 font-semibold bg-amber-800/40 px-3 py-1.5 rounded-xl border border-amber-700/40">
+                    <Users className="w-4 h-4 text-amber-300" />
+                    Token-based check-in queue
+                  </span>
+                  <span className="flex items-center gap-1.5 font-semibold bg-amber-800/40 px-3 py-1.5 rounded-xl border border-amber-700/40">
+                    <FileText className="w-4 h-4 text-amber-300" />
+                    Physical examination & Panchakarma
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* List of Clinic Visits */}
+            {clinicVisitsList.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+                <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <h3 className="text-sm font-bold text-slate-700">No In-Person Clinic OPD appointments</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                  Patients who book an "In-Person Clinic Visit (OPD)" will appear here with token numbers, health history, and examination notes.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-slate-900 font-serif">
+                    OPD Patient Queue ({clinicVisitsList.length})
+                  </h3>
+                  {totalClinicPages > 1 && (
+                    <span className="text-xs text-slate-500 font-medium">
+                      Page {clinicPage} of {totalClinicPages}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {paginatedClinicVisits.map((app, index) => {
+                    const isToday = app.date === todayDate;
+                    const cleanPhone = (app.patientPhone || '').replace(/[^\d+]/g, '');
+                    const tokenNum = (index % 10) + 1;
+
+                    return (
+                      <div 
+                        key={app.id} 
+                        className={`bg-white rounded-2xl border p-5 shadow-xs flex flex-col justify-between transition-all ${
+                          isToday ? 'border-amber-700/40 ring-1 ring-amber-700/20' : 'border-slate-200'
+                        }`}
+                      >
+                        <div className="space-y-4">
+                          {/* Header: Name, OPD Token, Time */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-11 h-11 rounded-xl bg-amber-100 text-amber-900 border border-amber-200 flex items-center justify-center font-bold text-base font-serif shrink-0">
+                                <Building2 className="w-5 h-5 text-amber-700" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-base font-bold text-slate-900 font-serif">
+                                    {app.patientName}
+                                  </h3>
+                                  <span className="text-xs text-slate-500">
+                                    ({app.patientAge}y, {app.patientGender})
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                                  <span className="font-mono text-[11px] text-slate-400">ID: {app.id}</span>
+                                  <span>•</span>
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-900 border border-amber-300">
+                                    Token #OPD-{tokenNum}
+                                  </span>
+                                  <span>•</span>
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    app.status === 'Completed'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : 'bg-amber-100 text-amber-800'
+                                  }`}>
+                                    {app.status}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {isToday && (
+                              <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-[11px] font-bold shrink-0">
+                                Today
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Scheduled Slot & OPD Chamber Info Box */}
+                          <div className="bg-amber-50/60 rounded-xl p-3 border border-amber-200/70 space-y-2">
+                            <div className="flex items-center justify-between text-xs text-slate-700">
+                              <span className="flex items-center gap-1.5 font-bold text-amber-950">
+                                <Clock className="w-4 h-4 text-amber-700" />
+                                <span>{app.date} at {app.timeSlot}</span>
+                              </span>
+                              <span className="text-[11px] font-bold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-200">
+                                Chamber 102
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1 border-t border-amber-100">
+                              <span className="text-xs text-slate-600 font-medium">Patient Contact:</span>
+                              <a
+                                href={`tel:${cleanPhone}`}
+                                className="font-mono font-bold text-xs bg-white px-3 py-1 rounded-lg border border-amber-300 text-amber-900 hover:bg-amber-100 transition-colors inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                              >
+                                <Phone className="w-3.5 h-3.5 text-amber-700" />
+                                <span>{app.patientPhone}</span>
+                              </a>
+                            </div>
+                          </div>
+
+                          {/* Chief Health Concern */}
+                          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-700">
+                            <strong className="text-slate-900">Chief Health Concern: </strong>
+                            <span>{app.healthConcern || 'In-Person Ayurvedic Examination'}</span>
+                          </div>
+
+                          {/* Uploaded Reports if any */}
+                          {app.medicalReports && app.medicalReports.length > 0 && (
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-slate-500 font-medium text-[11px]">Reports:</span>
+                              {app.medicalReports.map((report, idx) => (
+                                <a
+                                  key={idx}
+                                  href={report.dataUrl || '#'}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 hover:underline flex items-center gap-1"
+                                >
+                                  <FileText className="w-3 h-3" />
+                                  <span>{report.name}</span>
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="pt-4 mt-4 border-t border-slate-100 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <a
+                              href={`tel:${cleanPhone}`}
+                              className="py-2.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs text-center shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <Phone className="w-4 h-4" />
+                              <span>Call Patient</span>
+                            </a>
+
+                            <button
+                              type="button"
+                              onClick={() => handleWhatsAppClinicVisit(app, tokenNum)}
+                              className="py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <MessageSquare className="w-4 h-4 text-amber-700" />
+                              <span>WhatsApp Directions</span>
+                            </button>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1">
+                            {app.prescription ? (
+                              <button
+                                type="button"
+                                onClick={() => setViewPrescriptionData(app.prescription!)}
+                                className="text-xs font-bold text-amber-900 hover:underline flex items-center gap-1 cursor-pointer"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>View Issued Prescription</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenPrescriptionForm(app)}
+                                className="text-xs font-bold text-brand-green-800 hover:underline flex items-center gap-1 cursor-pointer"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>Write Prescription Pad</span>
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newStatus = app.status === 'Completed' ? 'Confirmed' : 'Completed';
+                                api.updateDoctorAppointmentStatus(app.id, newStatus);
+                                setAppointments(prev => prev.map(a => a.id === app.id ? { ...a, status: newStatus } : a));
+                              }}
+                              className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
+                            >
+                              {app.status === 'Completed' ? 'Mark as Pending' : 'Mark OPD Done'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Clinic OPD Pagination Bar */}
+                {clinicVisitsList.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 mt-6 bg-white p-4 rounded-2xl border shadow-xs">
+                    <div className="text-xs text-slate-600 font-medium">
+                      Showing <span className="font-bold text-slate-900">{(clinicPage - 1) * clinicPageSize + 1}</span> to <span className="font-bold text-slate-900">{Math.min(clinicPage * clinicPageSize, clinicVisitsList.length)}</span> of <span className="font-bold text-slate-900">{clinicVisitsList.length}</span> OPD visits • Page {clinicPage} of {totalClinicPages}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <span>Show</span>
+                        <select
+                          value={clinicPageSize}
+                          onChange={(e) => {
+                            setClinicPageSize(Number(e.target.value));
+                            setClinicPage(1);
+                          }}
+                          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 cursor-pointer"
+                        >
+                          <option value={2}>2</option>
+                          <option value={4}>4</option>
+                          <option value={8}>8</option>
+                          <option value={12}>12</option>
+                        </select>
+                        <span>per page</span>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setClinicPage(prev => Math.max(prev - 1, 1))}
+                          disabled={clinicPage === 1}
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                          <span>Prev</span>
+                        </button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: totalClinicPages }, (_, i) => i + 1).map((pageNum) => (
+                            <button
+                              key={pageNum}
+                              type="button"
+                              onClick={() => setClinicPage(pageNum)}
+                              className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                clinicPage === pageNum
+                                  ? 'bg-amber-700 text-white shadow-xs'
+                                  : 'text-slate-600 hover:bg-slate-100'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setClinicPage(prev => Math.min(prev + 1, totalClinicPages))}
+                          disabled={clinicPage === totalClinicPages}
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Next</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 5: DIGITAL PRESCRIPTION PAD */}
         {activeTab === 'prescriptions' && (
           <div className="space-y-6">
             <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs">

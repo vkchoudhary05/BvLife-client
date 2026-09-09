@@ -9,12 +9,13 @@ import {
   ShieldCheck, Award, User, Check, X, ArrowRight, ArrowLeft, Loader2,
   FileText, Upload, Trash2, Eye, Shield, Sparkles, ChevronLeft, ChevronRight,
   HeartHandshake, Stethoscope, CreditCard, Lock, CheckCircle2, QrCode,
-  Building2, Smartphone, AlertCircle
+  Building2, Smartphone, AlertCircle, Coins, PhoneCall, MessageCircle
 } from 'lucide-react';
 import { Doctor, DoctorAppointment, User as UserType, MedicalReportFile } from '../types';
 import { Language } from '../lib/translations';
 import { api } from '../services/api';
 import { ConsultationFeatures } from '../components/ConsultationFeatures';
+import { loadRazorpayScript } from '../utils/razorpay';
 import drImage from "@/assets/DrSanjeev.png";
 
 const legendaryDoctorImg = drImage;
@@ -95,8 +96,8 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     return () => clearInterval(timer);
   }, [isSlidePaused]);
 
-  // Booking selections
-  const [selectedMode, setSelectedMode] = useState<'video' | 'audio' | 'clinic' | null>(null);
+  // Booking selections (3 Premium Consultation Formats: Video, Phone/WhatsApp Call, WhatsApp Chat)
+  const [selectedMode, setSelectedMode] = useState<'video' | 'audio' | 'chat'>('video');
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('11:00 AM');
 
@@ -104,15 +105,9 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
   const [bookingStep, setBookingStep] = useState<'format' | 'datetime' | 'information' | 'payment'>('format');
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Payment states
-  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'netbanking'>('upi');
-  const [upiApp, setUpiApp] = useState<'gpay' | 'phonepe' | 'paytm' | 'other'>('gpay');
-  const [upiId, setUpiId] = useState('');
-  const [showUpiQr, setShowUpiQr] = useState(false);
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-  const [selectedBank, setSelectedBank] = useState('State Bank of India');
+  // Payment states (Mirrors product checkout: Razorpay UPI/Cards/Net Banking, or Pay Later)
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
+  const [userRazorpayKey, setUserRazorpayKey] = useState<string>(() => (typeof window !== 'undefined' ? localStorage.getItem('razorpay_key_id') || '' : ''));
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
   // Patient inputs
@@ -259,8 +254,8 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     });
   };
 
-  // Step 1 -> Step 2: User clicks "Book Now" on one of the 3 formats
-  const handleSelectFormatAndProceed = (mode: 'video' | 'audio' | 'clinic') => {
+  // Step 1 -> Step 2: User clicks or chooses a consultation format
+  const handleSelectFormatAndProceed = (mode: 'video' | 'audio' | 'chat' = 'video') => {
     setSelectedMode(mode);
     setBookingStep('datetime');
     setTimeout(() => {
@@ -306,14 +301,17 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     }, 50);
   };
 
-  // Step 4: Complete secure payment & confirm appointment
-  const handleExecutePayment = async () => {
+  // Finalize booking after payment authorization
+  const finalizeBooking = async (paymentDetails: {
+    paymentMethod: string;
+    paymentStatus: 'Paid' | 'Pending';
+    paymentId: string;
+    razorpayOrderId?: string;
+    razorpayPaymentId?: string;
+  }) => {
     setIsPaymentProcessing(true);
     setIsSubmitting(true);
     const appointmentId = `BVL-DOC-${Math.floor(100000 + Math.random() * 900000)}`;
-
-    // Simulate authentic secure bank/UPI node processing
-    await new Promise(r => setTimeout(r, 900));
 
     const newAppointment: DoctorAppointment = {
       id: appointmentId,
@@ -335,7 +333,12 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
       fee: doctor.fee,
       status: 'Confirmed',
       bookingDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      meetingLink: (selectedMode === 'video' || !selectedMode) ? `https://meet.jit.si/BVLife-DrSanjeevRastogi-${appointmentId}` : undefined
+      meetingLink: selectedMode === 'video' ? `https://meet.jit.si/BVLife-DrSanjeevRastogi-${appointmentId}` : undefined,
+      paymentMethod: paymentDetails.paymentMethod,
+      paymentStatus: paymentDetails.paymentStatus,
+      paymentId: paymentDetails.paymentId,
+      razorpayOrderId: paymentDetails.razorpayOrderId,
+      razorpayPaymentId: paymentDetails.razorpayPaymentId
     };
 
     let finalApp = newAppointment;
@@ -357,6 +360,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
       localStorage.setItem('bvlife_doctor_appointments', JSON.stringify(updated));
     }
 
+    // Immediately display the confirmation card with verified details!
     setBookingConfirmed(finalApp);
     setBookingStep('format');
     setTimeout(() => {
@@ -365,6 +369,129 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
         bookingAnchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
+  };
+
+  // Launch Razorpay Checkout connected to backend order API (same as buy product order)
+  const handleRazorpayCheckout = async () => {
+    setIsPaymentProcessing(true);
+    setIsSubmitting(true);
+    setFormError(null);
+
+    try {
+      const activeKey = userRazorpayKey.trim() || (typeof window !== 'undefined' ? localStorage.getItem('razorpay_key_id') || '' : '');
+
+      // Step 1: Request Razorpay Order from backend
+      const res = await fetch('/api/payment/razorpay-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: doctor.fee,
+          currency: 'INR',
+          receipt: `doc_${Date.now()}`,
+          customKeyId: activeKey
+        })
+      });
+
+      const data = await res.json();
+      console.log("Razorpay order response:", data);
+      const finalKey = data.keyId || activeKey;
+
+      if (!finalKey) {
+        alert("Please enter a valid Razorpay Key ID (rzp_test_... or rzp_live_...) to proceed.");
+        setIsPaymentProcessing(false);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Step 2: Load official Razorpay SDK script
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        alert("Failed to load Razorpay payment SDK. Please verify your internet connection.");
+        setIsPaymentProcessing(false);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Step 3: Open Razorpay modal
+      if (typeof (window as any).Razorpay !== 'undefined') {
+        const options = {
+          key: finalKey,
+          amount: data.amount,
+          currency: data.currency || 'INR',
+          name: 'Grams Life Ayurvedic Clinic',
+          description: `Consultation with ${doctor.name} (${selectedMode === 'video' ? '1-on-1 HD Video' : 'Direct Phone Call'})`,
+          image: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
+          order_id: data.orderId,
+          prefill: {
+            name: patientName.trim(),
+            email: currentUser?.email || 'patient@bvlife.com',
+            contact: patientPhone.trim()
+          },
+          handler: async function (response: any) {
+            // Step 4: Verify payment with backend Razorpay endpoint
+            try {
+              await fetch('/api/payment/verify-razorpay', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(response)
+              });
+            } catch (e) {
+              console.error("Razorpay doctor consultation payment verification error:", e);
+            }
+
+            // Step 5: On successful payment, confirm appointment!
+            await finalizeBooking({
+              paymentMethod: 'Razorpay',
+              paymentStatus: 'Paid',
+              paymentId: response.razorpay_payment_id || `pay_${Date.now()}`,
+              razorpayOrderId: response.razorpay_order_id || data.orderId,
+              razorpayPaymentId: response.razorpay_payment_id
+            });
+          },
+          modal: {
+            ondismiss: function () {
+              setIsPaymentProcessing(false);
+              setIsSubmitting(false);
+            }
+          },
+          theme: {
+            color: '#1e3a29'
+          }
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', function (resp: any) {
+          console.error("Razorpay payment failed:", resp.error);
+          alert("Payment failed or cancelled: " + (resp.error?.description || "Transaction declined."));
+          setIsPaymentProcessing(false);
+          setIsSubmitting(false);
+        });
+        rzp.open();
+      } else {
+        alert("Razorpay checkout is initializing. Please try again in a few seconds.");
+        setIsPaymentProcessing(false);
+        setIsSubmitting(false);
+      }
+    } catch (err: any) {
+      console.error("Error launching Razorpay:", err);
+      alert("Failed to initialize Razorpay checkout: " + (err.message || "Please check your network and Razorpay configuration."));
+      setIsPaymentProcessing(false);
+      setIsSubmitting(false);
+    }
+  };
+
+  // Step 4: Complete secure payment & confirm appointment
+  const handleExecutePayment = async () => {
+    if (paymentMethod === 'razorpay') {
+      await handleRazorpayCheckout();
+    } else {
+      // Pay Later (Post-Consultation)
+      await finalizeBooking({
+        paymentMethod: 'Pay Later',
+        paymentStatus: 'Pending',
+        paymentId: `post_${Date.now()}`
+      });
+    }
   };
 
   const handleCancelAppointment = async (id: string) => {
@@ -380,9 +507,9 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     }
   };
 
-  const handleNavigateToBook = (mode?: 'video' | 'audio' | 'clinic') => {
+  const handleNavigateToBook = (mode?: 'video' | 'audio' | 'clinic' | 'chat') => {
     setActiveTab('book');
-    if (mode) {
+    if (mode && mode !== 'clinic') {
       setSelectedMode(mode);
       setBookingStep('datetime');
     } else {
@@ -662,13 +789,50 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                   </div>
                   <div className="bg-white/10 p-3 rounded-xl">
                     <span className="text-slate-300">Consultation Format</span>
-                    <p className="font-bold text-white mt-0.5 capitalize">{bookingConfirmed.consultationMode} Call</p>
-                    <p className="text-[10px] text-emerald-400 font-semibold">Confirmed on WhatsApp</p>
+                    <p className="font-bold text-white mt-0.5">
+                      {bookingConfirmed.consultationMode === 'video'
+                        ? '1-on-1 HD Video Call'
+                        : bookingConfirmed.consultationMode === 'audio'
+                        ? 'Phone / WhatsApp Voice Call'
+                        : 'WhatsApp Live Chat Consultation'}
+                    </p>
+                    <p className="text-[10px] text-emerald-400 font-semibold">
+                      {bookingConfirmed.consultationMode === 'video'
+                        ? 'HD Video Room Ready'
+                        : bookingConfirmed.consultationMode === 'audio'
+                        ? 'Direct Call Scheduled'
+                        : 'WhatsApp Desk Open'}
+                    </p>
                   </div>
                 </div>
 
+                {/* Razorpay / Payment Verified Status Banner */}
+                <div className="p-3 bg-white/10 rounded-xl border border-white/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {bookingConfirmed.paymentStatus === 'Paid' ? (
+                      <span className="px-3 py-1 rounded-full bg-emerald-500/30 border border-emerald-400/50 text-emerald-300 font-bold flex items-center gap-1.5 text-[11px]">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                        <span>Payment Verified via Razorpay • Paid ₹{bookingConfirmed.fee}</span>
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 rounded-full bg-amber-500/30 border border-amber-400/50 text-amber-300 font-bold flex items-center gap-1.5 text-[11px]">
+                        <Coins className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Payment: Pay Later after Consultation (₹{bookingConfirmed.fee})</span>
+                      </span>
+                    )}
+                    {bookingConfirmed.paymentId && (
+                      <span className="text-[10px] text-slate-300 font-mono">
+                        Txn Ref: {bookingConfirmed.paymentId}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-300">
+                    A copy of this appointment slip has been sent to {bookingConfirmed.patientPhone}
+                  </span>
+                </div>
+
                 <div className="flex flex-wrap items-center gap-3 pt-2">
-                  {bookingConfirmed.meetingLink && (
+                  {bookingConfirmed.meetingLink && bookingConfirmed.consultationMode === 'video' && (
                     <a
                       href={bookingConfirmed.meetingLink}
                       target="_blank"
@@ -677,6 +841,23 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                     >
                       <Video className="w-4 h-4" />
                       <span>Join Live Video Room</span>
+                    </a>
+                  )}
+                  {bookingConfirmed.consultationMode === 'audio' && (
+                    <div className="px-4 py-2.5 rounded-xl bg-white/10 text-emerald-300 text-xs font-semibold flex items-center gap-2 border border-white/10">
+                      <PhoneCall className="w-4 h-4 text-emerald-400" />
+                      <span>Doctor will directly call: <strong>{bookingConfirmed.patientPhone}</strong></span>
+                    </div>
+                  )}
+                  {bookingConfirmed.consultationMode === 'chat' && (
+                    <a
+                      href={`https://wa.me/918882001122?text=${encodeURIComponent(`Namaste Dr. Sanjeev Rastogi, I have booked a WhatsApp Consultation (ID: #${bookingConfirmed.id}). Patient: ${bookingConfirmed.patientName}. Looking forward to discussing my health concerns.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs flex items-center gap-2 shadow-md transition-transform hover:scale-102"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Open WhatsApp Chat with Doctor</span>
                     </a>
                   )}
                   <button
@@ -814,183 +995,356 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
               </div>
 
               {/* ======================================================== */}
-              {/* STEP 1: SELECT FORMAT (WITH BOOK NOW ON ALL THREE OPTIONS) */}
+              {/* STEP 1: SELECT FORMAT (3 PREMIUM CONSULTATION OPTIONS) */}
               {/* ======================================================== */}
               {bookingStep === 'format' && (
                 <div className="space-y-6 animate-in fade-in duration-300">
-                  <div className="text-center max-w-lg mx-auto space-y-1">
-                    <h3 className="font-serif text-xl sm:text-2xl font-bold text-slate-900">
-                      Choose Consultation Format
+                  <div className="text-center max-w-xl mx-auto space-y-1.5">
+                    <span className="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-brand-gold-100 text-brand-green-950 border border-brand-gold-300/60 inline-flex items-center gap-1.5 shadow-2xs">
+                      <Sparkles className="w-3.5 h-3.5 text-brand-gold-600" />
+                      <span>Choose Your Consultation Format</span>
+                    </span>
+                    <h3 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900">
+                      Select How You'd Like to Consult
                     </h3>
-                    <p className="text-xs text-slate-500">
-                      Select your preferred mode of consultation with <strong>Dr. Sanjeev Rastogi</strong>. Click <strong>Book Now</strong> to choose your preferred date and time.
+                    <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                      Consult with <strong>Dr. Sanjeev Rastogi</strong> (Chief Ayurvedic Physician, MD Ayurveda, BHU). Pick the format best suited to your preference and comfort.
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  {/* 3 PREMIUM CONSULTATION FORMAT CARDS */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
                     
-                    {/* OPTION 1: 1-on-1 Video Call */}
-                    <div className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-4 relative ${
-                      selectedMode === 'video'
-                        ? 'border-brand-green-800 bg-brand-green-50/50 shadow-md ring-2 ring-brand-green-800/20'
-                        : 'border-slate-200 hover:border-brand-green-700/60 bg-white shadow-2xs hover:shadow-sm'
-                    }`}>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="w-12 h-12 rounded-xl bg-brand-green-800 text-brand-gold-300 flex items-center justify-center shadow-xs">
-                            <Video className="w-6 h-6" />
-                          </div>
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-full border border-emerald-300">
-                            Recommended
+                    {/* OPTION 1: 1-on-1 HD Video Call */}
+                    <div 
+                      id="card-format-videocall"
+                      onClick={() => setSelectedMode('video')}
+                      className={`rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between relative cursor-pointer group ${
+                        selectedMode === 'video'
+                          ? 'border-2 border-brand-green-800 bg-gradient-to-b from-brand-green-50/70 to-white shadow-lg ring-2 ring-brand-green-800/20 scale-[1.01]'
+                          : 'border border-slate-200/90 bg-white hover:border-brand-green-700/60 hover:shadow-md'
+                      }`}
+                    >
+                      {/* Top Ribbon Badge */}
+                      <div className="flex items-center justify-between gap-2 mb-4">
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-brand-green-800 text-brand-gold-300 px-2.5 py-1 rounded-full shadow-2xs flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-brand-gold-300 text-brand-gold-300" />
+                          <span>Most Popular</span>
+                        </span>
+                        
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                          selectedMode === 'video' 
+                            ? 'border-brand-green-800 bg-brand-green-800 text-white' 
+                            : 'border-slate-300 bg-white group-hover:border-slate-400'
+                        }`}>
+                          {selectedMode === 'video' && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3.5">
+                        {/* Premium Logo Emblem */}
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-green-900 to-emerald-950 text-brand-gold-300 border-2 border-brand-gold-400/40 shadow-sm flex items-center justify-center relative shrink-0">
+                          <Video className="w-7 h-7 text-brand-gold-300" />
+                          <span className="absolute -bottom-2 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-brand-gold-400 text-brand-green-950 shadow-2xs">
+                            1080p HD
                           </span>
                         </div>
 
                         <div>
-                          <h4 className="font-serif text-lg font-bold text-slate-900">1-on-1 Video Call</h4>
-                          <p className="text-xs text-slate-500 mt-0.5">Direct HD video room with doctor</p>
+                          <h4 className="font-serif text-lg font-bold text-slate-900 group-hover:text-brand-green-900 transition-colors">
+                            1-on-1 HD Video Call
+                          </h4>
+                          <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                            Private face-to-face video consultation via Google Meet or Jitsi with report screen-sharing.
+                          </p>
                         </div>
 
-                        <div className="flex items-baseline gap-2 pt-1">
-                          <span className="text-2xl font-black text-brand-green-950">₹{doctor.fee}</span>
-                          <span className="text-xs text-slate-400 line-through">₹{doctor.originalFee}</span>
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">58% OFF</span>
+                        {/* Pricing & Duration */}
+                        <div className="pt-2 border-t border-slate-100">
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-brand-green-950">₹{doctor.fee}</span>
+                            <span className="text-xs text-slate-400 line-through">₹{doctor.originalFee}</span>
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">58% OFF</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span>Duration: 20-30 Mins</span>
+                          </p>
                         </div>
 
-                        <ul className="space-y-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                        {/* Feature Points */}
+                        <ul className="space-y-2 text-xs text-slate-700 pt-3 border-t border-slate-100">
                           <li className="flex items-start gap-2">
                             <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
-                            <span>Visual facial, tongue & skin diagnosis</span>
+                            <span>Visual facial, tongue & skin Ayurvedic examination</span>
                           </li>
                           <li className="flex items-start gap-2">
                             <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
-                            <span>AYUSH certified digital prescription</span>
+                            <span>AYUSH certified signed digital prescription</span>
                           </li>
                           <li className="flex items-start gap-2">
                             <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
-                            <span>7 Days free WhatsApp follow-up care</span>
+                            <span>Instant meeting room link on SMS & WhatsApp</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                            <span>7 Days free follow-up support on WhatsApp</span>
                           </li>
                         </ul>
                       </div>
 
+                      {/* CTA Button */}
                       <button
-                        id="btn-book-video-call"
+                        id="btn-select-videocall"
                         type="button"
-                        onClick={() => handleSelectFormatAndProceed('video')}
-                        className="w-full py-3 px-4 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer group hover:scale-101"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectFormatAndProceed('video');
+                        }}
+                        className={`w-full mt-5 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs ${
+                          selectedMode === 'video'
+                            ? 'bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 shadow-md scale-[1.01]'
+                            : 'bg-slate-100 hover:bg-brand-green-800 hover:text-brand-gold-300 text-slate-800'
+                        }`}
                       >
-                        <span>Book Video Call Now</span>
-                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                        <Video className="w-3.5 h-3.5" />
+                        <span>Book Video Call Slot</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    {/* OPTION 2: Direct Phone Call */}
-                    <div className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-4 relative ${
-                      selectedMode === 'audio'
-                        ? 'border-brand-green-800 bg-brand-green-50/50 shadow-md ring-2 ring-brand-green-800/20'
-                        : 'border-slate-200 hover:border-brand-green-700/60 bg-white shadow-2xs hover:shadow-sm'
-                    }`}>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="w-12 h-12 rounded-xl bg-brand-green-800 text-brand-gold-300 flex items-center justify-center shadow-xs">
-                            <Phone className="w-6 h-6" />
-                          </div>
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full border border-slate-300">
-                            Direct Voice
+                    {/* OPTION 2: Phone Call or WhatsApp Call */}
+                    <div 
+                      id="card-format-phonecall"
+                      onClick={() => setSelectedMode('audio')}
+                      className={`rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between relative cursor-pointer group ${
+                        selectedMode === 'audio'
+                          ? 'border-2 border-teal-700 bg-gradient-to-b from-teal-50/70 to-white shadow-lg ring-2 ring-teal-700/20 scale-[1.01]'
+                          : 'border border-slate-200/90 bg-white hover:border-teal-600/60 hover:shadow-md'
+                      }`}
+                    >
+                      {/* Top Ribbon Badge */}
+                      <div className="flex items-center justify-between gap-2 mb-4">
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-teal-800 text-teal-100 px-2.5 py-1 rounded-full shadow-2xs flex items-center gap-1">
+                          <Smartphone className="w-3 h-3 text-teal-300" />
+                          <span>Direct Voice</span>
+                        </span>
+                        
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                          selectedMode === 'audio' 
+                            ? 'border-teal-700 bg-teal-700 text-white' 
+                            : 'border-slate-300 bg-white group-hover:border-slate-400'
+                        }`}>
+                          {selectedMode === 'audio' && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3.5">
+                        {/* Premium Logo Emblem */}
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-800 to-emerald-900 text-teal-100 border-2 border-teal-400/40 shadow-sm flex items-center justify-center relative shrink-0">
+                          <PhoneCall className="w-7 h-7 text-teal-200" />
+                          <span className="absolute -bottom-2 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-emerald-400 text-emerald-950 shadow-2xs">
+                            Audio Call
                           </span>
                         </div>
 
                         <div>
-                          <h4 className="font-serif text-lg font-bold text-slate-900">Direct Phone Call</h4>
-                          <p className="text-xs text-slate-500 mt-0.5">Doctor calls your mobile number</p>
+                          <h4 className="font-serif text-lg font-bold text-slate-900 group-hover:text-teal-900 transition-colors">
+                            Phone Call or WhatsApp Call
+                          </h4>
+                          <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                            Direct voice consultation on your mobile number or WhatsApp Voice with doctor.
+                          </p>
                         </div>
 
-                        <div className="flex items-baseline gap-2 pt-1">
-                          <span className="text-2xl font-black text-brand-green-950">₹{doctor.fee}</span>
-                          <span className="text-xs text-slate-400 line-through">₹{doctor.originalFee}</span>
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">58% OFF</span>
+                        {/* Pricing & Duration */}
+                        <div className="pt-2 border-t border-slate-100">
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-slate-900">₹{doctor.fee}</span>
+                            <span className="text-xs text-slate-400 line-through">₹{doctor.originalFee}</span>
+                            <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded">58% OFF</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span>Duration: 15-25 Mins</span>
+                          </p>
                         </div>
 
-                        <ul className="space-y-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                        {/* Feature Points */}
+                        <ul className="space-y-2 text-xs text-slate-700 pt-3 border-t border-slate-100">
                           <li className="flex items-start gap-2">
-                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
-                            <span>No app or high internet required</span>
+                            <CheckCircle className="w-3.5 h-3.5 text-teal-700 shrink-0 mt-0.5" />
+                            <span>Doctor directly dials your registered phone or WhatsApp</span>
                           </li>
                           <li className="flex items-start gap-2">
-                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
-                            <span>Detailed vocal symptom assessment</span>
+                            <CheckCircle className="w-3.5 h-3.5 text-teal-700 shrink-0 mt-0.5" />
+                            <span>Zero app download or high-speed internet needed</span>
                           </li>
                           <li className="flex items-start gap-2">
-                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
-                            <span>WhatsApp prescription & 7-day care</span>
+                            <CheckCircle className="w-3.5 h-3.5 text-teal-700 shrink-0 mt-0.5" />
+                            <span>In-depth symptom diagnosis & personalized diet plan</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-teal-700 shrink-0 mt-0.5" />
+                            <span>Digital prescription delivered directly to your WhatsApp</span>
                           </li>
                         </ul>
                       </div>
 
+                      {/* CTA Button */}
                       <button
-                        id="btn-book-phone-call"
+                        id="btn-select-phonecall"
                         type="button"
-                        onClick={() => handleSelectFormatAndProceed('audio')}
-                        className="w-full py-3 px-4 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer group hover:scale-101"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectFormatAndProceed('audio');
+                        }}
+                        className={`w-full mt-5 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs ${
+                          selectedMode === 'audio'
+                            ? 'bg-teal-700 hover:bg-teal-800 text-white shadow-md scale-[1.01]'
+                            : 'bg-slate-100 hover:bg-teal-700 hover:text-white text-slate-800'
+                        }`}
                       >
-                        <span>Book Phone Call Now</span>
-                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                        <PhoneCall className="w-3.5 h-3.5" />
+                        <span>Book Phone Call Slot</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    {/* OPTION 3: WhatsApp Audio */}
-                    <div className={`p-5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-4 relative ${
-                      selectedMode === 'clinic'
-                        ? 'border-brand-green-800 bg-brand-green-50/50 shadow-md ring-2 ring-brand-green-800/20'
-                        : 'border-slate-200 hover:border-brand-green-700/60 bg-white shadow-2xs hover:shadow-sm'
-                    }`}>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="w-12 h-12 rounded-xl bg-brand-green-800 text-brand-gold-300 flex items-center justify-center shadow-xs">
-                            <MessageSquare className="w-6 h-6" />
-                          </div>
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-full border border-emerald-300">
-                            WhatsApp Connect
+                    {/* OPTION 3: WhatsApp Chatting */}
+                    <div 
+                      id="card-format-whatsappchat"
+                      onClick={() => setSelectedMode('chat')}
+                      className={`rounded-3xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between relative cursor-pointer group ${
+                        selectedMode === 'chat'
+                          ? 'border-2 border-emerald-700 bg-gradient-to-b from-emerald-50/70 to-white shadow-lg ring-2 ring-emerald-700/20 scale-[1.01]'
+                          : 'border border-slate-200/90 bg-white hover:border-emerald-600/60 hover:shadow-md'
+                      }`}
+                    >
+                      {/* Top Ribbon Badge */}
+                      <div className="flex items-center justify-between gap-2 mb-4">
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-[#25D366] text-white px-2.5 py-1 rounded-full shadow-2xs flex items-center gap-1">
+                          <MessageSquare className="w-3 h-3 text-white" />
+                          <span>WhatsApp Live</span>
+                        </span>
+                        
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                          selectedMode === 'chat' 
+                            ? 'border-emerald-700 bg-emerald-700 text-white' 
+                            : 'border-slate-300 bg-white group-hover:border-slate-400'
+                        }`}>
+                          {selectedMode === 'chat' && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3.5">
+                        {/* Premium Logo Emblem */}
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-green-800 text-white border-2 border-emerald-300/50 shadow-sm flex items-center justify-center relative shrink-0">
+                          <MessageSquare className="w-7 h-7 text-white" />
+                          <span className="absolute -bottom-2 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-white text-emerald-900 font-bold shadow-2xs">
+                            Chatting
                           </span>
                         </div>
 
                         <div>
-                          <h4 className="font-serif text-lg font-bold text-slate-900">WhatsApp Audio</h4>
-                          <p className="text-xs text-slate-500 mt-0.5">Call & instant chart on WhatsApp</p>
+                          <h4 className="font-serif text-lg font-bold text-slate-900 group-hover:text-emerald-900 transition-colors">
+                            WhatsApp Chatting
+                          </h4>
+                          <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                            Direct WhatsApp consultation — chat symptoms, voice notes & send medical reports anytime.
+                          </p>
                         </div>
 
-                        <div className="flex items-baseline gap-2 pt-1">
-                          <span className="text-2xl font-black text-brand-green-950">₹{doctor.fee}</span>
-                          <span className="text-xs text-slate-400 line-through">₹{doctor.originalFee}</span>
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">58% OFF</span>
+                        {/* Pricing & Duration */}
+                        <div className="pt-2 border-t border-slate-100">
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-slate-900">₹{doctor.fee}</span>
+                            <span className="text-xs text-slate-400 line-through">₹{doctor.originalFee}</span>
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">58% OFF</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span>Live Chat + 7 Days Desk Access</span>
+                          </p>
                         </div>
 
-                        <ul className="space-y-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                        {/* Feature Points */}
+                        <ul className="space-y-2 text-xs text-slate-700 pt-3 border-t border-slate-100">
                           <li className="flex items-start gap-2">
                             <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
-                            <span>Instant WhatsApp audio connect</span>
+                            <span>Direct WhatsApp chat with Dr. Sanjeev's consultation desk</span>
                           </li>
                           <li className="flex items-start gap-2">
                             <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
-                            <span>Easy instant photo/report sharing</span>
+                            <span>Send blood tests, tongue/skin photos & audio messages</span>
                           </li>
                           <li className="flex items-start gap-2">
                             <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
-                            <span>7 Days free follow-up on chat</span>
+                            <span>Review recommendations & diet guidelines at your convenience</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                            <span>AYUSH prescription PDF delivered directly in WhatsApp</span>
                           </li>
                         </ul>
                       </div>
 
+                      {/* CTA Button */}
                       <button
-                        id="btn-book-whatsapp-audio"
+                        id="btn-select-whatsappchat"
                         type="button"
-                        onClick={() => handleSelectFormatAndProceed('clinic')}
-                        className="w-full py-3 px-4 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer group hover:scale-101"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectFormatAndProceed('chat');
+                        }}
+                        className={`w-full mt-5 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs ${
+                          selectedMode === 'chat'
+                            ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-md scale-[1.01]'
+                            : 'bg-slate-100 hover:bg-emerald-700 hover:text-white text-slate-800'
+                        }`}
                       >
-                        <span>Book WhatsApp Audio Now</span>
-                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Book WhatsApp Chat Slot</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
+                  </div>
+
+                  {/* PROCEED BAR WITH CURRENTLY SELECTED MODE */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+                    <div className="flex items-center gap-3 text-xs text-slate-700">
+                      <div className="w-9 h-9 rounded-xl bg-brand-green-800 text-brand-gold-300 flex items-center justify-center shrink-0 shadow-2xs">
+                        {selectedMode === 'video' ? (
+                          <Video className="w-4 h-4" />
+                        ) : selectedMode === 'audio' ? (
+                          <PhoneCall className="w-4 h-4 text-emerald-300" />
+                        ) : (
+                          <MessageSquare className="w-4 h-4 text-emerald-300" />
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Selected Option: </span>
+                        <strong className="text-slate-900">
+                          {selectedMode === 'video' 
+                            ? '1-on-1 HD Video Call' 
+                            : selectedMode === 'audio' 
+                            ? 'Phone Call or WhatsApp Voice Call' 
+                            : 'WhatsApp Live Chat Consultation'}
+                        </strong>
+                        <span className="text-emerald-700 font-bold ml-1.5">• ₹{doctor.fee}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      id="btn-proceed-to-datetime"
+                      type="button"
+                      onClick={() => handleSelectFormatAndProceed(selectedMode || 'video')}
+                      className="w-full sm:w-auto px-6 py-3 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer group"
+                    >
+                      <span>Proceed to Select Date & Time</span>
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </button>
                   </div>
 
                   {/* TRUST FOOTER STRIP */}
@@ -1002,12 +1356,12 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                     <span className="text-slate-300">•</span>
                     <span className="flex items-center gap-1.5 text-slate-600">
                       <Lock className="w-4 h-4 text-brand-green-800" />
-                      <span>100% Private & Confidential</span>
+                      <span>100% Private & Confidential Consultation</span>
                     </span>
                     <span className="text-slate-300">•</span>
                     <span className="flex items-center gap-1.5 text-slate-600">
                       <Sparkles className="w-4 h-4 text-brand-gold-600" />
-                      <span>Subsidized Fee: ₹{doctor.fee} Only</span>
+                      <span>Subsidized Fee: ₹{doctor.fee} (Flat 58% Off)</span>
                     </span>
                   </div>
                 </div>
@@ -1020,26 +1374,62 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                 <div className="space-y-6 animate-in fade-in duration-300">
                   
                   {/* SELECTED FORMAT BANNER */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 gap-3">
-                    <div className="flex items-center gap-2.5 text-xs text-emerald-950">
-                      <div className="w-8 h-8 rounded-lg bg-brand-green-800 text-brand-gold-300 flex items-center justify-center">
-                        {selectedMode === 'video' ? <Video className="w-4 h-4" /> : selectedMode === 'audio' ? <Phone className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 rounded-xl bg-brand-green-50/80 border border-brand-green-200 gap-3">
+                    <div className="flex items-center gap-2.5 text-xs text-brand-green-950">
+                      <div className="w-9 h-9 rounded-xl bg-brand-green-800 text-brand-gold-300 flex items-center justify-center shrink-0 shadow-2xs">
+                        {selectedMode === 'video' ? (
+                          <Video className="w-4 h-4" />
+                        ) : selectedMode === 'audio' ? (
+                          <PhoneCall className="w-4 h-4 text-emerald-300" />
+                        ) : (
+                          <MessageSquare className="w-4 h-4 text-emerald-300" />
+                        )}
                       </div>
                       <div>
-                        <p className="font-bold">
-                          Format: {selectedMode === 'video' ? '1-on-1 Video Call' : selectedMode === 'audio' ? 'Direct Phone Call' : 'WhatsApp Audio'}
+                        <p className="font-bold text-slate-900 text-xs sm:text-sm">
+                          {selectedMode === 'video' 
+                            ? '1-on-1 HD Video Consultation' 
+                            : selectedMode === 'audio' 
+                            ? 'Phone Call or WhatsApp Voice Call' 
+                            : 'WhatsApp Live Chat Consultation'}
                         </p>
-                        <p className="text-[11px] text-emerald-700">Fee: ₹{doctor.fee} • 20-30 Mins Consultation</p>
+                        <p className="text-[11px] text-brand-green-800 font-medium">
+                          {selectedMode === 'video'
+                            ? `Fee: ₹${doctor.fee} • 20-30 Mins • Google Meet / Jitsi Video Room`
+                            : selectedMode === 'audio'
+                            ? `Fee: ₹${doctor.fee} • 15-25 Mins • Doctor calls directly on your phone or WhatsApp`
+                            : `Fee: ₹${doctor.fee} • Live Interactive Chat + 7 Days WhatsApp Doctor Desk`}
+                        </p>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setBookingStep('format')}
-                      className="text-xs font-bold text-brand-green-900 hover:text-brand-green-950 hover:underline cursor-pointer px-3 py-1 rounded-lg bg-white border border-emerald-300 shadow-2xs"
-                    >
-                      Change Format
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold text-brand-green-900 bg-white px-2.5 py-1 rounded-lg border border-brand-green-200 shadow-2xs flex items-center gap-1.5">
+                        {selectedMode === 'video' ? (
+                          <>
+                            <Video className="w-3.5 h-3.5 text-brand-green-800" />
+                            <span>HD Video Room</span>
+                          </>
+                        ) : selectedMode === 'audio' ? (
+                          <>
+                            <PhoneCall className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>Voice Call</span>
+                          </>
+                        ) : (
+                          <>
+                            <MessageSquare className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>WhatsApp Chat</span>
+                          </>
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setBookingStep('format')}
+                        className="text-[11px] font-bold text-brand-green-800 hover:text-brand-green-900 underline cursor-pointer px-1 py-0.5"
+                      >
+                        Change
+                      </button>
+                    </div>
                   </div>
 
                   {/* SELECT DATE */}
@@ -1153,7 +1543,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                       <div>
                         <p className="font-bold text-slate-900">{doctor.name}</p>
                         <p className="text-[11px] text-slate-500">
-                          {selectedMode === 'video' ? '1-on-1 Video Call' : selectedMode === 'audio' ? 'Direct Phone Call' : 'WhatsApp Audio'} • <strong className="text-slate-800">{selectedDate} at {selectedTimeSlot}</strong>
+                          {selectedMode === 'video' ? '1-on-1 Video Call' : selectedMode === 'audio' ? 'Direct Phone Call' : 'In-Person Clinic Visit (OPD)'} • <strong className="text-slate-800">{selectedDate} at {selectedTimeSlot}</strong>
                         </p>
                       </div>
                     </div>
@@ -1385,8 +1775,23 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                       <div className="border-b border-slate-200 pb-3">
                         <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Booking Summary</span>
                         <h4 className="font-serif font-bold text-slate-900 text-base mt-0.5">{doctor.name}</h4>
-                        <p className="text-xs text-emerald-800 font-semibold">
-                          {selectedMode === 'video' ? '1-on-1 Video Call' : selectedMode === 'audio' ? 'Direct Phone Call' : 'WhatsApp Audio'}
+                        <p className="text-xs text-brand-green-800 font-semibold flex items-center gap-1.5 mt-0.5">
+                          {selectedMode === 'video' ? (
+                            <>
+                              <Video className="w-3.5 h-3.5 text-brand-green-800" />
+                              <span>1-on-1 HD Video Call (Google Meet / Jitsi)</span>
+                            </>
+                          ) : selectedMode === 'audio' ? (
+                            <>
+                              <PhoneCall className="w-3.5 h-3.5 text-teal-700" />
+                              <span>Phone Call or WhatsApp Voice Call</span>
+                            </>
+                          ) : (
+                            <>
+                              <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>WhatsApp Live Chat Consultation</span>
+                            </>
+                          )}
                         </p>
                       </div>
 
@@ -1429,181 +1834,120 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                     {/* RIGHT COLUMN: PAYMENT METHODS & PAY BUTTON */}
                     <div className="md:col-span-7 space-y-4">
                       
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <label className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
-                          Select Payment Method
+                          Select Payment Option
                         </label>
                         
-                        <div className="grid grid-cols-3 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setPaymentMethod('upi')}
-                            className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
-                              paymentMethod === 'upi'
-                                ? 'border-brand-green-800 bg-brand-green-50 text-brand-green-950 font-bold ring-1 ring-brand-green-800'
-                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                            }`}
-                          >
-                            <Smartphone className="w-5 h-5 text-brand-green-800" />
-                            <span className="text-xs">UPI / QR</span>
-                          </button>
+                        <div className="space-y-3">
+                          {/* Option 1: Razorpay (UPI, Cards & Net Banking) */}
+                          <div className="space-y-2">
+                            <label 
+                              className={`flex items-start justify-between p-4 border-2 rounded-2xl cursor-pointer transition-all ${
+                                paymentMethod === 'razorpay' 
+                                  ? 'border-brand-green-800 bg-brand-green-50/50 shadow-sm ring-1 ring-brand-green-800/30' 
+                                  : 'border-slate-200 hover:border-slate-300 bg-white'
+                              }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <input
+                                  type="radio"
+                                  name="consultationPaymentMethod"
+                                  checked={paymentMethod === 'razorpay'}
+                                  onChange={() => setPaymentMethod('razorpay')}
+                                  className="mt-1 accent-brand-green-800 cursor-pointer w-4 h-4"
+                                />
+                                <div className="text-xs space-y-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="font-bold text-slate-900 text-sm">UPI, Cards & Net Banking (via Razorpay)</p>
+                                    <span className="text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                                      <Sparkles className="w-3 h-3" />
+                                      <span>Instant & Secure</span>
+                                    </span>
+                                  </div>
+                                  <p className="text-slate-600">
+                                    Pay securely using Google Pay, PhonePe, Paytm, BHIM, UPI QR, Credit/Debit Cards, or Net Banking.
+                                  </p>
+                                  <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500 font-medium flex-wrap">
+                                    <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">GPay</span>
+                                    <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">PhonePe</span>
+                                    <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Paytm / UPI</span>
+                                    <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Debit / Credit Card</span>
+                                    <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Net Banking</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="w-9 h-9 rounded-xl bg-brand-green-800 text-brand-gold-300 flex items-center justify-center shrink-0">
+                                <CreditCard className="w-5 h-5" />
+                              </div>
+                            </label>
 
-                          <button
-                            type="button"
-                            onClick={() => setPaymentMethod('card')}
-                            className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
-                              paymentMethod === 'card'
-                                ? 'border-brand-green-800 bg-brand-green-50 text-brand-green-950 font-bold ring-1 ring-brand-green-800'
-                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                            }`}
-                          >
-                            <CreditCard className="w-5 h-5 text-brand-green-800" />
-                            <span className="text-xs">Cards</span>
-                          </button>
+                            {/* Razorpay Key Configuration Notice (Same as Checkout.tsx) */}
+                            {paymentMethod === 'razorpay' && (
+                              <div className="ml-4 sm:ml-7 p-3.5 bg-brand-green-50/80 rounded-xl border border-brand-green-200/80 space-y-2 text-xs">
+                                <div className="flex items-center justify-between text-[11px] font-bold text-brand-green-950">
+                                  <span>Razorpay API Key ID (Optional if set in .env)</span>
+                                  <span className="text-[10px] text-brand-green-700 font-semibold uppercase">Live/Test Key</span>
+                                </div>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. rzp_test_... or rzp_live_..."
+                                  value={userRazorpayKey}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setUserRazorpayKey(val);
+                                    localStorage.setItem('razorpay_key_id', val.trim());
+                                  }}
+                                  className="w-full px-3 py-2 rounded-lg border border-brand-green-300 font-mono text-xs text-brand-green-950 bg-white focus:outline-none focus:ring-1 focus:ring-brand-green-700"
+                                />
+                                <p className="text-brand-green-900 font-medium leading-relaxed text-[11px]">
+                                  ⚡ Clicking <strong className="text-brand-green-950 font-bold">Pay ₹{doctor.fee} via Razorpay & Confirm</strong> directly opens Razorpay's official checkout screen and verifies your payment with the backend.
+                                </p>
+                              </div>
+                            )}
+                          </div>
 
-                          <button
-                            type="button"
-                            onClick={() => setPaymentMethod('netbanking')}
-                            className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
-                              paymentMethod === 'netbanking'
-                                ? 'border-brand-green-800 bg-brand-green-50 text-brand-green-950 font-bold ring-1 ring-brand-green-800'
-                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                            }`}
-                          >
-                            <Building2 className="w-5 h-5 text-brand-green-800" />
-                            <span className="text-xs">Net Banking</span>
-                          </button>
+                          {/* Option 2: Pay Later */}
+                          <div className="space-y-2">
+                            <label 
+                              className={`flex items-start justify-between p-4 border-2 rounded-2xl cursor-pointer transition-all ${
+                                paymentMethod === 'cod' 
+                                  ? 'border-brand-green-800 bg-brand-green-50/50 shadow-sm ring-1 ring-brand-green-800/30' 
+                                  : 'border-slate-200 hover:border-slate-300 bg-white'
+                              }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <input
+                                  type="radio"
+                                  name="consultationPaymentMethod"
+                                  checked={paymentMethod === 'cod'}
+                                  onChange={() => setPaymentMethod('cod')}
+                                  className="mt-1 accent-brand-green-800 cursor-pointer w-4 h-4"
+                                />
+                                <div className="text-xs space-y-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="font-bold text-slate-900 text-sm">Pay Later (Post-Consultation)</p>
+                                    <span className="text-[10px] font-extrabold uppercase bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-300">
+                                      Zero Advance Needed
+                                    </span>
+                                  </div>
+                                  <p className="text-slate-600">
+                                    Book your consultation slot now with zero advance. Pay ₹{doctor.fee} via UPI or cash after your consultation call with Dr. Sanjeev Rastogi.
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center shrink-0">
+                                <Coins className="w-5 h-5 text-amber-800" />
+                              </div>
+                            </label>
+                          </div>
                         </div>
                       </div>
-
-                      {/* UPI PAYMENT FORM */}
-                      {paymentMethod === 'upi' && (
-                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in duration-200">
-                          <p className="text-xs font-bold text-slate-700">Choose Instant UPI App:</p>
-                          <div className="grid grid-cols-4 gap-2">
-                            {(['gpay', 'phonepe', 'paytm', 'other'] as const).map((app) => (
-                              <button
-                                key={app}
-                                type="button"
-                                onClick={() => setUpiApp(app)}
-                                className={`py-2 px-1 rounded-lg border text-center text-xs font-bold transition-all cursor-pointer ${
-                                  upiApp === app
-                                    ? 'bg-brand-green-800 text-brand-gold-300 border-brand-green-800 shadow-2xs'
-                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                                }`}
-                              >
-                                {app === 'gpay' ? 'GPay' : app === 'phonepe' ? 'PhonePe' : app === 'paytm' ? 'Paytm' : 'UPI ID'}
-                              </button>
-                            ))}
-                          </div>
-
-                          {upiApp === 'other' ? (
-                            <div>
-                              <label className="block text-[11px] font-semibold text-slate-600 mb-1">Enter UPI ID / VPA</label>
-                              <input
-                                type="text"
-                                placeholder="e.g. yourname@okhdfcbank"
-                                value={upiId}
-                                onChange={(e) => setUpiId(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-brand-green-800"
-                              />
-                            </div>
-                          ) : (
-                            <div className="p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200 text-[11px] text-emerald-800 flex items-center gap-2">
-                              <CheckCircle className="w-4 h-4 text-emerald-700 shrink-0" />
-                              <span>Instant UPI collect request will be sent to your {upiApp === 'gpay' ? 'Google Pay' : upiApp === 'phonepe' ? 'PhonePe' : 'Paytm'} app.</span>
-                            </div>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => setShowUpiQr(!showUpiQr)}
-                            className="text-xs text-brand-green-800 hover:underline font-semibold flex items-center gap-1 cursor-pointer pt-1"
-                          >
-                            <QrCode className="w-3.5 h-3.5" />
-                            <span>{showUpiQr ? 'Hide UPI QR Code' : 'Or Scan UPI QR Code'}</span>
-                          </button>
-
-                          {showUpiQr && (
-                            <div className="p-3 bg-white rounded-xl border border-slate-200 text-center space-y-2">
-                              <div className="w-32 h-32 mx-auto bg-slate-100 border-2 border-slate-300 rounded-lg flex items-center justify-center p-2">
-                                <img
-                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=bvlife@ayush&pn=BVLifeDoctor&am=${doctor.fee}&cu=INR`}
-                                  alt="UPI QR Code"
-                                  className="w-full h-full object-contain"
-                                />
-                              </div>
-                              <p className="text-[11px] text-slate-500">Scan using any UPI App (₹{doctor.fee})</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* CARD PAYMENT FORM */}
-                      {paymentMethod === 'card' && (
-                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in duration-200">
-                          <div>
-                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Card Number</label>
-                            <input
-                              type="text"
-                              maxLength={19}
-                              placeholder="4111 2222 3333 4444"
-                              value={cardNumber}
-                              onChange={(e) => setCardNumber(e.target.value)}
-                              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-brand-green-800 font-mono"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-[11px] font-semibold text-slate-600 mb-1">Expiry (MM/YY)</label>
-                              <input
-                                type="text"
-                                maxLength={5}
-                                placeholder="12/28"
-                                value={cardExpiry}
-                                onChange={(e) => setCardExpiry(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-brand-green-800"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] font-semibold text-slate-600 mb-1">CVV</label>
-                              <input
-                                type="password"
-                                maxLength={4}
-                                placeholder="•••"
-                                value={cardCvv}
-                                onChange={(e) => setCardCvv(e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-brand-green-800"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* NET BANKING FORM */}
-                      {paymentMethod === 'netbanking' && (
-                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in duration-200">
-                          <label className="block text-[11px] font-semibold text-slate-600">Select Your Bank:</label>
-                          <select
-                            value={selectedBank}
-                            onChange={(e) => setSelectedBank(e.target.value)}
-                            className="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-brand-green-800"
-                          >
-                            <option value="State Bank of India">State Bank of India (SBI)</option>
-                            <option value="HDFC Bank">HDFC Bank</option>
-                            <option value="ICICI Bank">ICICI Bank</option>
-                            <option value="Axis Bank">Axis Bank</option>
-                            <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
-                            <option value="Punjab National Bank">Punjab National Bank</option>
-                          </select>
-                        </div>
-                      )}
 
                       {/* TRUST STRIP */}
                       <div className="flex items-center gap-2 text-[11px] text-slate-500 pt-1">
                         <Lock className="w-3.5 h-3.5 text-brand-green-800 shrink-0" />
-                        <span>256-Bit SSL Encrypted & 100% Safe Banking Gateway</span>
+                        <span>256-Bit SSL Encrypted & Official Razorpay Verification Gateway</span>
                       </div>
 
                       {/* PAY BUTTON & BACK BUTTON */}
@@ -1628,12 +1972,17 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                           {isPaymentProcessing ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin text-brand-gold-300" />
-                              <span>Authorizing ₹{doctor.fee}...</span>
+                              <span>{paymentMethod === 'cod' ? 'Confirming Slot...' : `Opening Razorpay Gateway (₹${doctor.fee})...`}</span>
+                            </>
+                          ) : paymentMethod === 'cod' ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-brand-gold-300" />
+                              <span>Confirm Consultation Slot (Pay Later • ₹{doctor.fee})</span>
                             </>
                           ) : (
                             <>
-                              <Lock className="w-4 h-4 text-brand-gold-300" />
-                              <span>Pay ₹{doctor.fee} & Confirm Consultation</span>
+                              <CreditCard className="w-4 h-4 text-brand-gold-300" />
+                              <span>Pay ₹{doctor.fee} via Razorpay & Confirm</span>
                             </>
                           )}
                         </button>
@@ -1704,8 +2053,23 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                             {app.status}
                           </span>
                         </div>
-                        <p className="text-xs text-brand-green-800 font-semibold">
-                          {app.date} • {app.timeSlot} ({app.consultationMode} call)
+                        <p className="text-xs text-brand-green-800 font-semibold flex items-center gap-1.5">
+                          {app.consultationMode === 'video' ? (
+                            <>
+                              <Video className="w-3.5 h-3.5 text-brand-green-800" />
+                              <span>{app.date} • {app.timeSlot} (HD Video Call)</span>
+                            </>
+                          ) : app.consultationMode === 'audio' ? (
+                            <>
+                              <PhoneCall className="w-3.5 h-3.5 text-teal-700" />
+                              <span>{app.date} • {app.timeSlot} (Phone / WhatsApp Call)</span>
+                            </>
+                          ) : (
+                            <>
+                              <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>{app.date} • {app.timeSlot} (WhatsApp Live Chat)</span>
+                            </>
+                          )}
                         </p>
                         <p className="text-[11px] text-slate-500">
                           Patient: {app.patientName} ({app.patientPhone})
@@ -1717,7 +2081,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 self-end sm:self-center">
-                      {app.status === 'Confirmed' && app.meetingLink && (
+                      {app.status === 'Confirmed' && app.consultationMode === 'video' && app.meetingLink && (
                         <a
                           href={app.meetingLink}
                           target="_blank"
@@ -1726,6 +2090,25 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                         >
                           <Video className="w-3.5 h-3.5" />
                           <span>Join Video Room</span>
+                        </a>
+                      )}
+
+                      {app.status === 'Confirmed' && app.consultationMode === 'audio' && (
+                        <div className="px-3.5 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 font-semibold text-xs flex items-center gap-1.5">
+                          <PhoneCall className="w-3.5 h-3.5 text-teal-600" />
+                          <span>Doctor Will Call</span>
+                        </div>
+                      )}
+
+                      {app.status === 'Confirmed' && app.consultationMode === 'chat' && (
+                        <a
+                          href={`https://wa.me/918882001122?text=${encodeURIComponent(`Namaste Dr. Sanjeev Rastogi, following up on my booked WhatsApp Consultation #${app.id}. Patient: ${app.patientName}.`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Chat on WhatsApp</span>
                         </a>
                       )}
 

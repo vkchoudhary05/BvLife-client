@@ -321,6 +321,11 @@ export interface DoctorAppointment {
   prescription?: DoctorPrescription;
   doctorNotes?: string;
   roomStatus?: 'waiting' | 'in-progress' | 'completed';
+  paymentMethod?: string;
+  paymentStatus?: 'Pending' | 'Paid' | 'Failed';
+  paymentId?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
 }
 
 
