@@ -523,7 +523,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     <div id="doctor-consultation-page" className="min-h-screen bg-[#FBF9F5] pb-24 text-slate-800">
       
       {/* 1. TOP HERO BANNER — IDENTICAL REUSABLE BANNER SYSTEM */}
-      <section className="max-w-[1440px] mx-auto px-2 sm:px-4 pt-3 sm:pt-4">
+      <section className="max-w-[1440px] mx-auto">
         <div
           id="doctor-hero-banner"
           onClick={() => {
