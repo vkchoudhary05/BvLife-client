@@ -9,7 +9,8 @@ import {
   X, ExternalLink, Copy, Check, Search, Filter, Stethoscope, 
   Plus, Trash2, Printer, Download, Sparkles, Shield, AlertCircle,
   MessageSquare, RefreshCw, ChevronLeft, ChevronRight, Activity, ArrowLeft,
-  Settings, Link as LinkIcon, Eye, EyeOff, Lock, LogOut, Building2, MapPin, Users
+  Settings, Link as LinkIcon, Eye, EyeOff, Lock, LogOut, Building2, MapPin, Users,
+  Bell, BellRing, Volume2, VolumeX, Send, Camera, Image
 } from 'lucide-react';
 import { DoctorAppointment, DoctorPrescription, PrescribedMedicine, User as UserType } from '../types';
 import { api } from '../services/api';
@@ -35,6 +36,45 @@ const COMMON_AYURVEDIC_MEDICINES = [
   'Avipattikar Churna (Digestive Agni)',
   'Arjunarishta (Cardiovascular)'
 ];
+
+// Audible two-tone chime synthesizer for live appointment alerts (Web Audio API)
+const playDoctorChime = () => {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+    const now = ctx.currentTime;
+    
+    // Tone 1: 587.33Hz (D5)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(587.33, now);
+    gain1.gain.setValueAtTime(0.28, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.35);
+
+    // Tone 2: 880Hz (A5)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(880, now + 0.16);
+    gain2.gain.setValueAtTime(0.32, now + 0.16);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.16);
+    osc2.stop(now + 0.7);
+  } catch (e) {
+    console.warn('Audio chime notice:', e);
+  }
+};
 
 export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   currentUser,
@@ -174,11 +214,29 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   const [customMeetUrlInput, setCustomMeetUrlInput] = useState<string>('');
   const [preferredPlatform, setPreferredPlatform] = useState<'google-meet' | 'jitsi'>('google-meet');
 
+  // Real-time Booking Alert & Sound Controls
+  const [newBookingAlert, setNewBookingAlert] = useState<DoctorAppointment | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('grams_doctor_sound_enabled') !== 'false';
+    }
+    return true;
+  });
+  const [seenAppointmentIds, setSeenAppointmentIds] = useState<Set<string>>(new Set());
+
+  // Interactive WhatsApp Manual Confirmation Modal State
+  const [whatsAppModalApp, setWhatsAppModalApp] = useState<DoctorAppointment | null>(null);
+  const [whatsAppTemplate, setWhatsAppTemplate] = useState<'confirmation' | 'link' | 'reminder' | 'opd' | 'prescription'>('confirmation');
+  const [whatsAppCustomText, setWhatsAppCustomText] = useState<string>('');
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState<boolean>(false);
+  const [whatsAppToastMsg, setWhatsAppToastMsg] = useState<string | null>(null);
+
   // Prescription Drawer / Modal State
   const [prescriptionAppointment, setPrescriptionAppointment] = useState<DoctorAppointment | null>(null);
   const [viewPrescriptionData, setViewPrescriptionData] = useState<DoctorPrescription | null>(null);
   const [isSavingPrescription, setIsSavingPrescription] = useState<boolean>(false);
   const [prescriptionSuccessMsg, setPrescriptionSuccessMsg] = useState<string | null>(null);
+  const [previewPhotoModal, setPreviewPhotoModal] = useState<string | null>(null);
 
   // Prescription Form Fields
   const [diagnosis, setDiagnosis] = useState<string>('');
@@ -488,6 +546,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
       }
 
       setAppointments(combined);
+      setSeenAppointmentIds(new Set(combined.map(a => a.id)));
     } catch (err) {
       console.error('Error in fetchAppointments:', err);
     } finally {
@@ -505,6 +564,242 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
       console.warn('Doctor profile fetch warning:', err);
     });
   }, []);
+
+  // Real-time booking alert listeners (window event, storage event, and live polling)
+  useEffect(() => {
+    const handleNewBooking = (e: any) => {
+      const newApp: DoctorAppointment = e.detail;
+      if (newApp) {
+        setNewBookingAlert(newApp);
+        if (soundEnabled) {
+          playDoctorChime();
+        }
+        fetchAppointments();
+      }
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'bvlife_last_appointment_alert' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setNewBookingAlert(parsed);
+          if (soundEnabled) {
+            playDoctorChime();
+          }
+          fetchAppointments();
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    window.addEventListener('new_doctor_appointment_booked', handleNewBooking as EventListener);
+    window.addEventListener('storage', handleStorageChange);
+
+    // Also poll every 10 seconds for any new appointments booked across other browser tabs/devices
+    const pollTimer = setInterval(async () => {
+      try {
+        const fresh = await api.getAllDoctorAppointments();
+        if (fresh && fresh.length > 0) {
+          if (seenAppointmentIds.size > 0) {
+            const newlyAdded = fresh.find(a => !seenAppointmentIds.has(a.id) && a.status === 'Confirmed');
+            if (newlyAdded) {
+              setNewBookingAlert(newlyAdded);
+              if (soundEnabled) {
+                playDoctorChime();
+              }
+            }
+          }
+          setSeenAppointmentIds(new Set(fresh.map(a => a.id)));
+          setAppointments(fresh);
+        }
+      } catch {
+        // ignore polling error
+      }
+    }, 10000);
+
+    return () => {
+      window.removeEventListener('new_doctor_appointment_booked', handleNewBooking as EventListener);
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(pollTimer);
+    };
+  }, [soundEnabled, seenAppointmentIds]);
+
+  // Dynamic WhatsApp template generation whenever modal appointment or template changes
+  useEffect(() => {
+    if (!whatsAppModalApp) {
+      setWhatsAppCustomText('');
+      return;
+    }
+    const app = whatsAppModalApp;
+    const meetUrl = app.meetingLink || `https://meet.jit.si/BVLife-Consult-${app.id}`;
+    const docName = app.doctorName || activeDoctorProfile?.name || localDoctorUser?.fullName || 'Dr. Arundhati Sharma';
+
+    if (whatsAppTemplate === 'confirmation') {
+      setWhatsAppCustomText(
+`🌿 *Grams Life Ayurvedic Clinic - Consultation Confirmed* 🌿
+
+Namaste *${app.patientName}*,
+Your consultation with *${docName}* has been officially confirmed!
+
+📋 *Appointment Details:*
+• *Appointment ID:* #${app.id}
+• *Doctor:* ${docName} (${app.doctorSpecialty || 'Senior Vaidya'})
+• *Date:* ${app.date}
+• *Time Slot:* ${app.timeSlot}
+• *Format:* ${app.consultationMode.toUpperCase()}
+• *Payment Status:* ${app.paymentStatus === 'Paid' ? `Verified Paid (₹${app.fee})` : `Pay Later at Clinic (₹${app.fee})`}${app.paymentId ? `\n• *Txn Ref:* ${app.paymentId}` : ''}
+${app.consultationMode === 'video' ? `\n📹 *Video Consultation Link:*\n${meetUrl}\n(No app download required. Open on mobile/laptop 5 mins prior to slot.)\n` : ''}${app.consultationMode === 'audio' ? `\n📞 *Call Information:*\nDoctor will initiate telephone consultation directly to your mobile (${app.patientPhone}) at ${app.timeSlot}.\n` : ''}${app.consultationMode === 'clinic' ? `\n🏥 *Clinic Venue:*\nGrams Life Ayurvedic Center, Chamber 102, Ground Floor, Ayur Marg, New Delhi.\n` : ''}
+📌 *Patient Guidelines:*
+Please keep your previous medical files or blood test reports ready.
+
+For any questions or rescheduling, reply directly to this WhatsApp message or call our care desk.
+
+Warm regards,
+*Grams Life Care Desk*
+📞 +91 9425011088`
+      );
+    } else if (whatsAppTemplate === 'link') {
+      setWhatsAppCustomText(
+`📹 *Grams Life Clinic - Secure Video Consultation Link*
+
+Namaste *${app.patientName}*,
+Here is your direct Video Room link for your upcoming consultation with *${docName}*:
+
+📅 *Date & Slot:* ${app.date} at ${app.timeSlot}
+🔗 *Join Video Room:*
+${meetUrl}
+
+• Works seamlessly on all smartphones and laptops without installing any app.
+• Please ensure good lighting and microphone access.
+
+Warm regards,
+*Grams Life Medical Team*
+📞 +91 9425011088`
+      );
+    } else if (whatsAppTemplate === 'reminder') {
+      setWhatsAppCustomText(
+`⏰ *Reminder: Your Ayurvedic Consultation Starts in 15 Minutes*
+
+Namaste *${app.patientName}*,
+This is a gentle reminder that your consultation with *${docName}* will begin at *${app.timeSlot}* today (${app.date}).
+
+${app.consultationMode === 'video' ? `🔗 *Video Room Link:*\n${meetUrl}\n` : ''}${app.consultationMode === 'audio' ? `📞 The doctor will call your registered phone (${app.patientPhone}) shortly.\n` : ''}${app.consultationMode === 'clinic' ? `🏥 Please report to OPD Chamber 102.\n` : ''}
+Please keep your recent medical files handy.
+
+Best regards,
+*Grams Life Clinic*`
+      );
+    } else if (whatsAppTemplate === 'opd') {
+      setWhatsAppCustomText(
+`🏥 *Grams Life Ayurvedic Clinic - In-Person OPD Appointment Pass* 🏥
+
+Namaste *${app.patientName}*,
+Your In-Person OPD visit with *${docName}* is confirmed.
+
+📋 *OPD Token:* #OPD-${app.id.slice(-4)}
+• *Date & Time:* ${app.date} at ${app.timeSlot}
+• *Clinic Address:* Grams Life Ayurvedic Wellness Center, Chamber 102, Ground Floor, Ayur Marg, Near Metro Pillar 42, New Delhi.
+• *Contact Desk:* +91 9425011088
+
+Kindly arrive 10 minutes prior to your slot and carry previous health records or prescriptions.
+
+Warm regards,
+*Grams Life OPD Desk*`
+      );
+    } else if (whatsAppTemplate === 'prescription') {
+      const rx = app.prescription;
+      const medsList = rx?.medicines?.map(m => `• *${m.name}*: ${m.dosage} (${m.frequency} - ${m.timing})`).join('\n') || '• Prescribed Ayurvedic formulations';
+      setWhatsAppCustomText(
+`🌿 *Grams Life Clinic - Official Prescription & Care Plan* 🌿
+
+Namaste *${app.patientName}*,
+Here is your official consultation summary from *${docName}*:
+
+📋 *Prescription ID:* #${rx?.id || 'RX-' + app.id}
+• *Date:* ${app.date}
+• *Diagnosis:* ${rx?.diagnosis || 'Ayurvedic Assessment'}
+• *Dosha Prakriti:* ${rx?.doshaPrakriti || 'Vata-Pitta Balance'}
+
+💊 *Prescribed Formulations:*
+${medsList}
+
+🥗 *Diet & Pathya:*
+${rx?.dietRecommendations?.join('\n• ') || '• Eat freshly prepared warm Sattvic meals, avoid excess oil and sour food.'}
+
+🧘 *Lifestyle & Dinacharya:*
+${rx?.lifestyleAdvice?.join('\n• ') || '• 15 mins daily morning Pranayama and adequate hydration.'}
+
+To order your pure herbal formulations with direct home delivery, visit gramslife.com or WhatsApp our pharmacy desk at +91 9425011088.
+
+Wishing you swift recovery and holistic health,
+*${docName}*`
+      );
+    }
+  }, [whatsAppModalApp, whatsAppTemplate]);
+
+  // Dispatch manual WhatsApp message and record audit status
+  const handleDispatchWhatsApp = async () => {
+    if (!whatsAppModalApp) return;
+    setIsSendingWhatsApp(true);
+    try {
+      const app = whatsAppModalApp;
+      const cleanPhone = (app.patientPhone || '').replace(/\D/g, '');
+      const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+      const encodedMsg = encodeURIComponent(whatsAppCustomText);
+
+      // Open WhatsApp Web or Mobile App
+      window.open(`https://wa.me/${phoneWithCountry}?text=${encodedMsg}`, '_blank');
+
+      // Update backend & local state
+      try {
+        await api.updateAppointmentWhatsAppStatus(app.id, true);
+      } catch (e) {
+        console.warn('Backend updateAppointmentWhatsAppStatus error:', e);
+      }
+
+      const updated = appointments.map(a => 
+        a.id === app.id ? { ...a, whatsappConfirmationSent: true, whatsappConfirmationSentAt: new Date().toISOString() } : a
+      );
+      syncAppointments(updated);
+      setWhatsAppToastMsg(`WhatsApp Confirmation successfully dispatched to ${app.patientName} (${app.patientPhone})!`);
+      setTimeout(() => setWhatsAppToastMsg(null), 4000);
+      setWhatsAppModalApp(null);
+    } finally {
+      setIsSendingWhatsApp(false);
+    }
+  };
+
+  const handleSendToClinicDesk = (app: DoctorAppointment) => {
+    const text = encodeURIComponent(
+      `🚨 *NEW BOOKING ALERT FOR CLINIC DESK* 🚨\n\n` +
+      `• *Appointment ID:* #${app.id}\n` +
+      `• *Patient:* ${app.patientName} (${app.patientPhone})\n` +
+      `• *Doctor:* ${app.doctorName || 'Dr. Arundhati Sharma'}\n` +
+      `• *Date & Slot:* ${app.date} at ${app.timeSlot}\n` +
+      `• *Mode:* ${app.consultationMode.toUpperCase()}\n` +
+      `• *Status:* ${app.status} • Payment: ${app.paymentStatus || 'Paid'}\n` +
+      `• *Concern:* ${app.healthConcern || 'General Checkup'}\n\n` +
+      `Logged on Grams Life Doctor Dashboard.`
+    );
+    window.open(`https://wa.me/919425011088?text=${text}`, '_blank');
+  };
+
+  // Re-trigger MSG91 Automated WhatsApp API dispatch
+  const handleResendAutomatedMsg91Alert = async (app: DoctorAppointment) => {
+    try {
+      const res = await api.resendAppointmentWhatsAppAlert(app.id);
+      if (res.success) {
+        setWhatsAppToastMsg(`Automated MSG91 WhatsApp alert sent to Clinic (+91 9425011088) and Patient!`);
+      } else {
+        setWhatsAppToastMsg(`Automated alert queued. (Check MSG91 credentials in .env)`);
+      }
+      setTimeout(() => setWhatsAppToastMsg(null), 4000);
+    } catch (err) {
+      setWhatsAppToastMsg(`Alert dispatch attempted.`);
+      setTimeout(() => setWhatsAppToastMsg(null), 3000);
+    }
+  };
 
   // Update local storage and state helper
   const syncAppointments = (updated: DoctorAppointment[]) => {
@@ -1005,6 +1300,38 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                 <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               </button>
 
+              {/* Sound Alert Toggle & Test Chime */}
+              <div className="flex items-center gap-1.5 bg-brand-green-900/90 p-1 rounded-xl border border-brand-green-700/50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !soundEnabled;
+                    setSoundEnabled(next);
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('grams_doctor_sound_enabled', String(next));
+                    }
+                    if (next) playDoctorChime();
+                  }}
+                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold ${
+                    soundEnabled 
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title={soundEnabled ? "Alert Sound: ON (Click to Mute)" : "Alert Sound: MUTED (Click to Enable)"}
+                >
+                  {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-amber-400" /> : <VolumeX className="w-3.5 h-3.5" />}
+                  <span className="hidden sm:inline">{soundEnabled ? 'Chime ON' : 'Chime OFF'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => playDoctorChime()}
+                  className="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 text-[11px] font-medium transition-colors cursor-pointer hidden sm:inline"
+                  title="Test booking notification sound"
+                >
+                  Test
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={() => onNavigate('consult-doctor')}
@@ -1031,6 +1358,103 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        {/* Toast confirmation notice */}
+        {whatsAppToastMsg && (
+          <div className="p-4 rounded-xl bg-emerald-900 text-white border border-emerald-500/40 shadow-lg flex items-center justify-between gap-3 animate-fade-in">
+            <div className="flex items-center gap-2.5 text-xs font-semibold text-emerald-100">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span>{whatsAppToastMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setWhatsAppToastMsg(null)}
+              className="p-1 rounded-lg hover:bg-white/10 text-emerald-300 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Real-Time New Booking Alert Banner */}
+        {newBookingAlert && (
+          <div className="bg-gradient-to-r from-amber-500 via-rose-500 to-amber-600 p-0.5 sm:p-1 rounded-2xl shadow-xl animate-bounce-short">
+            <div className="bg-slate-900 text-white p-4 sm:p-5 rounded-[14px] flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3.5">
+                <div className="w-12 h-12 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 font-bold shadow-lg">
+                  <BellRing className="w-6 h-6 text-slate-950 animate-wiggle" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-rose-500 text-white font-black text-[10px] uppercase tracking-wider animate-pulse">
+                      Live Booking Alert
+                    </span>
+                    <span className="text-xs text-amber-300 font-mono">#{newBookingAlert.id}</span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-white mt-0.5">
+                    {newBookingAlert.patientName} booked a {newBookingAlert.consultationMode.toUpperCase()} Consultation
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    Scheduled for <strong className="text-amber-300">{newBookingAlert.date} at {newBookingAlert.timeSlot}</strong> • Phone: <strong className="text-white">{newBookingAlert.patientPhone}</strong> • Paid: <strong className="text-emerald-400">₹{newBookingAlert.fee}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleResendAutomatedMsg91Alert(newBookingAlert)}
+                  className="px-3.5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+                  title="Trigger MSG91 Automated WhatsApp Alert API directly"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Auto MSG91 Ping</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWhatsAppModalApp(newBookingAlert);
+                    setWhatsAppTemplate('confirmation');
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs flex items-center gap-2 shadow-lg transition-transform hover:scale-102 cursor-pointer"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Send WhatsApp Confirmation</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSendToClinicDesk(newBookingAlert)}
+                  className="px-3 py-2.5 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-600/40 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Forward copy to Clinic WhatsApp Business (+91 9425011088)"
+                >
+                  <span>Forward to Clinic Desk (+91 9425011088)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery(newBookingAlert.patientName);
+                    setNewBookingAlert(null);
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 transition-colors cursor-pointer"
+                >
+                  View in Schedule
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setNewBookingAlert(null)}
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white cursor-pointer"
+                  title="Dismiss Alert"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Metric Cards Banner - Interactive quick switch to the 3 shows */}
         <section aria-label="Daily Statistics" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
@@ -1547,23 +1971,43 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                                 </div>
                               )}
 
-                              {app.medicalReports && app.medicalReports.length > 0 && (
-                                <div className="flex items-center gap-2 pt-1">
-                                  <span className="text-[11px] text-slate-500 font-medium">
-                                    Uploaded Reports ({app.medicalReports.length}):
-                                  </span>
-                                  {app.medicalReports.map((report, idx) => (
-                                    <a
-                                      key={idx}
-                                      href={report.dataUrl || '#'}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="text-[11px] font-bold text-brand-green-800 bg-brand-green-50 px-2 py-0.5 rounded border border-brand-green-200 hover:underline flex items-center gap-1"
+                              {/* Uploaded Reports & Condition Photo */}
+                              {((app.medicalReports && app.medicalReports.length > 0) || app.patientPhoto) && (
+                                <div className="flex flex-wrap items-center gap-2 pt-1">
+                                  {app.medicalReports && app.medicalReports.length > 0 && (
+                                    <>
+                                      <span className="text-[11px] text-slate-500 font-medium">
+                                        Reports ({app.medicalReports.length}):
+                                      </span>
+                                      {app.medicalReports.map((report, idx) => (
+                                        <a
+                                          key={idx}
+                                          href={report.dataUrl || '#'}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-[11px] font-bold text-brand-green-800 bg-brand-green-50 px-2 py-0.5 rounded border border-brand-green-200 hover:underline flex items-center gap-1"
+                                        >
+                                          <FileText className="w-3 h-3" />
+                                          <span>{report.name}</span>
+                                        </a>
+                                      ))}
+                                    </>
+                                  )}
+                                  {app.patientPhoto && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setPreviewPhotoModal(app.patientPhoto || null)}
+                                      className="text-[11px] font-bold text-teal-900 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 hover:bg-teal-100 flex items-center gap-1.5 cursor-pointer"
+                                      title="Click to view full condition photo"
                                     >
-                                      <FileText className="w-3 h-3" />
-                                      <span>{report.name}</span>
-                                    </a>
-                                  ))}
+                                      <img
+                                        src={app.patientPhoto}
+                                        alt="Patient condition"
+                                        className="w-4 h-4 rounded object-cover border border-teal-300"
+                                      />
+                                      <span>Condition Photo</span>
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -1604,12 +2048,19 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
 
                                 <button
                                   type="button"
-                                  onClick={() => handleShareOnWhatsApp(app)}
-                                  className="px-3 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs transition-colors flex items-center gap-1 border border-emerald-200 cursor-pointer"
-                                  title="WhatsApp Link to Patient"
+                                  onClick={() => {
+                                    setWhatsAppModalApp(app);
+                                    setWhatsAppTemplate('confirmation');
+                                  }}
+                                  className={`px-3 py-2.5 rounded-xl font-bold text-xs transition-colors flex items-center gap-1 border cursor-pointer ${
+                                    app.whatsappConfirmationSent
+                                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
+                                  }`}
+                                  title={app.whatsappConfirmationSent ? `WhatsApp Confirmation dispatched on ${new Date(app.whatsappConfirmationSentAt || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : "Send WhatsApp Confirmation"}
                                 >
                                   <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span className="hidden sm:inline">WhatsApp</span>
+                                  <span className="hidden sm:inline">{app.whatsappConfirmationSent ? '✓ WA Sent' : 'WhatsApp'}</span>
                                 </button>
 
                                 <button
@@ -1644,6 +2095,18 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                                   <span>Open WhatsApp Chat</span>
                                   <ExternalLink className="w-3 h-3" />
                                 </a>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setWhatsAppModalApp(app);
+                                    setWhatsAppTemplate('confirmation');
+                                  }}
+                                  className="px-3 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200 cursor-pointer"
+                                  title="Custom WhatsApp Message"
+                                >
+                                  {app.whatsappConfirmationSent ? '✓ Slip Sent' : 'Send Slip'}
+                                </button>
                               </div>
                             )}
 
@@ -1664,12 +2127,19 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
 
                                 <button
                                   type="button"
-                                  onClick={() => handleWhatsAppPhoneCall(app)}
-                                  className="px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-xs transition-colors flex items-center gap-1.5 border border-emerald-200 cursor-pointer"
-                                  title="WhatsApp Call / Ping"
+                                  onClick={() => {
+                                    setWhatsAppModalApp(app);
+                                    setWhatsAppTemplate('confirmation');
+                                  }}
+                                  className={`px-3.5 py-2.5 rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5 border cursor-pointer ${
+                                    app.whatsappConfirmationSent
+                                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-200'
+                                  }`}
+                                  title={app.whatsappConfirmationSent ? "WhatsApp Confirmation Sent • Click to Send Again" : "Send WhatsApp Confirmation"}
                                 >
                                   <MessageSquare className="w-3.5 h-3.5 text-emerald-700" />
-                                  <span className="hidden sm:inline">WhatsApp Call</span>
+                                  <span className="hidden sm:inline">{app.whatsappConfirmationSent ? '✓ WA Sent' : 'WhatsApp Call'}</span>
                                 </button>
                               </div>
                             )}
@@ -1688,26 +2158,46 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
 
                                 <button
                                   type="button"
-                                  onClick={() => handleWhatsAppPhoneCall(app)}
-                                  className="px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-colors flex items-center gap-1.5 border border-amber-200 cursor-pointer"
-                                  title="WhatsApp Directions & Token"
+                                  onClick={() => {
+                                    setWhatsAppModalApp(app);
+                                    setWhatsAppTemplate('opd');
+                                  }}
+                                  className={`px-3.5 py-2.5 rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5 border cursor-pointer ${
+                                    app.whatsappConfirmationSent
+                                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                      : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-200'
+                                  }`}
+                                  title="Send WhatsApp OPD Pass & Directions"
                                 >
                                   <MessageSquare className="w-3.5 h-3.5 text-amber-700" />
-                                  <span className="hidden sm:inline">WhatsApp Info</span>
+                                  <span className="hidden sm:inline">{app.whatsappConfirmationSent ? '✓ WA Sent' : 'WhatsApp Pass'}</span>
                                 </button>
                               </div>
                             )}
 
                             {/* Write or View Prescription */}
                             {app.prescription ? (
-                              <button
-                                type="button"
-                                onClick={() => setViewPrescriptionData(app.prescription!)}
-                                className="px-4 py-2.5 rounded-xl bg-brand-green-50 hover:bg-brand-green-100 text-brand-green-900 border border-brand-green-200 font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
-                              >
-                                <FileText className="w-4 h-4 text-brand-green-800" />
-                                <span>View Signed Rx</span>
-                              </button>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setViewPrescriptionData(app.prescription!)}
+                                  className="px-4 py-2.5 rounded-xl bg-brand-green-50 hover:bg-brand-green-100 text-brand-green-900 border border-brand-green-200 font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <FileText className="w-4 h-4 text-brand-green-800" />
+                                  <span>View Signed Rx</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setWhatsAppModalApp(app);
+                                    setWhatsAppTemplate('prescription');
+                                  }}
+                                  className="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors cursor-pointer"
+                                  title="Send Prescription Rx via WhatsApp"
+                                >
+                                  <MessageSquare className="w-4 h-4 text-[#25D366]" />
+                                </button>
+                              </div>
                             ) : (
                               <button
                                 type="button"
@@ -2142,22 +2632,41 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                             <span>{app.healthConcern || 'Ayurvedic Wellness Evaluation'}</span>
                           </div>
 
-                          {/* Uploaded Reports if any */}
-                          {app.medicalReports && app.medicalReports.length > 0 && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-slate-500 font-medium text-[11px]">Reports:</span>
-                              {app.medicalReports.map((report, idx) => (
-                                <a
-                                  key={idx}
-                                  href={report.dataUrl || '#'}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 hover:underline flex items-center gap-1"
+                          {/* Uploaded Reports & Condition Photo */}
+                          {((app.medicalReports && app.medicalReports.length > 0) || app.patientPhoto) && (
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              {app.medicalReports && app.medicalReports.length > 0 && (
+                                <>
+                                  <span className="text-slate-500 font-medium text-[11px]">Reports:</span>
+                                  {app.medicalReports.map((report, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={report.dataUrl || '#'}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 hover:underline flex items-center gap-1"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      <span>{report.name}</span>
+                                    </a>
+                                  ))}
+                                </>
+                              )}
+                              {app.patientPhoto && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewPhotoModal(app.patientPhoto || null)}
+                                  className="text-[11px] font-bold text-teal-900 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 hover:bg-teal-100 flex items-center gap-1.5 cursor-pointer"
+                                  title="Click to view full condition photo"
                                 >
-                                  <FileText className="w-3 h-3" />
-                                  <span>{report.name}</span>
-                                </a>
-                              ))}
+                                  <img
+                                    src={app.patientPhoto}
+                                    alt="Patient condition"
+                                    className="w-4 h-4 rounded object-cover border border-teal-300"
+                                  />
+                                  <span>Condition Photo</span>
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -2434,22 +2943,41 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                             <span>{app.healthConcern || 'In-Person Ayurvedic Examination'}</span>
                           </div>
 
-                          {/* Uploaded Reports if any */}
-                          {app.medicalReports && app.medicalReports.length > 0 && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-slate-500 font-medium text-[11px]">Reports:</span>
-                              {app.medicalReports.map((report, idx) => (
-                                <a
-                                  key={idx}
-                                  href={report.dataUrl || '#'}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 hover:underline flex items-center gap-1"
+                          {/* Uploaded Reports & Condition Photo */}
+                          {((app.medicalReports && app.medicalReports.length > 0) || app.patientPhoto) && (
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              {app.medicalReports && app.medicalReports.length > 0 && (
+                                <>
+                                  <span className="text-slate-500 font-medium text-[11px]">Reports:</span>
+                                  {app.medicalReports.map((report, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={report.dataUrl || '#'}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 hover:underline flex items-center gap-1"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      <span>{report.name}</span>
+                                    </a>
+                                  ))}
+                                </>
+                              )}
+                              {app.patientPhoto && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewPhotoModal(app.patientPhoto || null)}
+                                  className="text-[11px] font-bold text-teal-900 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 hover:bg-teal-100 flex items-center gap-1.5 cursor-pointer"
+                                  title="Click to view full condition photo"
                                 >
-                                  <FileText className="w-3 h-3" />
-                                  <span>{report.name}</span>
-                                </a>
-                              ))}
+                                  <img
+                                    src={app.patientPhoto}
+                                    alt="Patient condition"
+                                    className="w-4 h-4 rounded object-cover border border-teal-300"
+                                  />
+                                  <span>Condition Photo</span>
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -3234,6 +3762,198 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                 className="px-5 py-2 text-xs font-bold text-brand-gold-300 bg-brand-green-900 hover:bg-brand-green-800 rounded-xl shadow-xs"
               >
                 Save Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Manual Confirmation Dispatcher Modal */}
+      {whatsAppModalApp && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 animate-scale-up space-y-4">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <span className="w-10 h-10 rounded-xl bg-[#25D366] text-white flex items-center justify-center shadow-xs shrink-0">
+                  <MessageSquare className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Send WhatsApp Confirmation Slip
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Patient: <strong className="text-slate-800">{whatsAppModalApp.patientName}</strong> • Phone: <strong className="text-[#128C7E] font-mono">{whatsAppModalApp.patientPhone}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setWhatsAppModalApp(null)}
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Template Selector */}
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                Select Message Format / Template:
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setWhatsAppTemplate('confirmation')}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all text-center border cursor-pointer ${
+                    whatsAppTemplate === 'confirmation'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  📋 Booking Slip
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsAppTemplate('link')}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all text-center border cursor-pointer ${
+                    whatsAppTemplate === 'link'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  📹 Video Link
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsAppTemplate('reminder')}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all text-center border cursor-pointer ${
+                    whatsAppTemplate === 'reminder'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  ⏰ 15m Reminder
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsAppTemplate(whatsAppModalApp.prescription ? 'prescription' : 'opd')}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all text-center border cursor-pointer ${
+                    whatsAppTemplate === 'prescription' || whatsAppTemplate === 'opd'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {whatsAppModalApp.prescription ? '💊 Prescr. Rx' : '🏥 OPD Pass'}
+                </button>
+              </div>
+            </div>
+
+            {/* Editable Message Preview */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-slate-700">
+                  Message Content (Editable before dispatch):
+                </label>
+                <span className="text-[11px] text-slate-400 font-mono">
+                  {whatsAppCustomText.length} characters
+                </span>
+              </div>
+              <textarea
+                rows={9}
+                value={whatsAppCustomText}
+                onChange={(e) => setWhatsAppCustomText(e.target.value)}
+                className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 font-mono leading-relaxed focus:bg-white focus:outline-none focus:border-emerald-600 shadow-2xs"
+                placeholder="Type customized WhatsApp message..."
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                • Clicking "Dispatch WhatsApp Slip" opens WhatsApp (Web or Mobile App) directly addressed to <strong>{whatsAppModalApp.patientPhone}</strong> with this exact message pre-typed.
+              </p>
+            </div>
+
+            {/* Audit info if already sent */}
+            {whatsAppModalApp.whatsappConfirmationSent && (
+              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2 text-xs text-emerald-800">
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  Previously sent {whatsAppModalApp.whatsappConfirmationSentAt ? `on ${new Date(whatsAppModalApp.whatsappConfirmationSentAt).toLocaleDateString()} at ${new Date(whatsAppModalApp.whatsappConfirmationSentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'earlier'}. You can send again if updated.
+                </span>
+              </div>
+            )}
+
+            {/* Action Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => handleSendToClinicDesk(whatsAppModalApp)}
+                className="w-full sm:w-auto px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                title="Send copy to Clinic Desk WhatsApp (+91 9425011088)"
+              >
+                <span>Notify Clinic Desk (+91 9425011088)</span>
+              </button>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setWhatsAppModalApp(null)}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDispatchWhatsApp}
+                  disabled={isSendingWhatsApp || !whatsAppCustomText.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{isSendingWhatsApp ? 'Opening WhatsApp...' : 'Dispatch WhatsApp Slip'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ENLARGED CONDITION PHOTO MODAL FOR DOCTORS */}
+      {previewPhotoModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setPreviewPhotoModal(null)}
+        >
+          <div 
+            className="relative max-w-2xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl p-4 border border-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Camera className="w-4 h-4 text-emerald-800" />
+                <span className="text-sm font-bold text-slate-900">Patient Uploaded Condition / Prescription Photo</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewPhotoModal(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mt-3 max-h-[75vh] flex items-center justify-center overflow-auto rounded-xl bg-slate-950/5 p-2">
+              <img
+                src={previewPhotoModal}
+                alt="Patient Condition Full View"
+                className="max-h-[70vh] w-auto max-w-full rounded-lg object-contain shadow-sm"
+              />
+            </div>
+            <div className="mt-3 flex justify-between items-center">
+              <span className="text-[11px] text-slate-500">
+                Uploaded by patient during consultation booking
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewPhotoModal(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs cursor-pointer"
+              >
+                Close View
               </button>
             </div>
           </div>

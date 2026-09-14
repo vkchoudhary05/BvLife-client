@@ -39,7 +39,7 @@ export interface OTPResponse {
 
 export const DEFAULT_MSG91_CONFIG: MSG91Config = {
   widgetId: "366745687850303433373438",
-  tokenAuth: "555226TgzLN8cZ6a698ec8P1",
+  tokenAuth: "555226ACqXDRqJuY6a69ae3dP1",
   exposeMethods: true,
   captchaRenderId: '',
   success: (data: any) => {
@@ -547,6 +547,9 @@ export async function performOtpLogin(params: {
   code?: string;
   reqId?: string;
   accessToken?: string;
+  fullName?: string;
+  email?: string;
+  autoCreate?: boolean;
 }): Promise<{ success: boolean; user?: any; token?: string; error?: string }> {
   try {
     const res = await fetch('/api/auth/otp-login', {

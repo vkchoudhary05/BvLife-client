@@ -254,7 +254,6 @@ export const Checkout: React.FC<CheckoutProps> = ({
 
   // Payment Method - Restricted to strictly UPI (via Razorpay) and Cash on Delivery
   const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'Cash on Delivery'>('UPI');
-  const [userRazorpayKey, setUserRazorpayKey] = useState<string>(() => localStorage.getItem('razorpay_key_id') || '');
   const [processingOrder, setProcessingOrder] = useState(false);
   const [orderCompleted, setOrderCompleted] = useState<Order | null>(() => {
     try {
@@ -303,7 +302,10 @@ export const Checkout: React.FC<CheckoutProps> = ({
 
   // Calculations
   const subtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    return cart.reduce((sum, item) => {
+      const price = item.selectedVariant ? item.selectedVariant.price : item.product.price;
+      return sum + price * item.quantity;
+    }, 0);
   }, [cart]);
 
   const discountAmount = useMemo(() => {
@@ -432,26 +434,17 @@ export const Checkout: React.FC<CheckoutProps> = ({
   const handleRazorpayUpiCheckout = async (targetAddress: Address) => {
     setProcessingOrder(true);
     try {
-      const activeKey = userRazorpayKey.trim() || localStorage.getItem('razorpay_key_id') || '';
-
       const res = await fetch('/api/payment/razorpay-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: finalTotal || subtotal || 499,
           currency: 'INR',
-          receipt: `rcpt_${Date.now()}`,
-          customKeyId: activeKey
+          receipt: `rcpt_${Date.now()}`
         })
       });
       const data = await res.json();
-      const finalKey = data.keyId || activeKey;
-
-      if (!finalKey) {
-        alert("Please enter your Razorpay Key ID (e.g. rzp_test_... or rzp_live_...) in the payment field below to proceed.");
-        setProcessingOrder(false);
-        return;
-      }
+      const finalKey = data.keyId || (import.meta as any).env?.VITE_RAZORPAY_KEY_ID || 'rzp_test_1DP5mmOlF5G5ag';
 
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
@@ -554,13 +547,20 @@ export const Checkout: React.FC<CheckoutProps> = ({
       };
     }
 
-    const itemsPayload = cart.length > 0 ? cart.map(item => ({
-      productId: item.product.id,
-      productName: item.product.name,
-      price: item.product.price,
-      quantity: item.quantity,
-      mainImage: item.product.mainImage
-    })) : [
+    const itemsPayload = cart.length > 0 ? cart.map(item => {
+      const itemPrice = item.selectedVariant ? item.selectedVariant.price : item.product.price;
+      return {
+        productId: item.product.id,
+        productName: item.selectedVariant ? `${item.product.name} (${item.selectedVariant.name})` : item.product.name,
+        price: itemPrice,
+        quantity: item.quantity,
+        mainImage: item.selectedVariant?.image || item.product.mainImage,
+        variantId: item.selectedVariant?.id,
+        variantName: item.selectedVariant?.name,
+        variantSize: item.selectedVariant?.size,
+        sku: item.selectedVariant?.sku || item.product.sku
+      };
+    }) : [
       {
         productId: 'item-1',
         productName: 'Ayurvedic Wellness Pack',
@@ -1297,24 +1297,9 @@ export const Checkout: React.FC<CheckoutProps> = ({
 
                     {/* Info helper for UPI */}
                     {paymentMethod === 'UPI' && pay.id === 'UPI' && (
-                      <div className="ml-7 p-3.5 bg-brand-green-50/80 rounded-xl border border-brand-green-200/80 space-y-2 text-xs">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-brand-green-950">
-                          <span>Razorpay API Key ID (Optional if set in .env)</span>
-                          <span className="text-[10px] text-brand-green-700 font-semibold uppercase">Live/Test Key</span>
-                        </div>
-                        <input
-                          type="text"
-                          placeholder="e.g. rzp_test_1234567890 or rzp_live_..."
-                          value={userRazorpayKey}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setUserRazorpayKey(val);
-                            localStorage.setItem('razorpay_key_id', val.trim());
-                          }}
-                          className="w-full px-3 py-2 rounded-lg border border-brand-green-300 font-mono text-xs text-brand-green-950 bg-white focus:outline-none focus:ring-1 focus:ring-brand-green-700"
-                        />
-                        <p className="text-brand-green-900 font-medium leading-relaxed text-[11px]">
-                          ⚡ Clicking <strong className="text-brand-green-950 font-bold">Pay via Razorpay & Place Order</strong> directly opens Razorpay's official checkout screen.
+                      <div className="ml-7 p-3 bg-brand-green-50/80 rounded-xl border border-brand-green-200/80 text-xs text-brand-green-900">
+                        <p className="font-medium leading-relaxed text-[11px]">
+                          ⚡ Clicking <strong className="text-brand-green-950 font-bold">Pay via Razorpay & Place Order</strong> directly opens Razorpay's official checkout screen for instant and secure UPI, Card, or Net Banking payment.
                         </p>
                       </div>
                     )}
@@ -1340,13 +1325,24 @@ export const Checkout: React.FC<CheckoutProps> = ({
               </div>
 
               {/* Items listing */}
-              <div className="space-y-3 max-h-[180px] overflow-y-auto pr-1">
-                {cart.map(item => (
-                  <div key={item.product.id} className="flex justify-between items-center text-xs text-brand-green-800 font-medium">
-                    <span className="line-clamp-1 flex-1 pr-4">{item.product.name} (x{item.quantity})</span>
-                    <span className="font-serif font-bold text-brand-green-900 flex-shrink-0">₹{item.product.price * item.quantity}</span>
-                  </div>
-                ))}
+              <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                {cart.map(item => {
+                  const currentPrice = item.selectedVariant ? item.selectedVariant.price : item.product.price;
+                  const itemKey = `${item.product.id}-${item.selectedVariant?.id || 'base'}`;
+                  return (
+                    <div key={itemKey} className="flex justify-between items-start text-xs text-brand-green-800 font-medium">
+                      <div className="flex-1 pr-4 text-left">
+                        <span className="line-clamp-1 font-semibold">{item.product.name} (x{item.quantity})</span>
+                        {item.selectedVariant && (
+                          <span className="inline-block text-[10px] text-brand-green-700 bg-brand-green-50 border border-brand-green-200 px-1.5 py-0.2 rounded mt-0.5">
+                            {item.selectedVariant.name}
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-serif font-bold text-brand-green-900 flex-shrink-0">₹{currentPrice * item.quantity}</span>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Subtotal breaking */}

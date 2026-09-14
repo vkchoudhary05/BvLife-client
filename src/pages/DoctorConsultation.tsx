@@ -9,14 +9,16 @@ import {
   ShieldCheck, Award, User, Check, X, ArrowRight, ArrowLeft, Loader2,
   FileText, Upload, Trash2, Eye, Shield, Sparkles, ChevronLeft, ChevronRight,
   HeartHandshake, Stethoscope, CreditCard, Lock, CheckCircle2, QrCode,
-  Building2, Smartphone, AlertCircle, Coins, PhoneCall, MessageCircle
+  Building2, Smartphone, AlertCircle, Coins, PhoneCall, MessageCircle,
+  Image as ImageIcon, Camera, FileCheck
 } from 'lucide-react';
 import { Doctor, DoctorAppointment, User as UserType, MedicalReportFile } from '../types';
 import { Language } from '../lib/translations';
 import { api } from '../services/api';
 import { ConsultationFeatures } from '../components/ConsultationFeatures';
 import { loadRazorpayScript } from '../utils/razorpay';
-import drImage from "@/assets/DrSanjeev3.png";
+import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin } from '../services/msg91OtpService';
+import drImage from "@/assets/DrSanjeev.png";
 
 const legendaryDoctorImg = drImage;
 const doctorBannerDesktop = drImage;
@@ -26,6 +28,8 @@ interface DoctorConsultationProps {
   currentUser: UserType | null;
   onNavigate: (page: string, params?: any) => void;
   language: Language;
+  onLoginSuccess?: (token: string, user?: any) => void;
+  authToken?: string | null;
 }
 
 const LEGEND_DOCTOR: Doctor = {
@@ -78,7 +82,9 @@ const HEALTH_CONCERNS = [
 export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
   currentUser,
   onNavigate,
-  language
+  language,
+  onLoginSuccess,
+  authToken
 }) => {
   const [doctor, setDoctor] = useState<Doctor>(LEGEND_DOCTOR);
   const [activeTab, setActiveTab] = useState<'book' | 'my-appointments' | 'about-doctor' | 'fees-chart'>('book');
@@ -101,27 +107,50 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('11:00 AM');
 
-  // Multi-step booking progression
-  const [bookingStep, setBookingStep] = useState<'format' | 'datetime' | 'information' | 'payment'>('format');
+  // Multi-step booking progression (format -> datetime -> information -> auth (if guest) -> payment)
+  const [bookingStep, setBookingStep] = useState<'format' | 'datetime' | 'information' | 'auth' | 'payment'>('format');
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Payment states (Mirrors product checkout: Razorpay UPI/Cards/Net Banking, or Pay Later)
-  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
-  const [userRazorpayKey, setUserRazorpayKey] = useState<string>(() => (typeof window !== 'undefined' ? localStorage.getItem('razorpay_key_id') || '' : ''));
+  // Payment states (Razorpay UPI/Cards/Net Banking)
+  const paymentMethod = 'razorpay' as const;
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
   // Patient inputs
   const [patientName, setPatientName] = useState(currentUser?.fullName || '');
+  const [patientEmail, setPatientEmail] = useState(currentUser?.email || '');
   const [patientAge, setPatientAge] = useState<number | ''>(28);
   const [patientGender, setPatientGender] = useState<'Male' | 'Female' | 'Other'>('Female');
   const [patientPhone, setPatientPhone] = useState(currentUser?.phone || '');
   const [healthConcern, setHealthConcern] = useState('Digestion & Acidity');
   const [customConcern, setCustomConcern] = useState('');
   
-  // PDF Reports
+  // Instant Mobile OTP Auth states (like Instant Buy / Checkout)
+  const [authMobile, setAuthMobile] = useState('');
+  const [authOtpCode, setAuthOtpCode] = useState('');
+  const [authReqId, setAuthReqId] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authSuccessMsg, setAuthSuccessMsg] = useState<string | null>(null);
+  const [usePasswordInstead, setUsePasswordInstead] = useState(false);
+  const [authPassword, setAuthPassword] = useState('');
+  
+  // Medical Reports (Multiple PDFs)
   const [uploadedReports, setUploadedReports] = useState<MedicalReportFile[]>([]);
-  const [showReportUpload, setShowReportUpload] = useState(false);
+  const [showReportUpload, setShowReportUpload] = useState(true);
   const [reportError, setReportError] = useState<string | null>(null);
+
+  // Single Condition / Prescription Photo
+  const [uploadedPhoto, setUploadedPhoto] = useState<{
+    name: string;
+    size: string;
+    dataUrl: string;
+    uploadedAt: string;
+  } | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
 
   // Status & persistence
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -145,6 +174,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     if (currentUser) {
       if (!patientName && currentUser.fullName) setPatientName(currentUser.fullName);
       if (!patientPhone && currentUser.phone) setPatientPhone(currentUser.phone);
+      if (!patientEmail && currentUser.email) setPatientEmail(currentUser.email);
     }
   }, [currentUser]);
 
@@ -211,24 +241,24 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     '06:00 PM', '06:45 PM', '07:30 PM'
   ];
 
-  // PDF report handler
+  // Multiple PDF Reports handler
   const handleReportUpload = (files: FileList | File[]) => {
     setReportError(null);
     const fileArray = Array.from(files);
     
-    if (uploadedReports.length + fileArray.length > 3) {
-      setReportError('Maximum 3 medical reports allowed.');
+    if (uploadedReports.length + fileArray.length > 10) {
+      setReportError('Maximum 10 medical reports allowed in total.');
       return;
     }
 
     fileArray.forEach(file => {
       const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
       if (!isPdf) {
-        setReportError('Only PDF files allowed.');
+        setReportError(`File "${file.name}" is not a PDF. Only PDF reports allowed.`);
         return;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        setReportError(`File "${file.name}" exceeds 10MB limit.`);
+      if (file.size > 15 * 1024 * 1024) {
+        setReportError(`File "${file.name}" exceeds 15MB limit.`);
         return;
       }
 
@@ -252,6 +282,160 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  // Single Condition / Prescription Photo handler (1 option of photo)
+  const handlePhotoUpload = (file: File) => {
+    setPhotoError(null);
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Please upload an image file (JPG, PNG, WEBP).');
+      return;
+    }
+
+    if (file.size > 12 * 1024 * 1024) {
+      setPhotoError('Photo exceeds 12MB limit. Please upload a smaller image.');
+      return;
+    }
+
+    const formattedSize = file.size < 1024 * 1024
+      ? `${(file.size / 1024).toFixed(1)} KB`
+      : `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+      setUploadedPhoto({
+        name: file.name,
+        size: formattedSize,
+        dataUrl,
+        uploadedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // OTP Countdown timer
+  useEffect(() => {
+    let interval: any;
+    if (otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [otpTimer]);
+
+  // If user signs in while on auth step, automatically move to payment
+  useEffect(() => {
+    if (currentUser && bookingStep === 'auth') {
+      setBookingStep('payment');
+    }
+  }, [currentUser, bookingStep]);
+
+  // Dispatch OTP via MSG91 for non-logged-in user
+  const handleSendOtp = async () => {
+    setAuthError(null);
+    setAuthSuccessMsg(null);
+    const clean = authMobile.replace(/\D/g, '').slice(-10);
+    if (clean.length !== 10) {
+      setAuthError('Please enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const target = formatMSG91Identifier(clean);
+      const res = await sendMSG91Otp(target);
+      if (res.success) {
+        setOtpSent(true);
+        setAuthReqId(res.reqId || '');
+        setOtpTimer(30);
+        setAuthSuccessMsg(`OTP sent to +91 ${clean}. Enter the 4-digit code below.`);
+      } else {
+        setAuthError(res.error || 'Failed to dispatch verification OTP. Please verify number.');
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'SMS service temporary failure. Please try again.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  // Verify OTP and proceed directly to payment
+  const handleVerifyOtpAndProceed = async () => {
+    setAuthError(null);
+    const clean = authMobile.replace(/\D/g, '').slice(-10);
+    const code = authOtpCode.trim();
+    if (!code || code.length < 4) {
+      setAuthError('Please enter the 4-digit verification code.');
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      const loginRes = await performOtpLogin({
+        identifier: clean,
+        code,
+        reqId: authReqId,
+        fullName: patientName.trim() || 'Ayurveda Patient',
+        email: patientEmail.trim() || `${clean}@gramslife.com`,
+        autoCreate: true
+      });
+
+      if (loginRes.success && loginRes.user) {
+        if (loginRes.token) {
+          sessionStorage.setItem('grams_auth_token', loginRes.token);
+          localStorage.setItem('grams_auth_token', loginRes.token);
+          if (onLoginSuccess) {
+            onLoginSuccess(loginRes.token, loginRes.user);
+          }
+        }
+        setAuthSuccessMsg('Identity verified! Advancing to payment step...');
+        setTimeout(() => {
+          setBookingStep('payment');
+          document.getElementById('booking-step-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+      } else {
+        setAuthError(loginRes.error || 'Incorrect OTP code. Please check and try again.');
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'OTP verification failed. Please try again.');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  // Optional password login
+  const handlePasswordLoginAndProceed = async () => {
+    setAuthError(null);
+    if (!patientEmail.trim() || !authPassword.trim()) {
+      setAuthError('Please enter your email and password.');
+      return;
+    }
+    setIsVerifyingOtp(true);
+    try {
+      const res = await api.login({ email: patientEmail.trim(), password: authPassword.trim() });
+      if (res && res.token) {
+        sessionStorage.setItem('grams_auth_token', res.token);
+        localStorage.setItem('grams_auth_token', res.token);
+        if (onLoginSuccess) {
+          onLoginSuccess(res.token, res.user);
+        }
+        setAuthSuccessMsg('Signed in successfully! Advancing to payment...');
+        setTimeout(() => {
+          setBookingStep('payment');
+          document.getElementById('booking-step-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+      } else {
+        setAuthError('Invalid credentials. Please verify or use Mobile OTP.');
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'Failed to sign in. Please verify password or use Mobile OTP.');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
   };
 
   // Step 1 -> Step 2: User clicks or chooses a consultation format
@@ -283,22 +467,52 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     }, 50);
   };
 
-  // Step 3 -> Step 4: User fills patient information and advances to pay
-  const handleProceedToPayment = (e?: React.FormEvent) => {
+  // Step 3 -> Step 4 (or Auth Step):
+  // "if user already login then then move and if not login then move to login screen same as instant buy enter mobile no otp then move like that in doctor booking"
+  const handleProceedToPayment = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    setFormError(null);
+
+    if (!selectedMode) {
+      setFormError('Please select a consultation format (Video, Audio, or Chat).');
+      setBookingStep('format');
+      return;
+    }
+    if (!selectedDate || !selectedTimeSlot) {
+      setFormError('Please pick your consultation date and preferred time slot.');
+      setBookingStep('datetime');
+      return;
+    }
     if (!patientName.trim()) {
       setFormError('Please enter the patient’s full name.');
       return;
     }
-    if (!patientPhone.trim() || patientPhone.trim().replace(/\D/g, '').length < 8) {
-      setFormError('Please enter a valid WhatsApp or phone number (minimum 8 digits).');
+    const cleanPhone = patientPhone.trim().replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      setFormError('Please enter a valid 10-digit mobile number.');
       return;
     }
-    setFormError(null);
-    setBookingStep('payment');
-    setTimeout(() => {
-      document.getElementById('booking-step-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
+    if (!patientEmail.trim() || !patientEmail.includes('@')) {
+      setFormError('Please provide a valid email address to receive your official consultation pass & meeting link.');
+      return;
+    }
+
+    // CHECK AUTH STATUS:
+    if (currentUser) {
+      // User is already logged in -> Move straight to payment!
+      setBookingStep('payment');
+      setTimeout(() => {
+        document.getElementById('booking-step-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    } else {
+      // User is NOT logged in -> Move to login screen (Mobile OTP) same as instant buy!
+      const tenDigit = cleanPhone.slice(-10);
+      setAuthMobile(tenDigit);
+      setBookingStep('auth');
+      setTimeout(() => {
+        document.getElementById('booking-step-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    }
   };
 
   // Finalize booking after payment authorization
@@ -313,6 +527,8 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     setIsSubmitting(true);
     const appointmentId = `BVL-DOC-${Math.floor(100000 + Math.random() * 900000)}`;
 
+    const effectivePatientEmail = patientEmail.trim() || currentUser?.email || 'patient@bvlife.com';
+
     const newAppointment: DoctorAppointment = {
       id: appointmentId,
       doctorId: doctor.id,
@@ -324,12 +540,13 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
       patientAge: Number(patientAge) || 28,
       patientGender,
       patientPhone: patientPhone.trim(),
-      patientEmail: currentUser?.email || 'patient@bvlife.com',
+      patientEmail: effectivePatientEmail,
       date: selectedDate,
       timeSlot: selectedTimeSlot,
       consultationMode: selectedMode || 'video',
       healthConcern: customConcern.trim() ? customConcern.trim() : healthConcern,
       medicalReports: uploadedReports,
+      patientPhoto: uploadedPhoto?.dataUrl || undefined,
       fee: doctor.fee,
       status: 'Confirmed',
       bookingDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -358,6 +575,11 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     setMyAppointments(updated);
     if (typeof window !== 'undefined') {
       localStorage.setItem('bvlife_doctor_appointments', JSON.stringify(updated));
+      localStorage.setItem('bvlife_last_appointment_alert', JSON.stringify({
+        ...finalApp,
+        alertTimestamp: Date.now()
+      }));
+      window.dispatchEvent(new CustomEvent('new_doctor_appointment_booked', { detail: finalApp }));
     }
 
     // Immediately display the confirmation card with verified details!
@@ -378,8 +600,6 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     setFormError(null);
 
     try {
-      const activeKey = userRazorpayKey.trim() || (typeof window !== 'undefined' ? localStorage.getItem('razorpay_key_id') || '' : '');
-
       // Step 1: Request Razorpay Order from backend
       const res = await fetch('/api/payment/razorpay-order', {
         method: 'POST',
@@ -387,20 +607,12 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
         body: JSON.stringify({
           amount: doctor.fee,
           currency: 'INR',
-          receipt: `doc_${Date.now()}`,
-          customKeyId: activeKey
+          receipt: `doc_${Date.now()}`
         })
       });
 
       const data = await res.json();
-      const finalKey = data.keyId || activeKey;
-
-      if (!finalKey) {
-        alert("Please enter a valid Razorpay Key ID (rzp_test_... or rzp_live_...) to proceed.");
-        setIsPaymentProcessing(false);
-        setIsSubmitting(false);
-        return;
-      }
+      const finalKey = data.keyId || (import.meta as any).env?.VITE_RAZORPAY_KEY_ID || 'rzp_test_1DP5mmOlF5G5ag';
 
       // Step 2: Load official Razorpay SDK script
       const scriptLoaded = await loadRazorpayScript();
@@ -473,7 +685,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
       }
     } catch (err: any) {
       console.error("Error launching Razorpay:", err);
-      alert("Failed to initialize Razorpay checkout: " + (err.message || "Please check your network and Razorpay configuration."));
+      alert("Failed to initialize Razorpay checkout: " + (err.message || "Please check your network connection."));
       setIsPaymentProcessing(false);
       setIsSubmitting(false);
     }
@@ -481,16 +693,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
 
   // Step 4: Complete secure payment & confirm appointment
   const handleExecutePayment = async () => {
-    if (paymentMethod === 'razorpay') {
-      await handleRazorpayCheckout();
-    } else {
-      // Pay Later (Post-Consultation)
-      await finalizeBooking({
-        paymentMethod: 'Pay Later',
-        paymentStatus: 'Pending',
-        paymentId: `post_${Date.now()}`
-      });
-    }
+    await handleRazorpayCheckout();
   };
 
   const handleCancelAppointment = async (id: string) => {
@@ -523,7 +726,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     <div id="doctor-consultation-page" className="min-h-screen bg-[#FBF9F5] pb-24 text-slate-800">
       
       {/* 1. TOP HERO BANNER — IDENTICAL REUSABLE BANNER SYSTEM */}
-      <section className="max-w-[1440px] mx-auto">
+      <section className="max-w-[1440px] ">
         <div
           id="doctor-hero-banner"
           onClick={() => {
@@ -569,30 +772,6 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
             {/* Subtle Gradient Overlay matching CustomerHome */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent sm:from-black/20 sm:via-transparent sm:to-transparent" />
           </div>
-
-          {/* Navigation Chevron Left */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentSlide((prev) => (prev - 1 + doctorHeroSlides.length) % doctorHeroSlides.length);
-            }}
-            aria-label="Previous slide"
-            className="flex absolute left-2 xs:left-3 md:left-4 lg:left-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
-          >
-            <ChevronLeft className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
-          </button>
-
-          {/* Navigation Chevron Right */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentSlide((prev) => (prev + 1) % doctorHeroSlides.length);
-            }}
-            aria-label="Next slide"
-            className="flex absolute right-2 xs:right-3 md:right-4 lg:right-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
-          >
-            <ChevronRight className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
-          </button>
 
           {/* Banner Slide Indicator Dots */}
           <div className="absolute bottom-2 xs:bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 xs:gap-2">
@@ -805,6 +984,51 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                   </div>
                 </div>
 
+                {/* Attached Clinical Reports & Photo in Confirmation Card */}
+                {((bookingConfirmed.medicalReports && bookingConfirmed.medicalReports.length > 0) || bookingConfirmed.patientPhoto) && (
+                  <div className="p-3 bg-white/10 rounded-xl border border-white/15 space-y-2 text-xs">
+                    <span className="text-[11px] font-bold text-brand-gold-300 uppercase tracking-wider block">
+                      Submitted Clinical Attachments
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {bookingConfirmed.medicalReports && bookingConfirmed.medicalReports.map((rep, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/20 text-white border border-white/10 text-[11px]">
+                          <FileText className="w-3.5 h-3.5 text-rose-400" />
+                          <span className="truncate max-w-[150px]">{rep.name}</span>
+                          {rep.dataUrl && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const win = window.open();
+                                if (win && rep.dataUrl) {
+                                  win.document.write(`<iframe src="${rep.dataUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                                }
+                              }}
+                              className="text-brand-gold-300 hover:underline text-[10px] ml-1"
+                            >
+                              View
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {bookingConfirmed.patientPhoto && (
+                        <div
+                          onClick={() => setPreviewModalImg(bookingConfirmed.patientPhoto || null)}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/20 text-white border border-white/10 text-[11px] cursor-pointer hover:bg-black/30"
+                          title="Click to zoom condition photo"
+                        >
+                          <img
+                            src={bookingConfirmed.patientPhoto}
+                            alt="Patient Photo"
+                            className="w-5 h-5 rounded object-cover border border-white/20"
+                          />
+                          <span>1 Condition Photo (Zoom)</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Razorpay / Payment Verified Status Banner */}
                 <div className="p-3 bg-white/10 rounded-xl border border-white/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -828,6 +1052,69 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                   <span className="text-[10px] text-slate-300">
                     A copy of this appointment slip has been sent to {bookingConfirmed.patientPhone}
                   </span>
+                </div>
+
+                {/* Instant WhatsApp Action Buttons */}
+                <div className="p-3.5 bg-emerald-950/70 border border-emerald-500/40 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      <MessageSquare className="w-4 h-4 text-[#25D366]" />
+                      <span>WhatsApp Confirmation & Alert Dispatch</span>
+                    </span>
+                    <span className="text-[10px] text-slate-300 font-mono">Clinic Desk: +91 9425011088</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    Your appointment has been registered in the clinic system. You can also send a direct confirmation copy to our WhatsApp desk or receive it on your own phone:
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {/* Notify Clinic Desk */}
+                    <a
+                      href={`https://wa.me/919425011088?text=${encodeURIComponent(
+                        `🌿 *NEW DOCTOR APPOINTMENT BOOKED* 🌿\n\n` +
+                        `Namaste Grams Life Clinic Desk, I have scheduled a doctor consultation:\n\n` +
+                        `• *Appointment ID:* #${bookingConfirmed.id}\n` +
+                        `• *Patient Name:* ${bookingConfirmed.patientName}\n` +
+                        `• *Patient Phone:* ${bookingConfirmed.patientPhone}\n` +
+                        `• *Doctor:* ${bookingConfirmed.doctorName}\n` +
+                        `• *Date & Slot:* ${bookingConfirmed.date} • ${bookingConfirmed.timeSlot}\n` +
+                        `• *Format:* ${bookingConfirmed.consultationMode.toUpperCase()}\n` +
+                        `• *Payment Status:* ${bookingConfirmed.paymentStatus === 'Paid' ? `Verified (₹${bookingConfirmed.fee})` : `Pay Later (₹${bookingConfirmed.fee})`}\n` +
+                        (bookingConfirmed.paymentId ? `• *Transaction Ref:* ${bookingConfirmed.paymentId}\n` : '') +
+                        `• *Health Concern:* ${bookingConfirmed.healthConcern || 'Ayurvedic Wellness Evaluation'}\n\n` +
+                        `Please verify the booking on the Doctor Dashboard.`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-2 rounded-lg bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Send Slip to Clinic WhatsApp Desk (+91 9425011088)</span>
+                    </a>
+
+                    {/* Send to Patient's Own WhatsApp */}
+                    {bookingConfirmed.patientPhone && (
+                      <a
+                        href={`https://wa.me/${bookingConfirmed.patientPhone.replace(/\D/g, '').length === 10 ? `91${bookingConfirmed.patientPhone.replace(/\D/g, '')}` : bookingConfirmed.patientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                          `🌿 *Grams Life Ayurvedic Clinic - Booking Confirmation* 🌿\n\n` +
+                          `Namaste ${bookingConfirmed.patientName},\n` +
+                          `Your consultation with *${bookingConfirmed.doctorName}* has been confirmed!\n\n` +
+                          `📋 *Appointment Details:*\n` +
+                          `• *Appointment ID:* #${bookingConfirmed.id}\n` +
+                          `• *Date & Time:* ${bookingConfirmed.date} at ${bookingConfirmed.timeSlot}\n` +
+                          `• *Consultation Mode:* ${bookingConfirmed.consultationMode.toUpperCase()}\n` +
+                          `• *Payment Status:* ${bookingConfirmed.paymentStatus === 'Paid' ? `Paid ₹${bookingConfirmed.fee} (Verified)` : `Pay Later (₹${bookingConfirmed.fee})`}\n` +
+                          (bookingConfirmed.meetingLink ? `• *Video Consultation Link:* ${bookingConfirmed.meetingLink}\n` : '') +
+                          `\nNeed assistance? Reply here or call clinic care: +91 9425011088.`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white font-bold text-xs flex items-center gap-1.5 border border-white/20 transition-all"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Send Slip to My WhatsApp ({bookingConfirmed.patientPhone})</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -914,19 +1201,19 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                     } ${
                       bookingStep === 'datetime'
                         ? 'border-brand-green-800 bg-brand-green-50/80 text-brand-green-950 ring-1 ring-brand-green-800'
-                        : (bookingStep === 'information' || bookingStep === 'payment')
+                        : (bookingStep === 'information' || bookingStep === 'auth' || bookingStep === 'payment')
                         ? 'border-emerald-200 bg-emerald-50/40 text-emerald-900 hover:bg-emerald-50'
                         : 'border-slate-200 bg-slate-50/60 text-slate-500'
                     }`}
                   >
                     <span className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
-                      (bookingStep === 'information' || bookingStep === 'payment')
+                      (bookingStep === 'information' || bookingStep === 'auth' || bookingStep === 'payment')
                         ? 'bg-emerald-600 text-white'
                         : bookingStep === 'datetime'
                         ? 'bg-brand-green-800 text-white'
                         : 'bg-slate-200 text-slate-600'
                     }`}>
-                      {(bookingStep === 'information' || bookingStep === 'payment') ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : '2'}
+                      {(bookingStep === 'information' || bookingStep === 'auth' || bookingStep === 'payment') ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : '2'}
                     </span>
                     <div className="min-w-0">
                       <p className="text-[10px] uppercase font-bold text-slate-400">Step 2</p>
@@ -942,7 +1229,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                     className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-2.5 ${
                       (!selectedMode || !selectedDate) ? 'opacity-50 cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400' : 'cursor-pointer'
                     } ${
-                      bookingStep === 'information'
+                      (bookingStep === 'information' || bookingStep === 'auth')
                         ? 'border-brand-green-800 bg-brand-green-50/80 text-brand-green-950 ring-1 ring-brand-green-800'
                         : bookingStep === 'payment'
                         ? 'border-emerald-200 bg-emerald-50/40 text-emerald-900 hover:bg-emerald-50'
@@ -952,7 +1239,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                     <span className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
                       bookingStep === 'payment'
                         ? 'bg-emerald-600 text-white'
-                        : bookingStep === 'information'
+                        : (bookingStep === 'information' || bookingStep === 'auth')
                         ? 'bg-brand-green-800 text-white'
                         : 'bg-slate-200 text-slate-600'
                     }`}>
@@ -960,7 +1247,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                     </span>
                     <div className="min-w-0">
                       <p className="text-[10px] uppercase font-bold text-slate-400">Step 3</p>
-                      <p className="text-xs font-bold truncate">Patient Info</p>
+                      <p className="text-xs font-bold truncate">{bookingStep === 'auth' ? 'OTP Verification' : 'Patient Info'}</p>
                     </div>
                   </button>
 
@@ -1568,7 +1855,24 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
 
                   {/* FORM INPUTS */}
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* User Account Identification Status */}
+                    {currentUser ? (
+                      <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-emerald-950 font-medium">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                          <span>Logged in as <strong>{currentUser.fullName || currentUser.phone || currentUser.email}</strong>. Consultation & prescription will be auto-linked to your profile.</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200/80 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-amber-950">
+                          <ShieldCheck className="w-4 h-4 text-brand-green-800 shrink-0" />
+                          <span>Quick booking: You can proceed right away. A simple 4-digit SMS OTP verification will verify your mobile number before payment.</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                           Patient Full Name *
@@ -1589,16 +1893,34 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                          WhatsApp / Phone Number *
+                          WhatsApp / Mobile *
                         </label>
                         <input
                           id="input-patient-phone"
                           type="tel"
                           required
-                          placeholder="e.g. 9876543210"
+                          placeholder="e.g. 9425011088"
                           value={patientPhone}
                           onChange={(e) => {
                             setPatientPhone(e.target.value);
+                            if (formError) setFormError(null);
+                          }}
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50/50"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Email for Confirmation Slip *
+                        </label>
+                        <input
+                          id="input-patient-email"
+                          type="email"
+                          required
+                          placeholder="care@bvlife.in"
+                          value={patientEmail}
+                          onChange={(e) => {
+                            setPatientEmail(e.target.value);
                             if (formError) setFormError(null);
                           }}
                           className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800 bg-slate-50/50"
@@ -1674,57 +1996,229 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                       />
                     </div>
 
-                    {/* Medical Reports Upload (Optional) */}
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => setShowReportUpload(!showReportUpload)}
-                        className="text-xs text-brand-green-800 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>{showReportUpload ? 'Hide Report Attachment' : '+ Have previous medical or blood reports? (Optional PDF)'}</span>
-                      </button>
+                    {/* ======================================================== */}
+                    {/* CLINICAL ATTACHMENTS: MULTIPLE PDFS & ONE OPTION OF PHOTO */}
+                    {/* ======================================================== */}
+                    <div className="pt-4 border-t border-slate-200 space-y-3">
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                          <FileCheck className="w-4 h-4 text-brand-green-800" />
+                          <span>Clinical Attachments (PDF Reports & Health Photo)</span>
+                        </h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Attach past lab reports or prescriptions (multiple PDFs) and a clear condition photo for {doctor.name} to examine.
+                        </p>
+                      </div>
 
-                      {showReportUpload && (
-                        <div className="mt-2.5 p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <label className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer inline-flex items-center gap-1.5">
-                              <Upload className="w-3.5 h-3.5" />
-                              <span>Select PDF Report</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* OPTION 1: MULTIPLE PDF REPORTS */}
+                        <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                <FileText className="w-3.5 h-3.5 text-rose-600" />
+                                <span>Medical Reports (Multiple PDFs)</span>
+                              </p>
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                Blood tests, past prescriptions, discharge notes.
+                              </p>
+                            </div>
+                            {uploadedReports.length > 0 && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 shrink-0">
+                                {uploadedReports.length} PDF{uploadedReports.length > 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Multiple PDF Upload Trigger */}
+                          <div>
+                            <label className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-slate-300 hover:border-brand-green-800 bg-white hover:bg-emerald-50/30 transition-all cursor-pointer flex items-center justify-center gap-2 text-xs font-semibold text-slate-700 shadow-2xs">
+                              <Upload className="w-4 h-4 text-brand-green-800" />
+                              <span>Select Multiple PDF Reports</span>
                               <input
                                 type="file"
+                                multiple
                                 accept="application/pdf"
                                 className="hidden"
                                 onChange={(e) => {
-                                  if (e.target.files) handleReportUpload(e.target.files);
+                                  if (e.target.files && e.target.files.length > 0) {
+                                    handleReportUpload(e.target.files);
+                                    e.target.value = '';
+                                  }
                                 }}
                               />
                             </label>
-                            <span className="text-[11px] text-slate-500">PDF only (Max 10MB)</span>
+                            <span className="text-[10px] text-slate-400 block text-center mt-1">
+                              Select one or more PDF files • Max 15MB each
+                            </span>
                           </div>
 
                           {reportError && (
-                            <p className="text-[11px] text-red-600 font-semibold">{reportError}</p>
+                            <p className="text-[11px] text-red-600 font-semibold flex items-center gap-1">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                              <span>{reportError}</span>
+                            </p>
                           )}
 
+                          {/* Uploaded PDFs List */}
                           {uploadedReports.length > 0 && (
-                            <div className="flex flex-wrap gap-2 pt-1">
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                               {uploadedReports.map((rep, idx) => (
-                                <div key={idx} className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-xs">
-                                  <span className="truncate max-w-[150px] font-medium">{rep.name}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => setUploadedReports(prev => prev.filter((_, i) => i !== idx))}
-                                    className="text-slate-400 hover:text-red-500"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
+                                <div
+                                  key={idx}
+                                  className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                                    <div className="w-6 h-6 rounded-md bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-center shrink-0">
+                                      <FileText className="w-3.5 h-3.5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="truncate font-semibold text-slate-800 text-[11px]" title={rep.name}>
+                                        {rep.name}
+                                      </p>
+                                      <p className="text-[10px] text-slate-400">{rep.size} • {rep.uploadedAt}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {rep.dataUrl && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const win = window.open();
+                                          if (win && rep.dataUrl) {
+                                            win.document.write(`<iframe src="${rep.dataUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                                          }
+                                        }}
+                                        title="Preview PDF"
+                                        className="p-1 rounded text-slate-500 hover:text-brand-green-800 hover:bg-slate-100 cursor-pointer"
+                                      >
+                                        <Eye className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => setUploadedReports(prev => prev.filter((_, i) => i !== idx))}
+                                      title="Remove PDF"
+                                      className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
                           )}
                         </div>
-                      )}
+
+                        {/* OPTION 2: ONE OPTION OF PHOTO */}
+                        <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                <Camera className="w-3.5 h-3.5 text-brand-green-800" />
+                                <span>Condition / Symptom Photo (1 Photo)</span>
+                              </p>
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                Clear photo of affected area, tongue, skin or medicines.
+                              </p>
+                            </div>
+                            {uploadedPhoto && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 shrink-0">
+                                1 Photo Attached
+                              </span>
+                            )}
+                          </div>
+
+                          {!uploadedPhoto ? (
+                            <div>
+                              <label className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-slate-300 hover:border-brand-green-800 bg-white hover:bg-emerald-50/30 transition-all cursor-pointer flex items-center justify-center gap-2 text-xs font-semibold text-slate-700 shadow-2xs">
+                                <Camera className="w-4 h-4 text-brand-green-800" />
+                                <span>Upload / Capture 1 Photo</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                      handlePhotoUpload(e.target.files[0]);
+                                      e.target.value = '';
+                                    }
+                                  }}
+                                />
+                              </label>
+                              <span className="text-[10px] text-slate-400 block text-center mt-1">
+                                Accepts JPG, PNG, WEBP • Max 12MB • 1 photo
+                              </span>
+                            </div>
+                          ) : (
+                            /* Photo Uploaded Preview Card */
+                            <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center gap-3">
+                              <div
+                                onClick={() => setPreviewModalImg(uploadedPhoto.dataUrl)}
+                                className="w-14 h-14 rounded-lg overflow-hidden border border-slate-200 shrink-0 cursor-pointer relative group bg-slate-100"
+                                title="Click to view enlarged photo"
+                              >
+                                <img
+                                  src={uploadedPhoto.dataUrl}
+                                  alt={uploadedPhoto.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                />
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                  <Eye className="w-3.5 h-3.5" />
+                                </div>
+                              </div>
+
+                              <div className="min-w-0 flex-1 space-y-0.5">
+                                <p className="truncate font-semibold text-slate-900 text-xs" title={uploadedPhoto.name}>
+                                  {uploadedPhoto.name}
+                                </p>
+                                <p className="text-[10px] text-slate-400">
+                                  {uploadedPhoto.size} • Attached for Doctor
+                                </p>
+                                <div className="flex items-center gap-2 pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewModalImg(uploadedPhoto.dataUrl)}
+                                    className="text-[11px] font-semibold text-brand-green-800 hover:underline flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    <span>Zoom</span>
+                                  </button>
+                                  <label className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 hover:underline cursor-pointer">
+                                    <span>Change</span>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        if (e.target.files && e.target.files[0]) {
+                                          handlePhotoUpload(e.target.files[0]);
+                                          e.target.value = '';
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => setUploadedPhoto(null)}
+                                    className="text-[11px] font-semibold text-rose-600 hover:underline flex items-center gap-0.5 cursor-pointer ml-auto"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                    <span>Remove</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {photoError && (
+                            <p className="text-[11px] text-red-600 font-semibold flex items-center gap-1">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                              <span>{photoError}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1750,6 +2244,304 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                   </div>
 
                 </form>
+              )}
+
+              {/* ======================================================== */}
+              {/* STEP 3.5: INSTANT MOBILE OTP LOGIN SCREEN (FOR GUEST USERS) */}
+              {/* "if user already login then then move and if not login then move to login screen same as instant buy enter mobile no otp then move like that in doctor booking" */}
+              {/* ======================================================== */}
+              {bookingStep === 'auth' && (
+                <div className="space-y-6 animate-in fade-in duration-300 max-w-xl mx-auto">
+                  <div className="text-center space-y-1.5">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 mb-1 shadow-xs">
+                      <ShieldCheck className="w-6 h-6 text-brand-green-800" />
+                    </div>
+                    <h3 className="font-serif text-xl sm:text-2xl font-bold text-slate-900">
+                      Patient Mobile Verification
+                    </h3>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto">
+                      Enter your mobile number and verify via instant SMS OTP to link your medical records and proceed to payment for <strong>{doctor.name}</strong>.
+                    </p>
+                  </div>
+
+                  {/* Mini Appointment Summary Card */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <img src={doctor.image || legendaryDoctorImg} alt={doctor.name} className="w-10 h-10 rounded-xl object-cover object-top border border-slate-200" />
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">{doctor.name}</p>
+                          <p className="text-[11px] text-brand-green-800 font-medium">{doctor.specialties[0]}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Fee Payable</span>
+                        <span className="text-sm font-black text-brand-green-950">₹{doctor.fee}</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200/80 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-slate-600">
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">Date & Time</span>
+                        <strong className="text-slate-800">{selectedDate} • {selectedTimeSlot}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">Consultation</span>
+                        <strong className="text-slate-800">{selectedMode.toUpperCase()} Call</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[10px]">Patient</span>
+                        <strong className="text-slate-800 truncate block">{patientName}</strong>
+                      </div>
+                    </div>
+
+                    {(uploadedReports.length > 0 || uploadedPhoto) && (
+                      <div className="pt-2 border-t border-slate-200/80 flex flex-wrap items-center gap-3 text-[11px] text-emerald-800 font-medium">
+                        {uploadedReports.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            <FileText className="w-3.5 h-3.5 text-rose-600" />
+                            {uploadedReports.length} PDF Report{uploadedReports.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {uploadedPhoto && (
+                          <span className="flex items-center gap-1">
+                            <Camera className="w-3.5 h-3.5 text-brand-green-800" />
+                            1 Condition Photo
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* AUTH FORM CARD */}
+                  <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-5">
+                    {!usePasswordInstead ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                            Mobile Number (for SMS OTP & WhatsApp Pass)
+                          </label>
+                          <div className="relative flex items-center">
+                            <span className="absolute left-3 text-xs font-bold text-slate-500 select-none">
+                              +91
+                            </span>
+                            <input
+                              id="input-auth-mobile"
+                              type="tel"
+                              maxLength={10}
+                              placeholder="Enter 10-digit mobile number"
+                              value={authMobile}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                setAuthMobile(val);
+                                if (authError) setAuthError(null);
+                              }}
+                              disabled={otpSent && isSendingOtp}
+                              className="w-full pl-12 pr-28 py-3 rounded-xl border border-slate-200 text-sm text-slate-900 font-semibold focus:outline-none focus:border-brand-green-800 bg-slate-50/50"
+                            />
+                            {!otpSent ? (
+                              <button
+                                type="button"
+                                onClick={handleSendOtp}
+                                disabled={isSendingOtp || authMobile.length !== 10}
+                                className="absolute right-2 px-3 py-1.5 rounded-lg bg-brand-green-800 hover:bg-brand-green-900 disabled:opacity-50 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                              >
+                                {isSendingOtp ? (
+                                  <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <span>Sending...</span>
+                                  </>
+                                ) : (
+                                  <span>Send OTP</span>
+                                )}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOtpSent(false);
+                                  setAuthOtpCode('');
+                                  setAuthError(null);
+                                  setAuthSuccessMsg(null);
+                                }}
+                                className="absolute right-2 text-xs font-bold text-brand-green-800 hover:underline cursor-pointer"
+                              >
+                                Change No.
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* OTP Input Field */}
+                        {otpSent && (
+                          <div className="space-y-3 animate-in fade-in duration-200">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-xs font-bold text-slate-700">
+                                Enter 4-Digit Verification OTP
+                              </label>
+                              <span className="text-[11px] text-slate-500">
+                                Sent to +91 {authMobile}
+                              </span>
+                            </div>
+
+                            <div className="relative">
+                              <input
+                                id="input-auth-otp"
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={6}
+                                autoFocus
+                                placeholder="• • • •"
+                                value={authOtpCode}
+                                onChange={(e) => {
+                                  const digits = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                  setAuthOtpCode(digits);
+                                  if (authError) setAuthError(null);
+                                }}
+                                className="w-full tracking-widest text-center text-xl font-bold py-3 rounded-xl border-2 border-brand-green-800 bg-white text-slate-900 focus:outline-none shadow-xs"
+                              />
+                            </div>
+
+                            {/* Resend OTP Timer & Button */}
+                            <div className="flex items-center justify-between text-xs pt-1">
+                              {otpTimer > 0 ? (
+                                <span className="text-slate-400">
+                                  Resend code in <strong>{otpTimer}s</strong>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={handleSendOtp}
+                                  disabled={isSendingOtp}
+                                  className="text-brand-green-800 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                                >
+                                  {isSendingOtp ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                                  <span>Resend OTP via SMS</span>
+                                </button>
+                              )}
+                              <span className="text-[11px] text-slate-400">Powered by MSG91 Secure OTP</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Status Messages */}
+                        {authError && (
+                          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>{authError}</span>
+                          </div>
+                        )}
+                        {authSuccessMsg && (
+                          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                            <span>{authSuccessMsg}</span>
+                          </div>
+                        )}
+
+                        {/* Action Button */}
+                        <div className="pt-2">
+                          {otpSent ? (
+                            <button
+                              type="button"
+                              id="btn-verify-otp-proceed"
+                              onClick={handleVerifyOtpAndProceed}
+                              disabled={isVerifyingOtp || authOtpCode.length < 4}
+                              className="w-full py-3.5 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 disabled:opacity-50 text-brand-gold-300 font-bold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                            >
+                              {isVerifyingOtp ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span>Verifying & Advancing to Payment...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>Verify OTP & Proceed to Payment</span>
+                                  <ArrowRight className="w-4 h-4" />
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={handleSendOtp}
+                              disabled={isSendingOtp || authMobile.length !== 10}
+                              className="w-full py-3.5 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 disabled:opacity-50 text-white font-bold text-sm shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                            >
+                              {isSendingOtp ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span>Sending Verification OTP...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>Send Verification OTP</span>
+                                  <ArrowRight className="w-4 h-4" />
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      /* Password Sign In Alternative */
+                      <div className="space-y-4">
+                        <h4 className="text-xs font-bold text-slate-900">Sign in with Account Password</h4>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                          <input
+                            type="email"
+                            value={patientEmail}
+                            onChange={(e) => setPatientEmail(e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 bg-slate-50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                          <input
+                            type="password"
+                            placeholder="Enter your account password..."
+                            value={authPassword}
+                            onChange={(e) => setAuthPassword(e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-brand-green-800"
+                          />
+                        </div>
+                        {authError && (
+                          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">
+                            {authError}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handlePasswordLoginAndProceed}
+                          disabled={isVerifyingOtp}
+                          className="w-full py-3 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-brand-gold-300 font-bold text-xs flex items-center justify-center gap-2"
+                        >
+                          {isVerifyingOtp ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                          <span>Sign In & Continue to Payment</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Back / Toggle options */}
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setUsePasswordInstead(!usePasswordInstead)}
+                        className="text-slate-500 hover:text-brand-green-800 font-medium underline cursor-pointer"
+                      >
+                        {usePasswordInstead ? '← Use Mobile OTP instead' : 'Or Sign In with Password'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBookingStep('information')}
+                        className="text-slate-600 hover:text-slate-900 font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5" />
+                        <span>Edit Patient Info</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* ======================================================== */}
@@ -1813,6 +2605,38 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                         </div>
                       </div>
 
+                      {/* Clinical Attachments summary */}
+                      {(uploadedReports.length > 0 || uploadedPhoto) && (
+                        <div className="pt-3 border-t border-slate-200 space-y-1.5 text-xs">
+                          <span className="font-bold text-slate-700 block text-[11px] uppercase tracking-wider">
+                            Attached Medical Records
+                          </span>
+                          {uploadedReports.length > 0 && (
+                            <div className="flex items-center gap-1.5 text-slate-700 font-medium text-[11px]">
+                              <FileText className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                              <span>{uploadedReports.length} PDF Report{uploadedReports.length > 1 ? 's' : ''} Attached</span>
+                            </div>
+                          )}
+                          {uploadedPhoto && (
+                            <div className="flex items-center gap-2 pt-0.5">
+                              <img
+                                src={uploadedPhoto.dataUrl}
+                                alt="Photo"
+                                className="w-8 h-8 rounded-md object-cover border border-slate-200"
+                              />
+                              <span className="text-[11px] text-slate-700 font-medium">1 Condition Photo Attached</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {currentUser && (
+                        <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-900 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>Verified Account: <strong>{currentUser.fullName || currentUser.phone}</strong></span>
+                        </div>
+                      )}
+
                       <div className="pt-3 border-t border-slate-200 space-y-1.5 text-xs">
                         <div className="flex justify-between text-slate-500">
                           <span>Standard Consultation:</span>
@@ -1835,110 +2659,36 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                       
                       <div className="space-y-3">
                         <label className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
-                          Select Payment Option
+                          Payment Method
                         </label>
                         
-                        <div className="space-y-3">
-                          {/* Option 1: Razorpay (UPI, Cards & Net Banking) */}
-                          <div className="space-y-2">
-                            <label 
-                              className={`flex items-start justify-between p-4 border-2 rounded-2xl cursor-pointer transition-all ${
-                                paymentMethod === 'razorpay' 
-                                  ? 'border-brand-green-800 bg-brand-green-50/50 shadow-sm ring-1 ring-brand-green-800/30' 
-                                  : 'border-slate-200 hover:border-slate-300 bg-white'
-                              }`}
-                            >
-                              <div className="flex items-start gap-3">
-                                <input
-                                  type="radio"
-                                  name="consultationPaymentMethod"
-                                  checked={paymentMethod === 'razorpay'}
-                                  onChange={() => setPaymentMethod('razorpay')}
-                                  className="mt-1 accent-brand-green-800 cursor-pointer w-4 h-4"
-                                />
-                                <div className="text-xs space-y-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="font-bold text-slate-900 text-sm">UPI, Cards & Net Banking (via Razorpay)</p>
-                                    <span className="text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
-                                      <Sparkles className="w-3 h-3" />
-                                      <span>Instant & Secure</span>
-                                    </span>
-                                  </div>
-                                  <p className="text-slate-600">
-                                    Pay securely using Google Pay, PhonePe, Paytm, BHIM, UPI QR, Credit/Debit Cards, or Net Banking.
-                                  </p>
-                                  <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500 font-medium flex-wrap">
-                                    <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">GPay</span>
-                                    <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">PhonePe</span>
-                                    <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Paytm / UPI</span>
-                                    <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Debit / Credit Card</span>
-                                    <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Net Banking</span>
-                                  </div>
-                                </div>
+                        <div className="p-4 border-2 border-brand-green-800 bg-brand-green-50/50 rounded-2xl shadow-sm ring-1 ring-brand-green-800/30 flex items-start justify-between">
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5 text-brand-green-800">
+                              <CheckCircle2 className="w-4 h-4 text-brand-green-800" />
+                            </div>
+                            <div className="text-xs space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-bold text-slate-900 text-sm">UPI, Cards & Net Banking (via Razorpay)</p>
+                                <span className="text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                                  <Sparkles className="w-3 h-3" />
+                                  <span>Instant & Secure</span>
+                                </span>
                               </div>
-                              <div className="w-9 h-9 rounded-xl bg-brand-green-800 text-brand-gold-300 flex items-center justify-center shrink-0">
-                                <CreditCard className="w-5 h-5" />
+                              <p className="text-slate-600">
+                                Pay securely using Google Pay, PhonePe, Paytm, BHIM, UPI QR, Credit/Debit Cards, or Net Banking.
+                              </p>
+                              <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500 font-medium flex-wrap">
+                                <span className="bg-white px-2 py-0.5 rounded border border-slate-200">GPay</span>
+                                <span className="bg-white px-2 py-0.5 rounded border border-slate-200">PhonePe</span>
+                                <span className="bg-white px-2 py-0.5 rounded border border-slate-200">Paytm / UPI</span>
+                                <span className="bg-white px-2 py-0.5 rounded border border-slate-200">Debit / Credit Card</span>
+                                <span className="bg-white px-2 py-0.5 rounded border border-slate-200">Net Banking</span>
                               </div>
-                            </label>
-
-                            {/* Razorpay Key Configuration Notice (Same as Checkout.tsx) */}
-                            {paymentMethod === 'razorpay' && (
-                              <div className="ml-4 sm:ml-7 p-3.5 bg-brand-green-50/80 rounded-xl border border-brand-green-200/80 space-y-2 text-xs">
-                                <div className="flex items-center justify-between text-[11px] font-bold text-brand-green-950">
-                                  <span>Razorpay API Key ID (Optional if set in .env)</span>
-                                  <span className="text-[10px] text-brand-green-700 font-semibold uppercase">Live/Test Key</span>
-                                </div>
-                                <input
-                                  type="text"
-                                  placeholder="e.g. rzp_test_... or rzp_live_..."
-                                  value={userRazorpayKey}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setUserRazorpayKey(val);
-                                    localStorage.setItem('razorpay_key_id', val.trim());
-                                  }}
-                                  className="w-full px-3 py-2 rounded-lg border border-brand-green-300 font-mono text-xs text-brand-green-950 bg-white focus:outline-none focus:ring-1 focus:ring-brand-green-700"
-                                />
-                                <p className="text-brand-green-900 font-medium leading-relaxed text-[11px]">
-                                  ⚡ Clicking <strong className="text-brand-green-950 font-bold">Pay ₹{doctor.fee} via Razorpay & Confirm</strong> directly opens Razorpay's official checkout screen and verifies your payment with the backend.
-                                </p>
-                              </div>
-                            )}
+                            </div>
                           </div>
-
-                          {/* Option 2: Pay Later */}
-                          <div className="space-y-2">
-                            <label 
-                              className={`flex items-start justify-between p-4 border-2 rounded-2xl cursor-pointer transition-all ${
-                                paymentMethod === 'cod' 
-                                  ? 'border-brand-green-800 bg-brand-green-50/50 shadow-sm ring-1 ring-brand-green-800/30' 
-                                  : 'border-slate-200 hover:border-slate-300 bg-white'
-                              }`}
-                            >
-                              <div className="flex items-start gap-3">
-                                <input
-                                  type="radio"
-                                  name="consultationPaymentMethod"
-                                  checked={paymentMethod === 'cod'}
-                                  onChange={() => setPaymentMethod('cod')}
-                                  className="mt-1 accent-brand-green-800 cursor-pointer w-4 h-4"
-                                />
-                                <div className="text-xs space-y-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="font-bold text-slate-900 text-sm">Pay Later (Post-Consultation)</p>
-                                    <span className="text-[10px] font-extrabold uppercase bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-300">
-                                      Zero Advance Needed
-                                    </span>
-                                  </div>
-                                  <p className="text-slate-600">
-                                    Book your consultation slot now with zero advance. Pay ₹{doctor.fee} via UPI or cash after your consultation call with {doctor.name}.
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center shrink-0">
-                                <Coins className="w-5 h-5 text-amber-800" />
-                              </div>
-                            </label>
+                          <div className="w-9 h-9 rounded-xl bg-brand-green-800 text-brand-gold-300 flex items-center justify-center shrink-0">
+                            <CreditCard className="w-5 h-5" />
                           </div>
                         </div>
                       </div>
@@ -1971,12 +2721,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                           {isPaymentProcessing ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin text-brand-gold-300" />
-                              <span>{paymentMethod === 'cod' ? 'Confirming Slot...' : `Opening Razorpay Gateway (₹${doctor.fee})...`}</span>
-                            </>
-                          ) : paymentMethod === 'cod' ? (
-                            <>
-                              <CheckCircle className="w-4 h-4 text-brand-gold-300" />
-                              <span>Confirm Consultation Slot (Pay Later • ₹{doctor.fee})</span>
+                              <span>Opening Razorpay Gateway (₹{doctor.fee})...</span>
                             </>
                           ) : (
                             <>
@@ -2536,6 +3281,49 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
               </div>
             </div>
 
+          </div>
+        )}
+
+        {/* CONDITION PHOTO ENLARGED PREVIEW MODAL */}
+        {previewModalImg && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-200"
+            onClick={() => setPreviewModalImg(null)}
+          >
+            <div
+              className="relative max-w-2xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl p-4 border border-slate-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-brand-green-800" />
+                  <span className="text-sm font-bold text-slate-900">Attached Condition / Prescription Photo</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewModalImg(null)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-sm cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="mt-3 max-h-[75vh] flex items-center justify-center overflow-auto rounded-xl bg-slate-950/5 p-2">
+                <img
+                  src={previewModalImg}
+                  alt="Enlarged Condition"
+                  className="max-h-[70vh] w-auto max-w-full rounded-lg object-contain shadow-sm"
+                />
+              </div>
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setPreviewModalImg(null)}
+                  className="px-4 py-2 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-white font-bold text-xs cursor-pointer"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

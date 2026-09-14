@@ -10,12 +10,12 @@ import {
   Printer, FileText, X, Download, Settings, Lock, Mail, Phone, ArrowRight, Eye, EyeOff, RotateCw,
   Search, Clock, Truck, AlertCircle, RefreshCw, Filter, ArrowUpDown, Layers, Radio, Copy,
   ExternalLink, SlidersHorizontal, BarChart3, TrendingUp, DollarSign, PackageCheck, AlertTriangle, CreditCard,
-  Building2, Star, MessageSquare, ChevronDown, ChevronUp, Boxes, PackagePlus, Camera
+  Building2, Star, MessageSquare, ChevronDown, ChevronUp, Boxes, PackagePlus, Camera, Stethoscope, Video, Send
 } from 'lucide-react';
 import { User as UserType, Order, Address, Product, ProductVariant, Coupon, WebsiteSettings } from '../types';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 import { SecureOtpWidget } from '../components/secureOtpWidget';
-import { WriteReviewModal } from "../components/WriteReviewModel";
+import { WriteReviewModal } from '../components/WriteReviewModel';
 import { ImageUploadField } from '../components/ImageUploadField';
 import { sendMSG91Otp, formatMSG91Identifier } from '../services/msg91OtpService';
 import { Pagination } from '../components/Pagination';
@@ -297,6 +297,66 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [logs, setLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
+  // Dedicated Communication Channels State (MSG91 Email, OTP, WhatsApp, SMS)
+  const [commLogs, setCommLogs] = useState<any[]>([]);
+  const [loadingCommLogs, setLoadingCommLogs] = useState(false);
+  const [commChannelFilter, setCommChannelFilter] = useState<'ALL' | 'EMAIL' | 'OTP' | 'WHATSAPP' | 'SMS'>('ALL');
+  const [commSearch, setCommSearch] = useState('');
+  const [testEmailSending, setTestEmailSending] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<string | null>(null);
+  const [testEmailTarget, setTestEmailTarget] = useState('care@bvlife.in');
+
+  const fetchCommunicationLogs = async () => {
+    setLoadingCommLogs(true);
+    try {
+      const url = commChannelFilter === 'ALL' 
+        ? '/api/communication/logs' 
+        : `/api/communication/logs?channel=${commChannelFilter}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setCommLogs(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch communication logs:', err);
+    } finally {
+      setLoadingCommLogs(false);
+    }
+  };
+
+  const handleTriggerTestEmail = async (templateType: 'order' | 'booking') => {
+    setTestEmailSending(true);
+    setTestEmailResult(null);
+    try {
+      const res = await fetch('/api/communication/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateType,
+          targetEmail: testEmailTarget.trim() || 'care@bvlife.in',
+          targetName: 'Care Recipient'
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTestEmailResult(`Success: Dispatched ${templateType.toUpperCase()} test template via MSG91!`);
+        fetchCommunicationLogs();
+      } else {
+        setTestEmailResult(`Notice: ${data.error || 'Failed to dispatch test template'}`);
+      }
+    } catch (err: any) {
+      setTestEmailResult(`Error: ${err.message || 'Network error'}`);
+    } finally {
+      setTestEmailSending(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'admin-communications' && isAdmin) {
+      fetchCommunicationLogs();
+    }
+  }, [activeTab, commChannelFilter]);
+
   useEffect(() => {
     if (activeTab === 'admin-logs' && isAdmin) {
       setLoadingLogs(true);
@@ -345,7 +405,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [prodImg4, setProdImg4] = useState('');
   const [prodBenefits, setProdBenefits] = useState('');
   const [prodDosage, setProdDosage] = useState('');
-  const [prodBrand, setProdBrand] = useState('Bv Life');
+  const [prodBrand, setProdBrand] = useState('Grams Life');
   const [prodSubcategory, setProdSubcategory] = useState('');
   const [prodUsageInstructions, setProdUsageInstructions] = useState('As directed');
   const [prodFeatured, setProdFeatured] = useState(false);
@@ -924,7 +984,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg4(prod.images?.[2] || '');
     setProdBenefits(prod.benefits.join(', '));
     setProdDosage(prod.dosage);
-    setProdBrand(prod.brand || 'Bv Life');
+    setProdBrand(prod.brand || 'Grams Life');
     setProdSubcategory(prod.subcategory || '');
     setProdUsageInstructions(prod.usageInstructions || 'As directed');
     setProdFeatured(prod.featured || false);
@@ -957,7 +1017,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg4('');
     setProdBenefits('');
     setProdDosage('');
-    setProdBrand('Bv Life');
+    setProdBrand('Grams Life');
     setProdSubcategory('');
     setProdUsageInstructions('As directed');
     setProdFeatured(false);
@@ -992,7 +1052,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdFormulation(targetForm);
     setProdFormLabel(targetLabel);
     setProdCategory(sourceProd.category);
-    setProdBrand(sourceProd.brand || 'Bv Life');
+    setProdBrand(sourceProd.brand || 'Grams Life');
     setProdPrice(sourceProd.price);
     setProdOrigPrice(sourceProd.originalPrice);
     setProdStock(sourceProd.stock);
@@ -1302,7 +1362,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <Building2 className="w-3.5 h-3.5 text-green-600" />
                 <span>Admin Management Gateway</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Bv Life Admin Panel</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Grams Life Admin Panel</h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
                 Director: <span className="font-semibold text-slate-900">{user.fullName}</span> ({user.email})
               </p>
@@ -1519,6 +1579,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <span>Security & Activity Logs</span>
                 </button>
                 <button
+                  onClick={() => setActiveTab('admin-communications')}
+                  className={`shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
+                    activeTab === 'admin-communications' 
+                      ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-sm font-bold' 
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Mail className="w-4 h-4 shrink-0" />
+                  <span>Communication Channels (MSG91)</span>
+                </button>
+                <button
                   onClick={() => setActiveTab('admin-settings')}
                   className={`shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
                     activeTab === 'admin-settings' 
@@ -1528,6 +1599,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 >
                   <Settings className="w-4 h-4 shrink-0" />
                   <span>Website Settings</span>
+                </button>
+                <button
+                  onClick={() => onNavigate('doctor-dashboard')}
+                  className="shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer bg-brand-green-900 hover:bg-brand-green-800 text-brand-gold-300 shadow-sm mt-1"
+                >
+                  <Stethoscope className="w-4 h-4 shrink-0 text-brand-gold-400" />
+                  <span>Doctor & Vaidya Dashboard</span>
                 </button>
               </>
             )}
@@ -4743,6 +4821,255 @@ export const Dashboard: React.FC<DashboardProps> = ({
             );
           })()}
 
+          {/* TAB: COMMUNICATION CHANNELS & MSG91 AUDIT (ADMIN ONLY) */}
+          {activeTab === 'admin-communications' && isAdmin && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 rounded-xl bg-emerald-100 text-emerald-800">
+                      <Mail className="w-5 h-5" />
+                    </span>
+                    <h3 className="text-xl font-bold text-slate-900">
+                      Communication Channels & MSG91 Hub
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Isolated dispatch channels for OTPs, Order Confirmations, Doctor Consultations, WhatsApp alerts, and SMS.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={fetchCommunicationLogs}
+                    disabled={loadingCommLogs}
+                    className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingCommLogs ? 'animate-spin' : ''}`} />
+                    <span>Refresh Channels</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Status Overview Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-1.5 shadow-2xs">
+                  <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
+                    <span>Sender Identity</span>
+                    <Mail className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-900 truncate">care@bvlife.in</p>
+                  <p className="text-[10px] text-emerald-700 font-semibold">Verified MSG91 Outbound Domain</p>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-1.5 shadow-2xs">
+                  <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
+                    <span>WhatsApp Gateway</span>
+                    <MessageSquare className="w-3.5 h-3.5 text-teal-600" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-900">+91 94250 11088</p>
+                  <p className="text-[10px] text-teal-700 font-semibold">Clinic Reception & Patient Bot</p>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-1.5 shadow-2xs">
+                  <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
+                    <span>Secure OTP Channel</span>
+                    <Shield className="w-3.5 h-3.5 text-blue-600" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-900">MSG91 SendOTP API</p>
+                  <p className="text-[10px] text-blue-700 font-semibold">SMS & WhatsApp Fallback</p>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-1.5 shadow-2xs">
+                  <div className="flex items-center justify-between text-xs text-slate-600 font-bold">
+                    <span>Server Outbound IP</span>
+                    <Radio className="w-3.5 h-3.5 text-amber-600" />
+                  </div>
+                  <p className="text-sm font-mono font-bold text-slate-900">34.34.244.74</p>
+                  <p className="text-[10px] text-amber-700 font-semibold">Whitelist in MSG91 AuthKey</p>
+                </div>
+              </div>
+
+              {/* MSG91 IP Whitelist Advisory */}
+              <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200/90 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-amber-900">Important: MSG91 Error 418 (IP Restriction)</span>
+                    <p className="text-[11px] text-amber-800 mt-0.5">
+                      MSG91 requires either disabling IP restriction or whitelisting your server IP on your AuthKey (<code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold">555226AC...</code>). Add <strong className="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-200">34.34.244.74</strong> under <span className="font-semibold">MSG91 Dashboard → AuthKey → Whitelist IP</span>.
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href="https://control.msg91.com/app/authkey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shrink-0 flex items-center gap-1 transition-all"
+                >
+                  <span>Open MSG91 AuthKeys</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              {/* Instant Test Dispatch Console */}
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white space-y-4 shadow-md">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-emerald-300 tracking-wider">Live Sandbox Test</span>
+                    <h4 className="font-bold text-sm sm:text-base">Test MSG91 Email Templates</h4>
+                    <p className="text-xs text-emerald-100/80 mt-0.5">
+                      Send a real template payload to your email to verify variable bindings and design.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <input
+                      type="email"
+                      value={testEmailTarget}
+                      onChange={(e) => setTestEmailTarget(e.target.value)}
+                      placeholder="care@bvlife.in"
+                      className="px-3 py-1.5 text-xs rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:bg-white/20 flex-1 sm:w-56"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3 pt-1">
+                  <button
+                    onClick={() => handleTriggerTestEmail('order')}
+                    disabled={testEmailSending}
+                    className="px-4 py-2 rounded-xl bg-brand-gold-400 hover:bg-brand-gold-500 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Send Test Order Confirmation Email</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleTriggerTestEmail('booking')}
+                    disabled={testEmailSending}
+                    className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer border border-white/30 disabled:opacity-50"
+                  >
+                    <Stethoscope className="w-3.5 h-3.5" />
+                    <span>Send Test Doctor Booking Email</span>
+                  </button>
+                </div>
+
+                {testEmailResult && (
+                  <div className="p-3 rounded-xl bg-black/30 border border-white/10 text-xs font-mono text-emerald-200">
+                    {testEmailResult}
+                  </div>
+                )}
+              </div>
+
+              {/* Channel Filter & Search */}
+              <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                  <span className="text-xs font-bold text-slate-700 mr-1 shrink-0">Channel:</span>
+                  {(['ALL', 'EMAIL', 'OTP', 'WHATSAPP', 'SMS'] as const).map((ch) => (
+                    <button
+                      key={ch}
+                      onClick={() => setCommChannelFilter(ch)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        commChannelFilter === ch
+                          ? 'bg-brand-green-800 text-white shadow-xs'
+                          : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                      }`}
+                    >
+                      {ch}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[220px]">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    placeholder="Search recipient or subject..."
+                    value={commSearch}
+                    onChange={(e) => setCommSearch(e.target.value)}
+                    className="w-full bg-white border border-slate-200 pl-8 pr-3 py-1.5 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600"
+                  />
+                  {commSearch && (
+                    <button
+                      onClick={() => setCommSearch('')}
+                      className="absolute right-2.5 top-2 text-xs text-slate-400 hover:text-slate-700 font-bold"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Logs Stream */}
+              {loadingCommLogs ? (
+                <div className="p-8 text-center text-xs text-slate-500 bg-white rounded-2xl border border-slate-200">
+                  Loading channel transmission records...
+                </div>
+              ) : (() => {
+                const filtered = commLogs.filter(log => {
+                  if (commSearch.trim()) {
+                    const q = commSearch.toLowerCase().trim();
+                    const rec = (log.recipient || '').toLowerCase();
+                    const sub = (log.subject || '').toLowerCase();
+                    const cat = (log.category || '').toLowerCase();
+                    return rec.includes(q) || sub.includes(q) || cat.includes(q);
+                  }
+                  return true;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="p-8 text-center text-xs text-slate-500 bg-white rounded-3xl border border-slate-200 space-y-2">
+                      <p className="font-bold text-slate-800">No transmission records for this channel</p>
+                      <p className="text-[11px] text-slate-400">
+                        Dispatch records will appear here as OTPs are sent, orders are confirmed, or doctor slots are reserved.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1.5 custom-scrollbar">
+                    {filtered.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-emerald-300 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-all"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              item.channel === 'EMAIL' ? 'bg-emerald-100 text-emerald-800' :
+                              item.channel === 'WHATSAPP' ? 'bg-teal-100 text-teal-800' :
+                              item.channel === 'OTP' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-800'
+                            }`}>
+                              {item.channel}
+                            </span>
+                            <span className="font-bold text-slate-900">{item.recipient}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">({item.category})</span>
+                          </div>
+                          {item.subject && (
+                            <p className="text-slate-800 font-medium text-xs">{item.subject}</p>
+                          )}
+                          <div className="flex items-center gap-2 text-[11px]">
+                            <span className={`font-semibold ${item.status === 'SENT' ? 'text-emerald-600' : item.status === 'SIMULATED' ? 'text-blue-600' : 'text-amber-600'}`}>
+                              ● Status: {item.status}
+                            </span>
+                            {item.gatewayMessage && (
+                              <span className="text-slate-500 truncate max-w-md">({item.gatewayMessage})</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-[10px] text-slate-400 font-mono text-right shrink-0 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-100">
+                          {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} • {new Date(item.timestamp).toLocaleDateString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
           {/* TAB: WEBSITE SETTINGS (ADMIN) */}
           {activeTab === 'admin-settings' && (
             <div className="space-y-6 animate-in fade-in duration-300">
@@ -4766,7 +5093,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
                 const updatedSettings: WebsiteSettings = {
-                  logoName: fd.get('logoName') as string || 'Bv Life',
+                  logoName: fd.get('logoName') as string || 'Grams Life',
                   logoUrl: fd.get('logoUrl') as string || '',
                   contactEmail: fd.get('contactEmail') as string || '',
                   contactPhone: fd.get('contactPhone') as string || '',
@@ -4999,7 +5326,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     G
                   </div>
                   <div>
-                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Bv Life</h2>
+                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Grams Life</h2>
                     <span className="text-[10px] uppercase tracking-widest text-brand-gold-700 font-extrabold mt-1 block">Ayurvedic Sanctuary</span>
                   </div>
                 </div>
@@ -5100,7 +5427,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </p>
                 <div className="space-y-0.5">
                   <p className="text-[10px] font-bold text-brand-gold-700 uppercase tracking-widest">Aacharya Dhanvantari</p>
-                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Bv Life Sanctuary</p>
+                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Grams Life Sanctuary</p>
                 </div>
               </div>
 
@@ -5260,7 +5587,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       RETURN ADDRESS (SHIPPER / SELLER)
                     </p>
                     <div className="text-[11px] font-bold leading-tight text-gray-800">
-                      <p className="font-black">Bv Life Ayurvedic Sanctuary</p>
+                      <p className="font-black">Grams Life Ayurvedic Sanctuary</p>
                       <p>Plot 42, Veda Heritage Enclave, Mansarovar</p>
                       <p>Jaipur, Rajasthan - 302020</p>
                       <p className="font-mono text-[10px] pt-0.5">Seller Care: +91 98765 43210 | care@gramslife.com</p>

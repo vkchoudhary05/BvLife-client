@@ -401,5 +401,38 @@ export const api = {
       console.error('Error updating room status:', err);
       return { success: false };
     }
+  },
+
+  async updateAppointmentWhatsAppStatus(id: string, sent: boolean = true, token?: string): Promise<{ success: boolean; appointment?: DoctorAppointment }> {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/doctor-appointments/${id}/whatsapp-confirmation`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ sent })
+      });
+      const data = await res.json();
+      return { success: res.ok, appointment: data.appointment };
+    } catch (err) {
+      console.error('Error updating WhatsApp confirmation status:', err);
+      return { success: false };
+    }
+  },
+
+  async resendAppointmentWhatsAppAlert(id: string, token?: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/doctor-appointments/${id}/resend-whatsapp`, {
+        method: 'POST',
+        headers
+      });
+      const data = await res.json();
+      return { success: res.ok, message: data.message };
+    } catch (err) {
+      console.error('Error resending automated WhatsApp alert:', err);
+      return { success: false };
+    }
   }
 };

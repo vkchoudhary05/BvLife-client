@@ -421,7 +421,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
   "
 >
   <span className="relative z-10 whitespace-nowrap">
-    CONSULT DR. SANJEEV
+  Booking Now 
   </span>
 
   {/* Shimmer */}

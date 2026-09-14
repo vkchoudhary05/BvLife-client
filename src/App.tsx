@@ -342,6 +342,11 @@ export default function App() {
             currentUser={currentUser}
             onNavigate={handleNavigate}
             language={language}
+            onLoginSuccess={(token, user) => {
+              if (user) setCurrentUser(user);
+              if (token) handleLoginSuccess(token, user?.role === 'admin');
+            }}
+            authToken={authToken}
           />
         )}
 
