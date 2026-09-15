@@ -1214,7 +1214,7 @@ Wishing you swift recovery and holistic health,
                 className="w-full py-2.5 px-3 bg-brand-gold-400/20 hover:bg-brand-gold-400/30 text-brand-green-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-brand-gold-400/40"
               >
                 <Sparkles className="w-3.5 h-3.5 text-brand-gold-600" />
-                <span>1-Click Sign In (Dr. Arundhati Sharma)</span>
+                <span>1-Click Sign In (Dr. Arundhati)</span>
               </button>
             </div>
 
@@ -1233,7 +1233,6 @@ Wishing you swift recovery and holistic health,
       </div>
     );
   }
-
   return (
     <div id="doctor-dashboard-container" className="min-h-screen bg-[#FBF9F5] text-slate-800 pb-24">
       

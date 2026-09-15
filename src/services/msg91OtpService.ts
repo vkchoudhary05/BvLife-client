@@ -322,6 +322,47 @@ export async function sendMSG91Otp(identifier: string): Promise<OTPResponse> {
         (error: any) => {
           console.warn('[MSG91 Widget] sendOtp failure response:', error);
           let rawError = typeof error === 'string' ? error : (error?.message || error?.error || 'Failed to send OTP via MSG91 Widget.');
+
+          const isIpBlocked = Boolean(
+            error?.code === 408 || error?.code === '408' ||
+            (typeof rawError === 'string' && (
+              rawError.toLowerCase().includes('ipblocked') ||
+              rawError.toLowerCase().includes('ip blocked')
+            ))
+          );
+
+          if (isIpBlocked) {
+            console.warn('[MSG91 Widget] Client IPBlocked (408). Attempting server backup OTP dispatch...');
+            fetch('/api/auth/otp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ identifier: formattedId, purpose: 'Login', channel: 'SMS' })
+            }).then(async (res) => {
+              const resData = await res.json().catch(() => null);
+              if (res.ok && resData?.success) {
+                if (resData.reqId) setLastDispatchedReqId(resData.reqId);
+                resolve({
+                  success: true,
+                  message: resData.message || 'OTP verification code dispatched via server backup.',
+                  reqId: resData.reqId,
+                  data: resData
+                });
+              } else {
+                resolve({
+                  success: false,
+                  error: 'MSG91 Service Notice: Your IP address is temporarily rate-limited (Error 408: IPBlocked). Please wait 5 minutes, switch to Wi-Fi/mobile data, or sign in using your password.',
+                  data: error
+                });
+              }
+            }).catch(() => {
+              resolve({
+                success: false,
+                error: 'MSG91 Service Notice: Your IP address is temporarily rate-limited (Error 408: IPBlocked). Please wait 5 minutes, switch network, or sign in using your password.',
+                data: error
+              });
+            });
+            return;
+          }
           
           if (typeof rawError === 'string' && rawError.toLowerCase().includes('captcha')) {
             rawError = 'Security verification failed or expired. Please complete the "I am human" verification box above and try again.';
@@ -452,6 +493,57 @@ export async function verifyMSG91Otp(
     try {
       console.log(`[MSG91 Widget] Verifying OTP via window.verifyOtp (code: ${cleanOtp}, reqId: ${resolvedReqId || 'store'})...`);
 
+      const fallbackServerVerify = async (originalErr: any) => {
+        try {
+          if (cleanOtp && (targetId || resolvedReqId)) {
+            console.log(`[MSG91 Widget] Verification issue detected. Attempting server fallback verification for ${targetId}...`);
+            const fallbackRes = await fetch('/api/auth/verify-otp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                identifier: targetId,
+                code: cleanOtp,
+                reqId: resolvedReqId
+              })
+            });
+            const fbData = await fallbackRes.json().catch(() => null);
+            if (fallbackRes.ok && (fbData?.success || fbData?.verified)) {
+              console.log('[MSG91 Widget] Server fallback verification succeeded!');
+              resolve({
+                success: true,
+                message: fbData.message || 'OTP passcode verified successfully.',
+                accessToken: 'server_verified_otp_session',
+                reqId: resolvedReqId,
+                data: fbData
+              });
+              return;
+            }
+          }
+        } catch (serverErr) {
+          console.warn('[MSG91 Widget] Fallback server verification exception:', serverErr);
+        }
+
+        const isIpBlocked = Boolean(
+          originalErr?.code === 408 || originalErr?.code === '408' ||
+          (typeof originalErr?.message === 'string' && originalErr.message.toLowerCase().includes('ipblocked')) ||
+          (typeof originalErr?.error === 'string' && originalErr.error.toLowerCase().includes('ipblocked')) ||
+          (typeof originalErr === 'string' && originalErr.toLowerCase().includes('ipblocked'))
+        );
+
+        let errText = typeof originalErr === 'string' ? originalErr : (originalErr?.message || originalErr?.error || 'Invalid or expired OTP code.');
+        if (isIpBlocked) {
+          errText = 'MSG91 Service Notice: Your IP address is temporarily rate-limited (Error 408: IPBlocked). Please wait 5 minutes, switch to Wi-Fi/mobile data, or sign in using your password.';
+        } else if (typeof errText === 'string' && errText.toLowerCase().includes('reqid is required')) {
+          errText = 'Verification session expired. Please tap Resend OTP to request a fresh passcode.';
+        }
+
+        resolve({
+          success: false,
+          error: errText,
+          data: originalErr
+        });
+      };
+
       const handleSuccess = (data: any) => {
         console.log('[MSG91 Widget] verifyOtp success response:', data);
 
@@ -465,21 +557,18 @@ export async function verifyMSG91Otp(
           data.code === 705 ||
           data.code === 401 ||
           data.code === 400 ||
-          (typeof data.message === 'string' && data.message.toLowerCase().includes('invalid')) ||
-          (typeof data.message === 'string' && data.message.toLowerCase().includes('expired')) ||
-          (typeof data.message === 'string' && data.message.toLowerCase().includes('required'))
+          data.code === 408 ||
+          data.code === '408' ||
+          (typeof data.message === 'string' && (
+            data.message.toLowerCase().includes('invalid') ||
+            data.message.toLowerCase().includes('expired') ||
+            data.message.toLowerCase().includes('required') ||
+            data.message.toLowerCase().includes('ipblocked')
+          ))
         );
 
         if (isErrorResponse) {
-          let errText = typeof data?.message === 'string' ? data.message : 'Invalid or expired OTP code. Please try again.';
-          if (errText.toLowerCase().includes('reqid is required')) {
-            errText = 'Verification session expired. Please tap Resend OTP to request a fresh passcode.';
-          }
-          resolve({
-            success: false,
-            error: errText,
-            data
-          });
+          fallbackServerVerify(data);
           return;
         }
 
@@ -514,15 +603,7 @@ export async function verifyMSG91Otp(
 
       const handleError = (error: any) => {
         console.warn('[MSG91 Widget] verifyOtp failure response:', error);
-        let errText = typeof error === 'string' ? error : (error?.message || error?.error || 'Incorrect OTP code. Please check your SMS and try again.');
-        if (typeof errText === 'string' && errText.toLowerCase().includes('reqid is required')) {
-          errText = 'Verification session expired. Please tap Resend OTP to request a fresh passcode.';
-        }
-        resolve({
-          success: false,
-          error: errText,
-          data: error
-        });
+        fallbackServerVerify(error);
       };
 
       // CRITICAL: Only pass reqId as 4th param if non-empty string!
