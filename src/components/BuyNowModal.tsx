@@ -5,12 +5,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ShieldCheck, CheckCircle2, ShoppingBag, Landmark, Sparkles, MapPin, Phone, User, ArrowRight, Lock, AlertCircle, Mail, Star } from 'lucide-react';
+import { X, ShieldCheck, CheckCircle2, ShoppingBag, Landmark, Sparkles, MapPin, Phone, User, ArrowRight, Lock, AlertCircle, Mail, Star, CreditCard } from 'lucide-react';
 import { Product, Order, Address, ProductVariant } from '../types';
 import { Language, t } from '../lib/translations';
 import { validateAndFormatIndianPhone } from '../utils';
 import { loadRazorpayScript } from '../utils/razorpay';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
+import { sendMSG91Otp, formatMSG91Identifier, verifyMSG91Otp } from '../services/msg91OtpService';
 
 interface BuyNowModalProps {
   product: Product;
@@ -56,7 +57,8 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [otpReqId, setOtpReqId] = useState('');
+  const [devTestOtp, setDevTestOtp] = useState('');
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [verificationError, setVerificationError] = useState('');
   const [accountExists, setAccountExists] = useState(false);
@@ -73,7 +75,6 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
 
   // Step 3: Payment states
   const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'Cash on Delivery'>('UPI');
-  const [userRazorpayKey, setUserRazorpayKey] = useState<string>(() => localStorage.getItem('razorpay_key_id') || '');
   const [processingOrder, setProcessingOrder] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
 
@@ -137,7 +138,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   const finalTotal = itemTotal + taxAmount + shippingCharge;
 
   // Handles requesting OTP
-  const handleRequestOtp = (e: React.FormEvent) => {
+  const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setVerificationError('');
 
@@ -172,10 +173,25 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
       return;
     }
 
-    // Generate simulated 6-digit OTP code
-    const mockOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(mockOtp);
-    setOtpSent(true);
+    setIsAuthLoading(true);
+    setVerificationError('');
+    try {
+      const msg91Target = formatMSG91Identifier(mobilePhone);
+      const res = await sendMSG91Otp(msg91Target);
+      if (res.success) {
+        setOtpSent(true);
+        setOtpReqId(res.reqId || '');
+        if (res.otp) {
+          setDevTestOtp(res.otp);
+        }
+      } else {
+        setVerificationError(res.error || 'Failed to dispatch verification OTP. Please verify number.');
+      }
+    } catch (err: any) {
+      setVerificationError(err.message || 'SMS service temporary failure. Please try again.');
+    } finally {
+      setIsAuthLoading(false);
+    }
   };
 
   // Handles logging in existing users
@@ -237,48 +253,62 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
     setVerificationError('');
     setAccountExists(false);
 
-    if (otpCode === generatedOtp || otpCode === '777777') {
+    const cleanCode = otpCode.trim();
+    if (!cleanCode || cleanCode.length < 4) {
+      setVerificationError(language === 'hi' ? 'कृपया सत्यापन कोड दर्ज करें।' : 'Please enter the verification code.');
+      return;
+    }
+
+    setIsAuthLoading(true);
+    try {
+      const msg91Target = formatMSG91Identifier(mobilePhone);
+      const verifyRes = await verifyMSG91Otp(cleanCode, otpReqId, msg91Target);
+
+      if (!verifyRes.success) {
+        setVerificationError(verifyRes.error || (language === 'hi' ? 'गलत ओटीपी। कृपया पुनः प्रयास करें।' : 'Invalid or expired OTP. Please try again.'));
+        setIsAuthLoading(false);
+        return;
+      }
+
       setIsPhoneVerified(true);
       
       if (!currentUser && authMode === 'register') {
-        setIsAuthLoading(true);
-        try {
-          const res = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: email.trim().toLowerCase(),
-              fullName,
-              phone: `+91${mobilePhone}`,
-              password: password,
-              role: 'customer'
-            })
-          });
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.trim().toLowerCase(),
+            fullName,
+            phone: `+91${mobilePhone}`,
+            password: password,
+            role: 'customer',
+            code: cleanCode,
+            reqId: otpReqId,
+            accessToken: verifyRes.accessToken
+          })
+        });
 
-          if (res.ok) {
-            const data = await res.json();
-            if (onLoginSuccess) {
-              onLoginSuccess(data.token);
-            }
-            setStep('address');
-          } else {
-            const data = await res.json();
-            setVerificationError(data.error || 'Registration failed. Email or mobile might already be registered.');
-            if (data.accountExists || (data.error && data.error.toLowerCase().includes('already'))) {
-              setAccountExists(true);
-            }
+        if (res.ok) {
+          const data = await res.json();
+          if (onLoginSuccess) {
+            onLoginSuccess(data.token);
           }
-        } catch (err) {
-          console.error(err);
-          setVerificationError('Failed to establish account. Please try again.');
-        } finally {
-          setIsAuthLoading(false);
+          setStep('address');
+        } else {
+          const data = await res.json();
+          setVerificationError(data.error || 'Registration failed. Email or mobile might already be registered.');
+          if (data.accountExists || (data.error && data.error.toLowerCase().includes('already'))) {
+            setAccountExists(true);
+          }
         }
       } else {
         setStep('address');
       }
-    } else {
-      setVerificationError(language === 'hi' ? 'गलत ओटीपी। कृपया पुनः प्रयास करें।' : 'Invalid OTP. Please try again.');
+    } catch (err: any) {
+      console.error(err);
+      setVerificationError(err.message || 'Failed to establish account. Please try again.');
+    } finally {
+      setIsAuthLoading(false);
     }
   };
 
@@ -341,7 +371,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   ) => {
     setProcessingOrder(true);
     
-    const targetEmail = currentUser?.email || email.trim().toLowerCase() || 'guest@gramslife.com';
+    const targetEmail = currentUser?.email || email.trim().toLowerCase() || 'guest@Bvlife.com';
 
     if (!currentUser && email.trim()) {
       try {
@@ -409,12 +439,12 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
       setStep('success');
       setProcessingOrder(false);
       try {
-        localStorage.setItem('grams_last_placed_order', JSON.stringify(result));
-        localStorage.setItem('grams_last_completed_order', JSON.stringify(result));
-        const stored = localStorage.getItem('grams_recent_orders');
+        localStorage.setItem('Bv_last_placed_order', JSON.stringify(result));
+        localStorage.setItem('Bv_last_completed_order', JSON.stringify(result));
+        const stored = localStorage.getItem('Bv_recent_orders');
         const existingIds: string[] = stored ? JSON.parse(stored) : [];
         if (!existingIds.includes(result.id)) {
-          localStorage.setItem('grams_recent_orders', JSON.stringify([result.id, ...existingIds]));
+          localStorage.setItem('Bv_recent_orders', JSON.stringify([result.id, ...existingIds]));
         }
       } catch (e) {}
       if (onNavigate) {
@@ -439,27 +469,17 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
     } else {
       setProcessingOrder(true);
       try {
-        const activeKey = userRazorpayKey.trim() || localStorage.getItem('razorpay_key_id') || '';
-
         const res = await fetch('/api/payment/razorpay-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             amount: finalTotal,
             currency: 'INR',
-            receipt: `rcpt_${Date.now()}`,
-            customKeyId: activeKey
+            receipt: `rcpt_${Date.now()}`
           })
         });
         const data = await res.json();
-        console.log("Razorpay order response:", data);
-        const finalKey = data.keyId || activeKey;
-
-        if (!finalKey) {
-          alert("Please enter your Razorpay Key ID in the input box below to proceed.");
-          setProcessingOrder(false);
-          return;
-        }
+        const finalKey = data.keyId || (import.meta as any).env?.VITE_RAZORPAY_KEY_ID || 'rzp_test_1DP5mmOlF5G5ag';
 
         const scriptLoaded = await loadRazorpayScript();
         if (!scriptLoaded) {
@@ -920,17 +940,31 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                   <div className="space-y-1.5">
                     <label className="font-bold text-brand-green-800 flex items-center gap-1">
                       <Lock className="w-3.5 h-3.5" />
-                      <span>{language === 'hi' ? '6-अंकीय ओटीपी' : 'Enter 6-Digit SMS OTP'}</span>
+                      <span>{language === 'hi' ? 'ओटीपी सत्यापन कोड' : 'SMS Verification Passcode'}</span>
                     </label>
                     <input
                       type="text"
                       required
-                      maxLength={6}
-                      placeholder="Enter verification code"
+                      maxLength={4}
+                      placeholder="• • • •"
                       value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
                       className="w-full text-center px-4 py-3 bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 rounded-xl text-lg font-bold font-mono tracking-widest text-brand-green-900 placeholder-brand-green-200"
                     />
+                    {devTestOtp && (
+                      <div className="flex items-center justify-between text-[11px] pt-1">
+                        <span className="text-slate-500">
+                          Session Code: <code className="font-mono font-bold text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">{devTestOtp}</code>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setOtpCode(devTestOtp)}
+                          className="text-[11px] font-bold text-brand-green-800 hover:underline cursor-pointer"
+                        >
+                          Auto-fill
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-2.5">
@@ -943,10 +977,10 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                     </button>
                     <button
                       type="submit"
-                      disabled={otpCode.length !== 6}
+                      disabled={otpCode.length < 4 || isAuthLoading}
                       className="w-2/3 py-3 bg-brand-green-800 hover:bg-brand-green-900 disabled:opacity-55 text-brand-cream-50 font-bold rounded-2xl uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-1.5"
                     >
-                      <span>{language === 'hi' ? 'ओटीपी सत्यापित करें' : 'Confirm OTP'}</span>
+                      <span>{isAuthLoading ? (language === 'hi' ? 'सत्यापन हो रहा है...' : 'Verifying...') : (language === 'hi' ? 'ओटीपी सत्यापित करें' : 'Confirm OTP')}</span>
                       <ShieldCheck className="w-4 h-4 text-brand-gold-400" />
                     </button>
                   </div>
@@ -1181,24 +1215,13 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
 
                 {/* Inline method details for UPI */}
                 {paymentMethod === 'UPI' && (
-                  <div className="p-3.5 bg-brand-green-50/80 rounded-2xl border border-brand-green-200/60 space-y-2 text-xs mt-2">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-brand-green-950">
-                      <span>Razorpay API Key ID (Optional if set in .env)</span>
-                      <span className="text-[10px] text-brand-green-700 font-semibold uppercase">Live/Test Key</span>
+                  <div className="p-3.5 bg-brand-green-50/80 rounded-2xl border border-brand-green-200/60 space-y-1.5 text-xs mt-2">
+                    <div className="flex items-center gap-1.5 font-bold text-brand-green-950 text-xs">
+                      <CreditCard className="w-3.5 h-3.5 text-brand-green-800" />
+                      <span>Instant UPI & Online Payment</span>
                     </div>
-                    <input
-                      type="text"
-                      placeholder="e.g. rzp_test_1234567890 or rzp_live_..."
-                      value={userRazorpayKey}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setUserRazorpayKey(val);
-                        localStorage.setItem('razorpay_key_id', val.trim());
-                      }}
-                      className="w-full px-3 py-2 rounded-xl border border-brand-green-300 font-mono text-xs text-brand-green-950 bg-white focus:outline-none focus:ring-1 focus:ring-brand-green-700"
-                    />
                     <p className="text-brand-green-900 font-medium leading-relaxed text-[11px]">
-                      ⚡ Clicking <strong className="text-brand-green-950 font-bold">Pay via Razorpay UPI</strong> will directly launch Razorpay's official payment screen.
+                      ⚡ Secure payment via Google Pay, PhonePe, Paytm, UPI, Cards, and Net Banking powered by Razorpay.
                     </p>
                   </div>
                 )}
@@ -1368,12 +1391,12 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                             {/* Simulated Interactive UPI QR code */}
                             <div className="w-32 h-32 bg-white mx-auto p-2 rounded-xl border border-brand-green-200 shadow-sm flex items-center justify-center relative">
                               <img 
-                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=gramslife@icici%26pn=GramsLife%26am=${finalTotal}%26cu=INR`} 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=Bvlife@icici%26pn=BvLife%26am=${finalTotal}%26cu=INR`} 
                                 alt="UPI Payment QR Code"
                                 className="w-full h-full object-contain"
                               />
                             </div>
-                            <p className="text-[10px] text-brand-green-700 font-mono">Pay to: <strong className="font-bold text-brand-green-950">gramslife@icici</strong></p>
+                            <p className="text-[10px] text-brand-green-700 font-mono">Pay to: <strong className="font-bold text-brand-green-950">Bvlife@icici</strong></p>
                           </div>
 
                           <div className="relative flex py-1 items-center">
@@ -1726,7 +1749,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
           if (onLoginSuccess) {
             onLoginSuccess(token);
           } else {
-            localStorage.setItem('grams_auth_token', token);
+            localStorage.setItem('Bv_auth_token', token);
             window.location.reload();
           }
         }}

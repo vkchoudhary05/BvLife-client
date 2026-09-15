@@ -55,7 +55,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
           </h2>
           <div className="prose prose-brand text-xs sm:text-sm text-brand-green-800 space-y-4 leading-relaxed">
             <p>
-              At <strong className="font-bold">Grams Life</strong>, we believe that the transport of therapeutic herbs is a sacred ritual. Every formulation, root capsule, and skincare elixir is packaged in premium protective containers to guard biochemical potency during shipment.
+              At <strong className="font-bold">Bv Life</strong>, we believe that the transport of therapeutic herbs is a sacred ritual. Every formulation, root capsule, and skincare elixir is packaged in premium protective containers to guard biochemical potency during shipment.
             </p>
             <h4 className="font-serif text-base font-bold text-brand-green-900 pt-2">1. Shipping Logistics & Coverage</h4>
             <p>
@@ -109,7 +109,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
           </h2>
           <div className="prose prose-brand text-xs sm:text-sm text-brand-green-800 space-y-4 leading-relaxed">
             <p>
-              Grams Life values the security of your Ayurvedic personal biological health logs. We never trade, rent, or sell user personal identifiers, health symptoms, or order histories.
+              Bv Life values the security of your Ayurvedic personal biological health logs. We never trade, rent, or sell user personal identifiers, health symptoms, or order histories.
             </p>
             <h4 className="font-serif text-base font-bold text-brand-green-900 pt-2">1. Data Collected</h4>
             <p>
@@ -131,7 +131,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
           </h2>
           <div className="prose prose-brand text-xs sm:text-sm text-brand-green-800 space-y-4 leading-relaxed">
             <p>
-              Welcome to the Grams Life digital platform. By accessing our wellness shop and interacting with our AI Acharya consultant, you agree to comply with the terms documented below.
+              Welcome to the Bv Life digital platform. By accessing our wellness shop and interacting with our AI Acharya consultant, you agree to comply with the terms documented below.
             </p>
             <h4 className="font-serif text-base font-bold text-brand-green-900 pt-2">1. Medical Disclaimer</h4>
             <p>
@@ -139,7 +139,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
             </p>
             <h4 className="font-serif text-base font-bold text-brand-green-900 pt-2">2. Pricing & Payments</h4>
             <p>
-              Grams Life reserves the right to modify prices, discontinue limited botanical batches, or alter discount coupons depending on high-altitude herb sourcing availability. All transactions are securely audited.
+              Bv Life reserves the right to modify prices, discontinue limited botanical batches, or alter discount coupons depending on high-altitude herb sourcing availability. All transactions are securely audited.
             </p>
           </div>
         </div>
@@ -327,7 +327,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
 
               <div className="relative z-10 pt-8 border-t border-brand-cream-100/10 space-y-3">
                 <p className="text-xs text-brand-cream-100/80 leading-relaxed max-w-md">
-                  Historically, master healers measured extracts not in standardized volumes, but in precise ratios tailored to the local atmosphere and biological soil cycles. <strong>Grams Life</strong> honors this micro-accuracy down to the milligram.
+                  Historically, master healers measured extracts not in standardized volumes, but in precise ratios tailored to the local atmosphere and biological soil cycles. <strong>Bv Life</strong> honors this micro-accuracy down to the milligram.
                 </p>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-brand-gold-500/20 flex items-center justify-center">
@@ -547,7 +547,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
                   <div className="md:w-1/2" />
                   <div className="md:w-1/2 md:pl-10 space-y-2">
                     <span className="font-serif text-3xl font-bold text-brand-green-700 leading-none">Present Day</span>
-                    <h4 className="font-serif text-base font-bold text-brand-green-900">Grams Life Biological Sanctuary</h4>
+                    <h4 className="font-serif text-base font-bold text-brand-green-900">Bv Life Biological Sanctuary</h4>
                     <p className="text-xs text-brand-green-800/80 leading-relaxed">
                       We bring this 5,000-year legacy into an interactive digital age. By linking ancient diagnostic principles with dynamic smart tracking, we help you trace every gram of our formula and align your elements.
                     </p>
@@ -627,7 +627,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-brand-green-900 uppercase tracking-wider">Email Correspondence</h4>
-                    <p className="text-sm font-semibold text-brand-gold-700 mt-0.5">care@gramslife.com</p>
+                    <p className="text-sm font-semibold text-brand-gold-700 mt-0.5">care@Bvlife.com</p>
                     <p className="text-[10px] text-brand-green-600/60 mt-0.5">For queries, order tracking, and custom botanical mixtures.</p>
                   </div>
                 </div>
@@ -638,7 +638,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-brand-green-900 uppercase tracking-wider">Direct Hotline</h4>
-                    <p className="text-sm font-semibold text-brand-gold-700 mt-0.5">+1 (800) 555-GRAM</p>
+                    <p className="text-sm font-semibold text-brand-gold-700 mt-0.5">+91 7015999375</p>
                     <p className="text-[10px] text-brand-green-600/60 mt-0.5">Toll-free. Monday – Friday, 9:00 AM – 6:00 PM IST.</p>
                   </div>
                 </div>
@@ -650,8 +650,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
                   <div>
                     <h4 className="text-xs font-bold text-brand-green-900 uppercase tracking-wider">Apothecary Headquarters</h4>
                     <p className="text-xs text-brand-green-800 font-medium mt-0.5">
-                      108 Sacred Valley Road, Rishikesh,<br />
-                      Uttarakhand, PIN 249201, India
+                      Road No. 1, Kila No. 69/21/3/1, Khewat No. 668, Khatoni 752, near Shiv Dharam Kanta, Jhundpur Industrial Area, Jhundpur, Sonipat, Haryana - 131021, India<br />
                     </p>
                   </div>
                 </div>

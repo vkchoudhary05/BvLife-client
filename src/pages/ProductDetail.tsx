@@ -243,7 +243,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
 
     // 2. Check local stored orders
     try {
-      const lastCompleted = localStorage.getItem('grams_last_completed_order');
+      const lastCompleted = localStorage.getItem('Bv_last_completed_order');
       if (lastCompleted) {
         const orderObj = JSON.parse(lastCompleted);
         if (orderObj.items?.some((it: any) => it.productId === productId)) {
@@ -254,7 +254,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
           }
         }
       }
-      const allLocalOrders = localStorage.getItem('grams_orders');
+      const allLocalOrders = localStorage.getItem('Bv_orders');
       if (allLocalOrders) {
         const orderList = JSON.parse(allLocalOrders);
         if (Array.isArray(orderList)) {
@@ -274,7 +274,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
     // Check if already reviewed
     let reviewed = false;
     try {
-      const storedReviewed = localStorage.getItem('grams_reviewed_products');
+      const storedReviewed = localStorage.getItem('Bv_reviewed_products');
       if (storedReviewed) {
         const ids = JSON.parse(storedReviewed);
         if (Array.isArray(ids) && ids.includes(productId)) {
@@ -1232,7 +1232,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   <p className="text-[11px] text-brand-green-700/80 leading-relaxed max-w-xl">
                     {language === 'hi'
                       ? 'आयुर्वेदिक प्रामाणिकता और सत्यता बनाए रखने के लिए, समीक्षाएं केवल उन ग्राहकों द्वारा अपनी ऑर्डर हिस्ट्री से दी जा सकती हैं जिन्हें उत्पाद सफलतापूर्वक डिलीवर हो चुका है।'
-                      : 'To ensure clinical authenticity and trust, reviews on GRAMS are exclusively submitted by verified customers after successful package delivery in their Order History.'}
+                      : 'To ensure clinical authenticity and trust, reviews on Bv are exclusively submitted by verified customers after successful package delivery in their Order History.'}
                   </p>
                 </div>
 

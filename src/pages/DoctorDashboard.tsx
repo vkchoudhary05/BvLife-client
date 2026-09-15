@@ -86,7 +86,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   const [localDoctorUser, setLocalDoctorUser] = useState<UserType | null>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const stored = localStorage.getItem('grams_doctor_session');
+        const stored = localStorage.getItem('Bv_doctor_session');
         if (stored) return JSON.parse(stored);
       } catch {
         // ignore
@@ -95,7 +95,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     return null;
   });
 
-  const [loginEmail, setLoginEmail] = useState<string>('doctor@gramslife.com');
+  const [loginEmail, setLoginEmail] = useState<string>('doctor@Bvlife.com');
   const [loginPassword, setLoginPassword] = useState<string>('123123123');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
@@ -106,7 +106,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     if (!active) return false;
     const email = (active.email || '').toLowerCase().trim();
     return active.role === 'admin' || 
-      ['doctor@gramslife.com', 'admin@gramslife.com', 'iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com'].includes(email);
+      ['doctor@Bvlife.com', 'admin@Bvlife.com', 'iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com'].includes(email);
   }, [localDoctorUser, currentUser]);
 
   const handleDoctorLogin = async (e?: React.FormEvent, customEmail?: string, customPassword?: string) => {
@@ -117,27 +117,27 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     let emailToUse = (customEmail !== undefined ? customEmail : loginEmail).trim();
     let passToUse = (customPassword !== undefined ? customPassword : loginPassword).trim();
 
-    // Sanitize in case user copied "Doctor ID: doctor@gramslife.com" or label prefixes
+    // Sanitize in case user copied "Doctor ID: doctor@Bvlife.com" or label prefixes
     emailToUse = emailToUse.replace(/^(doctor\s*id\s*[:\-]?\s*|email\s*[:\-]?\s*|id\s*[:\-]?\s*|username\s*[:\-]?\s*)/i, '').trim();
     passToUse = passToUse.replace(/^(password\s*[:\-]?\s*|pass\s*[:\-]?\s*)/i, '').trim();
 
-    if (emailToUse.toLowerCase().includes('doctor@gramslife.com') || emailToUse.toLowerCase() === 'doctor') {
-      emailToUse = 'doctor@gramslife.com';
+    if (emailToUse.toLowerCase().includes('doctor@Bvlife.com') || emailToUse.toLowerCase() === 'doctor') {
+      emailToUse = 'doctor@Bvlife.com';
     }
 
     // Default fallback to standard clinical practitioner
-    if (!emailToUse) emailToUse = 'doctor@gramslife.com';
+    if (!emailToUse) emailToUse = 'doctor@Bvlife.com';
     if (!passToUse) passToUse = '123123123';
 
     const defaultDoctorUser: UserType = {
-      email: 'doctor@gramslife.com',
+      email: 'doctor@Bvlife.com',
       fullName: 'Dr. Arundhati Sharma',
       role: 'admin',
       phone: '9876543210',
       addresses: []
     };
 
-    const isVerifiedDoctorCreds = emailToUse.toLowerCase() === 'doctor@gramslife.com' && 
+    const isVerifiedDoctorCreds = emailToUse.toLowerCase() === 'doctor@Bvlife.com' && 
       (passToUse === '123123123' || passToUse === 'password123' || passToUse === '');
 
     try {
@@ -145,9 +145,9 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
       if (res && res.user && res.token) {
         setLocalDoctorUser(res.user);
         try {
-          localStorage.setItem('grams_doctor_session', JSON.stringify(res.user));
-          localStorage.setItem('grams_auth_token', res.token);
-          sessionStorage.setItem('grams_auth_token', res.token);
+          localStorage.setItem('Bv_doctor_session', JSON.stringify(res.user));
+          localStorage.setItem('Bv_auth_token', res.token);
+          sessionStorage.setItem('Bv_auth_token', res.token);
         } catch {
           // ignore
         }
@@ -165,9 +165,9 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
       const fallbackToken = 'doc_auth_token_' + Date.now();
       setLocalDoctorUser(defaultDoctorUser);
       try {
-        localStorage.setItem('grams_doctor_session', JSON.stringify(defaultDoctorUser));
-        localStorage.setItem('grams_auth_token', fallbackToken);
-        sessionStorage.setItem('grams_auth_token', fallbackToken);
+        localStorage.setItem('Bv_doctor_session', JSON.stringify(defaultDoctorUser));
+        localStorage.setItem('Bv_auth_token', fallbackToken);
+        sessionStorage.setItem('Bv_auth_token', fallbackToken);
       } catch {
         // ignore
       }
@@ -175,14 +175,14 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
         onLoginSuccess(defaultDoctorUser, fallbackToken);
       }
     } else {
-      setLoginError('Invalid Doctor credentials. Please check Doctor ID (doctor@gramslife.com) and Password (123123123).');
+      setLoginError('Invalid Doctor credentials. Please check Doctor ID (doctor@Bvlife.com) and Password (123123123).');
     }
     setIsLoggingIn(false);
   };
 
   const handleDoctorSignOut = () => {
     try {
-      localStorage.removeItem('grams_doctor_session');
+      localStorage.removeItem('Bv_doctor_session');
     } catch {
       // ignore
     }
@@ -218,7 +218,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   const [newBookingAlert, setNewBookingAlert] = useState<DoctorAppointment | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('grams_doctor_sound_enabled') !== 'false';
+      return localStorage.getItem('Bv_doctor_sound_enabled') !== 'false';
     }
     return true;
   });
@@ -637,7 +637,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
 
     if (whatsAppTemplate === 'confirmation') {
       setWhatsAppCustomText(
-`🌿 *Grams Life Ayurvedic Clinic - Consultation Confirmed* 🌿
+`🌿 *Bv Life Ayurvedic Clinic - Consultation Confirmed* 🌿
 
 Namaste *${app.patientName}*,
 Your consultation with *${docName}* has been officially confirmed!
@@ -648,20 +648,20 @@ Your consultation with *${docName}* has been officially confirmed!
 • *Date:* ${app.date}
 • *Time Slot:* ${app.timeSlot}
 • *Format:* ${app.consultationMode.toUpperCase()}
-• *Payment Status:* ${app.paymentStatus === 'Paid' ? `Verified Paid (₹${app.fee})` : `Pay Later at Clinic (₹${app.fee})`}${app.paymentId ? `\n• *Txn Ref:* ${app.paymentId}` : ''}
-${app.consultationMode === 'video' ? `\n📹 *Video Consultation Link:*\n${meetUrl}\n(No app download required. Open on mobile/laptop 5 mins prior to slot.)\n` : ''}${app.consultationMode === 'audio' ? `\n📞 *Call Information:*\nDoctor will initiate telephone consultation directly to your mobile (${app.patientPhone}) at ${app.timeSlot}.\n` : ''}${app.consultationMode === 'clinic' ? `\n🏥 *Clinic Venue:*\nGrams Life Ayurvedic Center, Chamber 102, Ground Floor, Ayur Marg, New Delhi.\n` : ''}
+• *Payment Status:* ${app.paymentStatus === 'Paid' ? `Verified Paid (₹${app.fee})` : `Online Fee (₹${app.fee})`}${app.paymentId ? `\n• *Txn Ref:* ${app.paymentId}` : ''}
+${app.consultationMode === 'video' ? `\n📹 *Video Consultation Link:*\n${meetUrl}\n(No app download required. Open on mobile/laptop 5 mins prior to slot.)\n` : ''}${app.consultationMode === 'audio' ? `\n📞 *Call Information:*\nDoctor will initiate telephone consultation directly to your mobile (${app.patientPhone}) at ${app.timeSlot}.\n` : ''}${app.consultationMode === 'clinic' ? `\n🏥 *Clinic Venue:*\nBv Life Ayurvedic Center, Chamber 102, Ground Floor, Ayur Marg, New Delhi.\n` : ''}
 📌 *Patient Guidelines:*
 Please keep your previous medical files or blood test reports ready.
 
 For any questions or rescheduling, reply directly to this WhatsApp message or call our care desk.
 
 Warm regards,
-*Grams Life Care Desk*
+*Bv Life Care Desk*
 📞 +91 9425011088`
       );
     } else if (whatsAppTemplate === 'link') {
       setWhatsAppCustomText(
-`📹 *Grams Life Clinic - Secure Video Consultation Link*
+`📹 *Bv Life Clinic - Secure Video Consultation Link*
 
 Namaste *${app.patientName}*,
 Here is your direct Video Room link for your upcoming consultation with *${docName}*:
@@ -674,7 +674,7 @@ ${meetUrl}
 • Please ensure good lighting and microphone access.
 
 Warm regards,
-*Grams Life Medical Team*
+*Bv Life Medical Team*
 📞 +91 9425011088`
       );
     } else if (whatsAppTemplate === 'reminder') {
@@ -688,30 +688,30 @@ ${app.consultationMode === 'video' ? `🔗 *Video Room Link:*\n${meetUrl}\n` : '
 Please keep your recent medical files handy.
 
 Best regards,
-*Grams Life Clinic*`
+*Bv Life Clinic*`
       );
     } else if (whatsAppTemplate === 'opd') {
       setWhatsAppCustomText(
-`🏥 *Grams Life Ayurvedic Clinic - In-Person OPD Appointment Pass* 🏥
+`🏥 *Bv Life Ayurvedic Clinic - In-Person OPD Appointment Pass* 🏥
 
 Namaste *${app.patientName}*,
 Your In-Person OPD visit with *${docName}* is confirmed.
 
 📋 *OPD Token:* #OPD-${app.id.slice(-4)}
 • *Date & Time:* ${app.date} at ${app.timeSlot}
-• *Clinic Address:* Grams Life Ayurvedic Wellness Center, Chamber 102, Ground Floor, Ayur Marg, Near Metro Pillar 42, New Delhi.
+• *Clinic Address:* Bv Life Ayurvedic Wellness Center, Chamber 102, Ground Floor, Ayur Marg, Near Metro Pillar 42, New Delhi.
 • *Contact Desk:* +91 9425011088
 
 Kindly arrive 10 minutes prior to your slot and carry previous health records or prescriptions.
 
 Warm regards,
-*Grams Life OPD Desk*`
+*Bv Life OPD Desk*`
       );
     } else if (whatsAppTemplate === 'prescription') {
       const rx = app.prescription;
       const medsList = rx?.medicines?.map(m => `• *${m.name}*: ${m.dosage} (${m.frequency} - ${m.timing})`).join('\n') || '• Prescribed Ayurvedic formulations';
       setWhatsAppCustomText(
-`🌿 *Grams Life Clinic - Official Prescription & Care Plan* 🌿
+`🌿 *Bv Life Clinic - Official Prescription & Care Plan* 🌿
 
 Namaste *${app.patientName}*,
 Here is your official consultation summary from *${docName}*:
@@ -730,7 +730,7 @@ ${rx?.dietRecommendations?.join('\n• ') || '• Eat freshly prepared warm Satt
 🧘 *Lifestyle & Dinacharya:*
 ${rx?.lifestyleAdvice?.join('\n• ') || '• 15 mins daily morning Pranayama and adequate hydration.'}
 
-To order your pure herbal formulations with direct home delivery, visit gramslife.com or WhatsApp our pharmacy desk at +91 9425011088.
+To order your pure herbal formulations with direct home delivery, visit Bvlife.com or WhatsApp our pharmacy desk at +91 9425011088.
 
 Wishing you swift recovery and holistic health,
 *${docName}*`
@@ -780,7 +780,7 @@ Wishing you swift recovery and holistic health,
       `• *Mode:* ${app.consultationMode.toUpperCase()}\n` +
       `• *Status:* ${app.status} • Payment: ${app.paymentStatus || 'Paid'}\n` +
       `• *Concern:* ${app.healthConcern || 'General Checkup'}\n\n` +
-      `Logged on Grams Life Doctor Dashboard.`
+      `Logged on Bv Life Doctor Dashboard.`
     );
     window.open(`https://wa.me/919425011088?text=${text}`, '_blank');
   };
@@ -939,7 +939,7 @@ Wishing you swift recovery and holistic health,
     const cleanPhone = (app.patientPhone || '').replace(/\D/g, '');
     const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
     const message = encodeURIComponent(
-      `Namaste ${app.patientName}, this is Dr. Arundhati Sharma from GramsLife Ayurvedic Clinic. I am calling you for your scheduled Telephonic Consultation (${app.date} at ${app.timeSlot}). Please let me know if you are ready to speak on ${app.patientPhone}.`
+      `Namaste ${app.patientName}, this is Dr. Arundhati Sharma from BvLife Ayurvedic Clinic. I am calling you for your scheduled Telephonic Consultation (${app.date} at ${app.timeSlot}). Please let me know if you are ready to speak on ${app.patientPhone}.`
     );
     window.open(`https://wa.me/${phoneWithCountry}?text=${message}`, '_blank');
   };
@@ -949,7 +949,7 @@ Wishing you swift recovery and holistic health,
     const cleanPhone = (app.patientPhone || '').replace(/\D/g, '');
     const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
     const message = encodeURIComponent(
-      `Namaste ${app.patientName}, this is Grams Life Ayurvedic Wellness Center. Your In-Person Clinic Visit (OPD) with Dr. Arundhati Sharma is confirmed for ${app.date} at ${app.timeSlot}.\n\n🏥 OPD Token: #OPD-${tokenIndex}\n📍 Location: Grams Life Center, Chamber 102, Ground Floor, Ayur Marg, New Delhi.\n\nKindly arrive 10 minutes before your slot and bring your previous health reports.`
+      `Namaste ${app.patientName}, this is Bv Life Ayurvedic Wellness Center. Your In-Person Clinic Visit (OPD) with Dr. Arundhati Sharma is confirmed for ${app.date} at ${app.timeSlot}.\n\n🏥 OPD Token: #OPD-${tokenIndex}\n📍 Location: Bv Life Center, Chamber 102, Ground Floor, Ayur Marg, New Delhi.\n\nKindly arrive 10 minutes before your slot and bring your previous health reports.`
     );
     window.open(`https://wa.me/${phoneWithCountry}?text=${message}`, '_blank');
   };
@@ -1113,7 +1113,7 @@ Wishing you swift recovery and holistic health,
                 <button
                   type="button"
                   onClick={() => {
-                    setLoginEmail('doctor@gramslife.com');
+                    setLoginEmail('doctor@Bvlife.com');
                     setLoginPassword('123123123');
                     setLoginError('');
                   }}
@@ -1125,7 +1125,7 @@ Wishing you swift recovery and holistic health,
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-slate-600">
                 <div>
                   <span className="font-semibold text-slate-500">Doctor ID:</span>{' '}
-                  <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-800 font-mono">doctor@gramslife.com</code>
+                  <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-800 font-mono">doctor@Bvlife.com</code>
                 </div>
                 <div>
                   <span className="font-semibold text-slate-500">Password:</span>{' '}
@@ -1156,7 +1156,7 @@ Wishing you swift recovery and holistic health,
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     required
-                    placeholder="doctor@gramslife.com"
+                    placeholder="doctor@Bvlife.com"
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand-green-700 focus:ring-1 focus:ring-brand-green-700 text-sm font-medium outline-none transition-all"
                   />
                 </div>
@@ -1206,9 +1206,9 @@ Wishing you swift recovery and holistic health,
                 type="button"
                 id="btn-quick-doctor-login-card"
                 onClick={() => {
-                  setLoginEmail('doctor@gramslife.com');
+                  setLoginEmail('doctor@Bvlife.com');
                   setLoginPassword('123123123');
-                  handleDoctorLogin(undefined, 'doctor@gramslife.com', '123123123');
+                  handleDoctorLogin(undefined, 'doctor@Bvlife.com', '123123123');
                 }}
                 disabled={isLoggingIn}
                 className="w-full py-2.5 px-3 bg-brand-gold-400/20 hover:bg-brand-gold-400/30 text-brand-green-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-brand-gold-400/40"
@@ -1269,7 +1269,7 @@ Wishing you swift recovery and holistic health,
                   {activeDoctorProfile?.qualification || "BAMS, MD (Ayurveda - BHU Gold Medalist) • Reg. #AY-24890"}
                 </p>
                 <p className="text-[11px] text-brand-gold-400/80 mt-0.5">
-                  {activeDoctorProfile?.title || "Chief Ayurvedic Vaidya & Nadi Pariksha Master"} • Grams Life Clinic
+                  {activeDoctorProfile?.title || "Chief Ayurvedic Vaidya & Nadi Pariksha Master"} • Bv Life Clinic
                 </p>
               </div>
             </div>
@@ -1308,7 +1308,7 @@ Wishing you swift recovery and holistic health,
                     const next = !soundEnabled;
                     setSoundEnabled(next);
                     if (typeof window !== 'undefined') {
-                      localStorage.setItem('grams_doctor_sound_enabled', String(next));
+                      localStorage.setItem('Bv_doctor_sound_enabled', String(next));
                     }
                     if (next) playDoctorChime();
                   }}
@@ -1953,7 +1953,7 @@ Wishing you swift recovery and holistic health,
                                     <Building2 className="w-4 h-4 text-amber-700 shrink-0" />
                                     <div>
                                       <span className="font-bold">In-Person OPD Consultation: </span>
-                                      <span className="text-amber-900">Patient arrives at Grams Life Wellness Center at <strong>{app.timeSlot}</strong>. Chamber 102.</span>
+                                      <span className="text-amber-900">Patient arrives at Bv Life Wellness Center at <strong>{app.timeSlot}</strong>. Chamber 102.</span>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -2818,7 +2818,7 @@ Wishing you swift recovery and holistic health,
                   In-Person Clinic Visits (OPD)
                 </h2>
                 <p className="text-sm text-amber-100/90 leading-relaxed">
-                  Patients scheduled for physical OPD visits at Grams Life Wellness Center. Conduct physical <strong>Nadi Pariksha (Pulse Examination)</strong>, tongue and posture analysis, issue electronic OPD tokens, and draft authenticated prescriptions.
+                  Patients scheduled for physical OPD visits at Bv Life Wellness Center. Conduct physical <strong>Nadi Pariksha (Pulse Examination)</strong>, tongue and posture analysis, issue electronic OPD tokens, and draft authenticated prescriptions.
                 </p>
                 <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-amber-200">
                   <span className="flex items-center gap-1.5 font-semibold bg-amber-800/40 px-3 py-1.5 rounded-xl border border-amber-700/40">
@@ -3531,7 +3531,7 @@ Wishing you swift recovery and holistic health,
               <div className="flex items-start justify-between border-b-2 border-brand-green-900 pb-4">
                 <div>
                   <h3 className="text-xl font-bold font-serif text-brand-green-950">
-                    GRAMS LIFE AYURVEDIC CLINIC
+                    Bv LIFE AYURVEDIC CLINIC
                   </h3>
                   <p className="text-xs text-brand-green-800 font-medium mt-0.5">
                     Department of Kayachikitsa & Classical Nadi Pariksha
@@ -3650,7 +3650,7 @@ Wishing you swift recovery and holistic health,
               {/* Doctor Digital Stamp & Signature */}
               <div className="pt-6 border-t border-slate-200 flex items-center justify-between text-xs">
                 <div className="text-slate-400 text-[10px]">
-                  Generated via Grams Life Telemedicine • Option B WebRTC Secure
+                  Generated via Bv Life Telemedicine • Option B WebRTC Secure
                 </div>
 
                 <div className="text-right space-y-0.5">

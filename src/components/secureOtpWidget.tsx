@@ -20,6 +20,7 @@ export interface SecureOtpWidgetProps {
   smsOnly?: boolean; // strictly SMS
   allowedChannels?: string[];
   initialReqId?: string;
+  initialOtp?: string;
   theme?: 'light' | 'dark'; // Theme mode
   onVerified: (data: { code: string; accessToken?: string; reqId?: string }) => void;
   onCancel?: () => void;
@@ -120,19 +121,7 @@ export const SecureOtpWidget: React.FC<SecureOtpWidgetProps> = ({
     setLoading(true);
 
     try {
-      // 1. Instant Sandbox Bypass Codes for Local Testing & Admin Recovery (1234, 123456, 0000, 9999)
-      if (['1234', '123456', '0000', '9999'].includes(cleanOtp)) {
-        setSuccessMsg('Passcode Accepted! Authenticating...');
-        setTimeout(() => {
-          onVerified({
-            code: cleanOtp,
-            reqId: activeReqId || 'sandbox_passcode_req'
-          });
-        }, 100);
-        return;
-      }
-
-      // 2. Perform live server/MSG91 verification
+      // Perform live server/MSG91 verification strictly
       const formattedTarget = isEmailTarget 
         ? identifier.trim().toLowerCase()
         : formatMSG91Identifier(identifier);
@@ -149,7 +138,7 @@ export const SecureOtpWidget: React.FC<SecureOtpWidgetProps> = ({
           });
         }, 100);
       } else {
-        setErrorMsg(verifyRes.error || 'Invalid or expired passcode. Please re-enter or request a new code.');
+        setErrorMsg(verifyRes.error || 'Invalid or expired passcode. Please enter the correct code.');
       }
     } catch (err: any) {
       console.error('[Secure OTP Verification Error]:', err);
@@ -240,12 +229,12 @@ export const SecureOtpWidget: React.FC<SecureOtpWidgetProps> = ({
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={6}
+              maxLength={4}
               value={otpCode}
               onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, '');
+                const val = e.target.value.replace(/\D/g, '').slice(0, 4);
                 setOtpCode(val);
-                if (val.length === otpLength || val.length === 6) {
+                if (val.length === 4) {
                   setErrorMsg('');
                 }
               }}

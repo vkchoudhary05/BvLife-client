@@ -4,7 +4,7 @@ import { CartItem, Product, ProductVariant, Coupon } from '../types';
 export function useCartAndWishlist() {
   const [cart, setCart] = useState<CartItem[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('grams_cart');
+      const saved = localStorage.getItem('Bv_cart');
       return saved ? JSON.parse(saved) : [];
     }
     return [];
@@ -12,7 +12,7 @@ export function useCartAndWishlist() {
 
   const [wishlist, setWishlist] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('grams_wishlist');
+      const saved = localStorage.getItem('Bv_wishlist');
       return saved ? JSON.parse(saved) : [];
     }
     return [];
@@ -21,11 +21,11 @@ export function useCartAndWishlist() {
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 
   useEffect(() => {
-    localStorage.setItem('grams_cart', JSON.stringify(cart));
+    localStorage.setItem('Bv_cart', JSON.stringify(cart));
   }, [cart]);
 
   useEffect(() => {
-    localStorage.setItem('grams_wishlist', JSON.stringify(wishlist));
+    localStorage.setItem('Bv_wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
   const handleAddToCart = useCallback((product: Product, qty: number, selectedVariant?: ProductVariant) => {

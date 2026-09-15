@@ -80,7 +80,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
           <div className="space-y-3 text-sm text-black font-semibold">
             <div className="flex items-center gap-2.5">
               <Phone className="w-5 h-5 text-brand-green-800 flex-shrink-0" />
-              <span>+917451050607</span>
+              <span>+917015999375</span>
             </div>
             <div className="flex items-center gap-2.5">
               <Mail className="w-5 h-5 text-brand-green-800 flex-shrink-0" />

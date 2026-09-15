@@ -45,14 +45,14 @@ export default function App() {
   // Language configuration
   const [language, setLanguage] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('gramslife_lang') as Language) || 'en';
+      return (localStorage.getItem('Bvlife_lang') as Language) || 'en';
     }
     return 'en';
   });
 
   const handleLanguageChange = (lang: Language) => {
     setLanguage(lang);
-    localStorage.setItem('gramslife_lang', lang);
+    localStorage.setItem('Bvlife_lang', lang);
   };
 
   // Modular Hooks
@@ -393,7 +393,7 @@ export default function App() {
         {currentPage === 'admin' && (
           (currentUser && (
             currentUser.role === 'admin' ||
-            ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com', 'doctor@gramslife.com'].includes((currentUser.email || '').toLowerCase()) ||
+            ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@Bvlife.com', 'doctor@Bvlife.com'].includes((currentUser.email || '').toLowerCase()) ||
             ['7451050607', '9425011088'].includes((currentUser.phone || '').replace(/\D/g, '').slice(-10))
           )) ? (
             <Dashboard
@@ -517,7 +517,7 @@ export default function App() {
           currentUser={currentUser}
           onAddAddress={handleAddAddress}
           onLoginSuccess={(token) => {
-            localStorage.setItem('grams_auth_token', token);
+            localStorage.setItem('Bv_auth_token', token);
             setAuthToken(token);
           }}
         />

@@ -5,7 +5,7 @@ import { api } from '../services/api';
 export function useAuth() {
   const [authToken, setAuthToken] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('grams_auth_token') || localStorage.getItem('grams_auth_token');
+      return sessionStorage.getItem('Bv_auth_token') || localStorage.getItem('Bv_auth_token');
     }
     return null;
   });
@@ -14,19 +14,19 @@ export function useAuth() {
 
   // Sync token changes to storage
   const handleLoginSuccess = useCallback((token: string, isUserAdmin = false) => {
-    sessionStorage.setItem('grams_auth_token', token);
+    sessionStorage.setItem('Bv_auth_token', token);
     if (!isUserAdmin) {
-      localStorage.setItem('grams_auth_token', token);
+      localStorage.setItem('Bv_auth_token', token);
     }
     setAuthToken(token);
   }, []);
 
   const handleLogout = useCallback(() => {
-    sessionStorage.removeItem('grams_auth_token');
-    localStorage.removeItem('grams_auth_token');
-    localStorage.removeItem('grams_recent_orders');
-    localStorage.removeItem('grams_last_completed_order');
-    localStorage.removeItem('grams_last_placed_order');
+    sessionStorage.removeItem('Bv_auth_token');
+    localStorage.removeItem('Bv_auth_token');
+    localStorage.removeItem('Bv_recent_orders');
+    localStorage.removeItem('Bv_last_completed_order');
+    localStorage.removeItem('Bv_last_placed_order');
     setAuthToken(null);
     setCurrentUser(null);
   }, []);
@@ -36,7 +36,7 @@ export function useAuth() {
       const data = await api.login(credentials);
       if (data) {
         const cleanEmail = (data.user?.email || credentials.email).toLowerCase();
-        const isUserAdmin = data.user?.role === 'admin' || ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com', 'doctor@gramslife.com'].includes(cleanEmail);
+        const isUserAdmin = data.user?.role === 'admin' || ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@Bvlife.com', 'doctor@Bvlife.com'].includes(cleanEmail);
 
         handleLoginSuccess(data.token, isUserAdmin);
         setCurrentUser(data.user);
@@ -62,7 +62,7 @@ export function useAuth() {
       });
       if (regData) {
         const cleanEmail = (regData.user?.email || data.email).toLowerCase();
-        const isUserAdmin = regData.user?.role === 'admin' || ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes(cleanEmail);
+        const isUserAdmin = regData.user?.role === 'admin' || ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@Bvlife.com'].includes(cleanEmail);
 
         handleLoginSuccess(regData.token, isUserAdmin);
         setCurrentUser(regData.user);
@@ -87,15 +87,15 @@ export function useAuth() {
         const cleanPhone = (user.phone || '').replace(/\D/g, '').slice(-10);
         if (
           user.role === 'admin' ||
-          ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com', 'doctor@gramslife.com'].includes(lowerEmail) ||
+          ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@Bvlife.com', 'doctor@Bvlife.com'].includes(lowerEmail) ||
           ['7451050607', '9425011088'].includes(cleanPhone)
         ) {
           user.role = 'admin';
         }
         setCurrentUser(user);
       } else {
-        sessionStorage.removeItem('grams_auth_token');
-        localStorage.removeItem('grams_auth_token');
+        sessionStorage.removeItem('Bv_auth_token');
+        localStorage.removeItem('Bv_auth_token');
         setAuthToken(null);
         setCurrentUser(null);
       }

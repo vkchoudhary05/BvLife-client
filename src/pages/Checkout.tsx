@@ -47,7 +47,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
   const [reviewModalProduct, setReviewModalProduct] = useState<{ id: string; name: string; image?: string; defaultRating?: number } | null>(null);
   const [reviewedProductIds, setReviewedProductIds] = useState<string[]>(() => {
     try {
-      const stored = localStorage.getItem('grams_reviewed_products');
+      const stored = localStorage.getItem('Bv_reviewed_products');
       return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
@@ -72,6 +72,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
   const [authPassword, setAuthPassword] = useState('');
   const [authOtp, setAuthOtp] = useState('');
   const [activeReqId, setActiveReqId] = useState<string | undefined>(undefined);
+  const [checkoutDevOtp, setCheckoutDevOtp] = useState<string | undefined>(undefined);
   const [formattedPhone, setFormattedPhone] = useState('');
   const [otpStep, setOtpStep] = useState(false);
   const [otpMessage, setOtpMessage] = useState('');
@@ -169,6 +170,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
         if (response.success) {
           setActiveReqId(response.reqId);
           setFormattedPhone(msg91Target);
+          setCheckoutDevOtp(response.otp);
           setOtpMessage(response.message || `Verification code sent via SMS to +${msg91Target}`);
           setResendTimer(30);
           setOtpStep(true);
@@ -258,18 +260,18 @@ export const Checkout: React.FC<CheckoutProps> = ({
   const [orderCompleted, setOrderCompleted] = useState<Order | null>(() => {
     try {
       if (initialCompletedOrderId) {
-        const savedPlaced = localStorage.getItem('grams_last_placed_order');
+        const savedPlaced = localStorage.getItem('Bv_last_placed_order');
         if (savedPlaced) {
           const parsed = JSON.parse(savedPlaced);
           if (parsed.id === initialCompletedOrderId) return parsed;
         }
-        const savedComp = localStorage.getItem('grams_last_completed_order');
+        const savedComp = localStorage.getItem('Bv_last_completed_order');
         if (savedComp) {
           const parsed = JSON.parse(savedComp);
           if (parsed.id === initialCompletedOrderId) return parsed;
         }
       }
-      const saved = localStorage.getItem('grams_last_completed_order') || localStorage.getItem('grams_last_placed_order');
+      const saved = localStorage.getItem('Bv_last_completed_order') || localStorage.getItem('Bv_last_placed_order');
       return saved ? JSON.parse(saved) : null;
     } catch (e) {
       return null;
@@ -280,7 +282,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
   React.useEffect(() => {
     if (initialCompletedOrderId) {
       try {
-        const savedPlaced = localStorage.getItem('grams_last_placed_order');
+        const savedPlaced = localStorage.getItem('Bv_last_placed_order');
         if (savedPlaced) {
           const parsed = JSON.parse(savedPlaced);
           if (parsed.id === initialCompletedOrderId) {
@@ -288,7 +290,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
             return;
           }
         }
-        const savedComp = localStorage.getItem('grams_last_completed_order');
+        const savedComp = localStorage.getItem('Bv_last_completed_order');
         if (savedComp) {
           const parsed = JSON.parse(savedComp);
           if (parsed.id === initialCompletedOrderId) {
@@ -458,7 +460,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
           key: finalKey,
           amount: data.amount,
           currency: data.currency || 'INR',
-          name: 'Grams Life',
+          name: 'Bv Life',
           description: 'Wellness & Herbal Remedies Order',
           image: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
           order_id: data.orderId,
@@ -503,7 +505,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
       }
     } catch (err: any) {
       console.error("Error initializing Razorpay:", err);
-      alert("Failed to initialize Razorpay checkout: " + (err.message || "Please check your Razorpay API Key ID."));
+      alert("Failed to initialize Razorpay checkout: " + (err.message || "Please check your network connection and try again."));
     } finally {
       setProcessingOrder(false);
     }
@@ -570,7 +572,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
       }
     ];
 
-    const activeUserEmail = currentUser?.email || authEmail || (selectedAddress?.phone ? `${selectedAddress.phone.replace(/\D/g, '')}@gramslife.com` : 'guest@gramslife.com');
+    const activeUserEmail = currentUser?.email || authEmail || (selectedAddress?.phone ? `${selectedAddress.phone.replace(/\D/g, '')}@Bvlife.com` : 'guest@Bvlife.com');
     const activeUserName = currentUser?.fullName || selectedAddress.fullName || fullName || authName || 'Guest Customer';
 
     const chosenPayMethod = overridePayMethod || paymentMethod;
@@ -594,12 +596,12 @@ export const Checkout: React.FC<CheckoutProps> = ({
       setOrderCompleted(result);
       setProcessingOrder(false);
       try {
-        localStorage.setItem('grams_last_completed_order', JSON.stringify(result));
-        localStorage.setItem('grams_last_placed_order', JSON.stringify(result));
-        const stored = localStorage.getItem('grams_recent_orders');
+        localStorage.setItem('Bv_last_completed_order', JSON.stringify(result));
+        localStorage.setItem('Bv_last_placed_order', JSON.stringify(result));
+        const stored = localStorage.getItem('Bv_recent_orders');
         const existingIds: string[] = stored ? JSON.parse(stored) : [];
         if (!existingIds.includes(result.id)) {
-          localStorage.setItem('grams_recent_orders', JSON.stringify([result.id, ...existingIds]));
+          localStorage.setItem('Bv_recent_orders', JSON.stringify([result.id, ...existingIds]));
         }
       } catch (e) {}
       return result;
@@ -614,13 +616,13 @@ export const Checkout: React.FC<CheckoutProps> = ({
   React.useEffect(() => {
     if (cart.length > 0 && orderCompleted && !initialCompletedOrderId) {
       setOrderCompleted(null);
-      localStorage.removeItem('grams_last_completed_order');
+      localStorage.removeItem('Bv_last_completed_order');
     }
   }, [cart.length, initialCompletedOrderId]);
 
   React.useEffect(() => {
     if (cart.length === 0 && !orderCompleted && !processingOrder && !initialCompletedOrderId) {
-      const storedOrder = localStorage.getItem('grams_last_completed_order') || localStorage.getItem('grams_last_placed_order');
+      const storedOrder = localStorage.getItem('Bv_last_completed_order') || localStorage.getItem('Bv_last_placed_order');
       if (storedOrder) {
         try {
           setOrderCompleted(JSON.parse(storedOrder));
@@ -634,7 +636,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
   }, [cart.length, orderCompleted, processingOrder, onNavigate, initialCompletedOrderId]);
 
   if (cart.length === 0 && !orderCompleted && !processingOrder) {
-    const storedOrder = localStorage.getItem('grams_last_completed_order');
+    const storedOrder = localStorage.getItem('Bv_last_completed_order');
     if (!storedOrder) {
       return null;
     }
@@ -778,7 +780,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
             </button>
             <button 
               onClick={() => {
-                localStorage.removeItem('grams_last_completed_order');
+                localStorage.removeItem('Bv_last_completed_order');
                 setOrderCompleted(null);
                 onNavigate('shop');
               }}
@@ -898,6 +900,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
                 widgetName="Verification"
                 smsOnly={true}
                 initialReqId={activeReqId}
+                initialOtp={checkoutDevOtp}
                 onVerified={async (params) => {
                   setAuthLoading(true);
                   try {
@@ -1893,7 +1896,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
           if (onLoginSuccess) {
             onLoginSuccess(token);
           } else {
-            localStorage.setItem('grams_auth_token', token);
+            localStorage.setItem('Bv_auth_token', token);
             window.location.reload();
           }
         }}
@@ -1916,7 +1919,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
             const updated = [...reviewedProductIds, reviewModalProduct.id];
             setReviewedProductIds(updated);
             try {
-              localStorage.setItem('grams_reviewed_products', JSON.stringify(updated));
+              localStorage.setItem('Bv_reviewed_products', JSON.stringify(updated));
             } catch {}
           }}
         />

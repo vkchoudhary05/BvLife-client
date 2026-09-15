@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// MSG91 Headless OTP Service for Custom UI Integration
+// MSG91 Headless OTP Service for Direct Widget Integration
 
 declare global {
   interface Window {
@@ -23,7 +23,9 @@ export interface MSG91Config {
   tokenAuth: string;
   identifier?: string;
   exposeMethods: boolean;
+  exposedMethods?: boolean;
   captchaRenderId?: string;
+  captchaVerified?: (isVerified: boolean) => void;
   success?: (data: any) => void;
   failure?: (error: any) => void;
 }
@@ -35,20 +37,121 @@ export interface OTPResponse {
   accessToken?: string;
   error?: string;
   reqId?: string;
+  otp?: string;
 }
 
 export const DEFAULT_MSG91_CONFIG: MSG91Config = {
   widgetId: "366745687850303433373438",
-  tokenAuth: "555226ACqXDRqJuY6a69ae3dP1",
+  tokenAuth: "555226TgzLN8cZ6a698ec8P1",
   exposeMethods: true,
-  captchaRenderId: '',
+  exposedMethods: true,
+  captchaRenderId: "msg91-captcha-container",
+  captchaVerified: (isVerified: boolean) => {
+    console.log('[MSG91 Widget] Captcha verification state changed:', isVerified);
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('msg91-captcha-status', { detail: { verified: !!isVerified } }));
+      } catch (e) {}
+    }
+  },
   success: (data: any) => {
-    console.log('[MSG91 Headless] Global Success response:', data);
+    console.log('[MSG91 Widget] Global success response:', data);
   },
   failure: (error: any) => {
-    console.warn('[MSG91 Headless] Global Failure response:', error);
+    console.warn('[MSG91 Widget] Global failure response:', error);
   }
 };
+
+let isInitializingScript = false;
+
+/**
+ * Ensures MSG91 Widget is fully initialized and window.sendOtp & window.verifyOtp exist.
+ * Waits dynamically for Angular component to boot and expose methods.
+ */
+export async function waitForMSG91Ready(maxTimeoutMs = 12000): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+
+  // If already exposed and ready, return immediately
+  if (typeof window.sendOtp === 'function' && typeof window.verifyOtp === 'function') {
+    return true;
+  }
+
+  // Ensure window.configuration is present
+  if (!window.configuration) {
+    window.configuration = { ...DEFAULT_MSG91_CONFIG };
+  } else {
+    window.configuration.exposeMethods = true;
+  }
+
+  // If window.initSendOTP exists, invoke it once if not already invoked
+  if (typeof window.initSendOTP === 'function' && !(window as any).__msg91_init_invoked) {
+    (window as any).__msg91_init_invoked = true;
+    try {
+      window.initSendOTP(window.configuration);
+    } catch (e) {
+      console.warn('[MSG91] initSendOTP invocation error:', e);
+    }
+  }
+
+  // If script not yet injected, inject it into document.body
+  if (typeof window.initSendOTP !== 'function' && !isInitializingScript) {
+    isInitializingScript = true;
+    const urls = [
+      'https://verify.msg91.com/otp-provider.js',
+      'https://verify.phone91.com/otp-provider.js'
+    ];
+    let i = 0;
+    function attemptLoad() {
+      const s = document.createElement('script');
+      s.src = urls[i];
+      s.async = true;
+      s.onload = () => {
+        if (typeof window.initSendOTP === 'function') {
+          try {
+            (window as any).__msg91_init_invoked = true;
+            window.initSendOTP(window.configuration);
+          } catch (e) {
+            console.warn('[MSG91] initSendOTP exception on script load:', e);
+          }
+        }
+      };
+      s.onerror = () => {
+        i++;
+        if (i < urls.length) {
+          attemptLoad();
+        }
+      };
+      if (document.body) {
+        document.body.appendChild(s);
+      } else {
+        document.head.appendChild(s);
+      }
+    }
+    attemptLoad();
+  }
+
+  // Poll until window.sendOtp and window.verifyOtp are defined (or timeout)
+  const startTime = Date.now();
+  while (Date.now() - startTime < maxTimeoutMs) {
+    if (typeof window.sendOtp === 'function' && typeof window.verifyOtp === 'function') {
+      return true;
+    }
+
+    // If initSendOTP became available during polling, invoke it
+    if (typeof window.initSendOTP === 'function' && !(window as any).__msg91_init_invoked) {
+      (window as any).__msg91_init_invoked = true;
+      try {
+        window.initSendOTP(window.configuration);
+      } catch (e) {
+        console.warn('[MSG91] initSendOTP invocation in poll:', e);
+      }
+    }
+
+    await new Promise((r) => setTimeout(r, 120));
+  }
+
+  return typeof window.sendOtp === 'function' && typeof window.verifyOtp === 'function';
+}
 
 /**
  * Initializes the MSG91 Headless script & exposed methods
@@ -62,54 +165,80 @@ export async function initializeMSG91(customConfig?: Partial<MSG91Config>): Prom
     exposeMethods: true
   };
 
-  window.configuration = config;
-  window.msg91Configuration = config;
+  window.configuration = { ...(window.configuration || {}), ...config };
+  return waitForMSG91Ready();
+}
 
-  if (typeof window.sendOtp === 'function' && typeof window.verifyOtp === 'function') {
-    return true;
+// Cache last successful reqId globally so verifyOtp never lacks it
+let lastDispatchedReqId = '';
+
+export function getLastDispatchedReqId(): string {
+  if (lastDispatchedReqId && lastDispatchedReqId.trim()) {
+    return lastDispatchedReqId.trim();
   }
+  if (typeof window !== 'undefined' && (window as any).__msg91_last_req_id) {
+    return String((window as any).__msg91_last_req_id).trim();
+  }
+  return '';
+}
 
-  // Check if initSendOTP is already available
-  if (typeof window.initSendOTP === 'function') {
+export function setLastDispatchedReqId(reqId: string): void {
+  if (!reqId || typeof reqId !== 'string') return;
+  const clean = reqId.trim();
+  if (!clean) return;
+  lastDispatchedReqId = clean;
+  if (typeof window !== 'undefined') {
+    (window as any).__msg91_last_req_id = clean;
+  }
+}
+
+/**
+ * Carefully extracts the requestId / reqId from MSG91's response.
+ * In MSG91's generateOtp / sendOtp API:
+ * Response is: { type: "success", message: "36696e6d5575426978746b4d" }
+ * Here `message` is the alphanumeric reqId (length ~24)!
+ */
+export function extractReqIdFromData(data: any): string {
+  if (!data) return '';
+  if (typeof data === 'string') {
+    const trimmed = data.trim();
+    if (trimmed.length >= 8 && !trimmed.includes(' ')) {
+      return trimmed;
+    }
     try {
-      window.initSendOTP(config);
-      return true;
-    } catch (e) {
-      console.warn('[MSG91] Error calling initSendOTP:', e);
+      const parsed = JSON.parse(trimmed);
+      return extractReqIdFromData(parsed);
+    } catch {
+      return '';
     }
   }
-
-  // Load the script dynamically if not already loaded
-  return new Promise((resolve) => {
-    const existingScript = document.querySelector('script[src="https://verify.msg91.com/otp-provider.js"]');
-    if (!existingScript) {
-      const script = document.createElement('script');
-      script.type = 'text/javascript';
-      script.src = 'https://verify.msg91.com/otp-provider.js';
-      script.async = true;
-      script.onload = () => {
-        if (typeof window.initSendOTP === 'function') {
-          try {
-            window.initSendOTP(config);
-          } catch (err) {
-            console.error('[MSG91] Error in initSendOTP after load:', err);
-          }
-        }
-        resolve(true);
-      };
-      script.onerror = () => {
-        // Graceful fallback to backend direct SMS gateway when client CDN script is restricted
-        console.info('[MSG91] Client widget script unavailable or sandboxed; operating via direct backend API.');
-        resolve(false);
-      };
-      document.body.appendChild(script);
-    } else {
-      if (typeof window.initSendOTP === 'function') {
-        window.initSendOTP(config);
-      }
-      resolve(true);
+  if (typeof data === 'object') {
+    if (typeof data.reqId === 'string' && data.reqId.trim()) {
+      return data.reqId.trim();
     }
-  });
+    if (typeof data.requestId === 'string' && data.requestId.trim()) {
+      return data.requestId.trim();
+    }
+    if (typeof data.request_id === 'string' && data.request_id.trim()) {
+      return data.request_id.trim();
+    }
+    // In MSG91 generateOtp response, `message` is the unique requestId if success
+    if (typeof data.message === 'string') {
+      const msg = data.message.trim();
+      if (msg.length >= 8 && !msg.includes(' ') && /^[a-zA-Z0-9_-]+$/.test(msg)) {
+        return msg;
+      }
+    }
+    if (data.data) {
+      const nested = extractReqIdFromData(data.data);
+      if (nested) return nested;
+    }
+    if (data.response) {
+      const nested = extractReqIdFromData(data.response);
+      if (nested) return nested;
+    }
+  }
+  return '';
 }
 
 /**
@@ -133,232 +262,155 @@ export function formatMSG91Identifier(identifier: string): string {
 }
 
 /**
- * Headless Send OTP using window.sendOtp with server sync
+ * Headless Send OTP using MSG91 Widget window.sendOtp()
  */
 export async function sendMSG91Otp(identifier: string): Promise<OTPResponse> {
-  await initializeMSG91();
-
   const formattedId = formatMSG91Identifier(identifier);
 
-  // Sync window configuration with the new target identifier
   if (typeof window !== 'undefined') {
-    if (window.configuration) {
-      window.configuration.identifier = formattedId;
-    }
-    if (typeof window.initSendOTP === 'function') {
-      try {
-        window.initSendOTP(window.configuration || { ...DEFAULT_MSG91_CONFIG, identifier: formattedId });
-      } catch (e) {
-        console.warn('[MSG91] initSendOTP update notice:', e);
+    if (!window.configuration) window.configuration = { ...DEFAULT_MSG91_CONFIG };
+    window.configuration.identifier = formattedId;
+    window.configuration.exposeMethods = true;
+    window.configuration.exposedMethods = true;
+    window.configuration.captchaRenderId = 'msg91-captcha-container';
+  }
+
+  // Wait for MSG91 widget methods to be ready
+  const isReady = await waitForMSG91Ready(12000);
+  if (!isReady || typeof window.sendOtp !== 'function') {
+    return {
+      success: false,
+      error: 'MSG91 OTP service is taking longer than usual to connect. Please check your connection and tap Send OTP again.'
+    };
+  }
+
+  // Check if widget has captcha enabled and if it's not yet completed
+  if (typeof window !== 'undefined') {
+    const widgetData = typeof window.getWidgetData === 'function' ? window.getWidgetData() : null;
+    const hasCaptchaRequirement = widgetData?.captchaValidations === 1 || widgetData?.captchaValidations === true;
+    
+    if (hasCaptchaRequirement && typeof window.isCaptchaVerified === 'function') {
+      const isVerified = window.isCaptchaVerified();
+      if (!isVerified) {
+        return {
+          success: false,
+          error: 'Please verify the "I am human" security checkbox to request your SMS OTP.'
+        };
       }
     }
   }
 
-  // Dual dispatch: Ensure backend activeOtpStore is also primed
-  const serverDispatchPromise = fetch('/api/auth/otp', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: identifier, email: identifier, identifier })
-  }).then(r => r.json()).catch(err => ({ success: false, error: err.message }));
-
   return new Promise((resolve) => {
-    if (typeof window !== 'undefined' && typeof window.sendOtp === 'function') {
-      try {
-        console.log(`[MSG91 Headless] Sending OTP to ${formattedId}...`);
-        window.sendOtp(
-          formattedId,
-          async (data: any) => {
-            console.log('[MSG91 Headless] OTP sent successfully:', data);
-            const serverData = await serverDispatchPromise;
-            const finalReqId = data?.reqId || data?.requestId || serverData?.reqId;
-            resolve({
-              success: true,
-              message: typeof data === 'string' ? data : (data?.message || 'OTP verification code sent via SMS.'),
-              data,
-              reqId: finalReqId
-            });
-          },
-          async (error: any) => {
-            console.warn('[MSG91 Headless] Error from window.sendOtp, checking server dispatch:', error);
-            const serverData = await serverDispatchPromise;
-            if (serverData && serverData.success) {
-              resolve({
-                success: true,
-                message: serverData.message || 'OTP verification code dispatched via SMS.',
-                data: serverData,
-                reqId: serverData.reqId
-              });
-            } else {
-              resolve({
-                success: false,
-                error: typeof error === 'string' ? error : (error?.message || error?.error || serverData?.error || 'Failed to dispatch OTP passcode via SMS.'),
-                data: error
-              });
-            }
+    try {
+      console.log(`[MSG91 Widget] Dispatching OTP via window.sendOtp to ${formattedId}...`);
+      window.sendOtp!(
+        formattedId,
+        (data: any) => {
+          console.log('[MSG91 Widget] sendOtp success response:', data);
+          const reqId = extractReqIdFromData(data);
+          if (reqId) {
+            setLastDispatchedReqId(reqId);
           }
-        );
-      } catch (err: any) {
-        console.error('[MSG91 Headless] Exception calling window.sendOtp:', err);
-        serverDispatchPromise.then(serverData => {
-          if (serverData && serverData.success) {
-            resolve({
-              success: true,
-              message: serverData.message || 'OTP verification code dispatched via SMS.',
-              data: serverData,
-              reqId: serverData.reqId
-            });
-          } else {
-            resolve({
-              success: false,
-              error: err.message || 'Failed to trigger MSG91 sendOtp.'
-            });
+
+          resolve({
+            success: true,
+            message: typeof data === 'string' ? data : (data?.message || 'OTP verification code dispatched via SMS.'),
+            data,
+            reqId: reqId || undefined
+          });
+        },
+        (error: any) => {
+          console.warn('[MSG91 Widget] sendOtp failure response:', error);
+          let rawError = typeof error === 'string' ? error : (error?.message || error?.error || 'Failed to send OTP via MSG91 Widget.');
+          
+          if (typeof rawError === 'string' && rawError.toLowerCase().includes('captcha')) {
+            rawError = 'Security verification failed or expired. Please complete the "I am human" verification box above and try again.';
           }
-        });
-      }
-    } else {
-      console.warn('[MSG91 Headless] window.sendOtp not available, using backend API dispatch');
-      serverDispatchPromise
-        .then(serverData => {
-          if (serverData && serverData.success) {
-            resolve({
-              success: true,
-              message: serverData.message || 'OTP sent successfully.',
-              data: serverData,
-              reqId: serverData.reqId
-            });
-          } else {
-            resolve({
-              success: false,
-              error: serverData?.error || 'Failed to dispatch OTP.'
-            });
-          }
-        })
-        .catch(err => {
+
           resolve({
             success: false,
-            error: err.message || 'Connection error while dispatching OTP.'
+            error: rawError,
+            data: error
           });
-        });
+        }
+      );
+    } catch (err: any) {
+      console.error('[MSG91 Widget] Exception in sendOtp:', err);
+      resolve({
+        success: false,
+        error: err.message || 'Error executing MSG91 sendOtp.'
+      });
     }
   });
 }
 
 /**
- * Headless Retry OTP using window.retryOtp
- * Channel options:
- * - null : Default configuration
- * - '11' : SMS
- * - '4'  : Voice
- * - '3'  : Email
- * - '12' : WhatsApp
+ * Headless Retry OTP using MSG91 Widget window.retryOtp()
  */
 export async function retryMSG91Otp(
   channel: '11' | '4' | '3' | '12' | null = null,
   reqId?: string,
-  identifier?: string
+  _identifier?: string
 ): Promise<OTPResponse> {
-  await initializeMSG91();
+  const isReady = await waitForMSG91Ready(10000);
+  if (!isReady || typeof window.retryOtp !== 'function') {
+    return {
+      success: false,
+      error: 'MSG91 OTP Widget retry method not ready. Please try again in a moment.'
+    };
+  }
 
-  // Sync server store on retry
-  const target = identifier || (typeof window !== 'undefined' ? window.configuration?.identifier : '');
-  const serverRetryPromise = target ? fetch('/api/auth/otp', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: target, email: target, identifier: target })
-  }).then(r => r.json()).catch(() => null) : Promise.resolve(null);
+  const resolvedReqId = (reqId && reqId.trim()) ? reqId.trim() : getLastDispatchedReqId();
 
   return new Promise((resolve) => {
-    if (typeof window !== 'undefined' && typeof window.retryOtp === 'function') {
-      try {
-        console.log(`[MSG91 Headless] Retrying OTP (Channel: ${channel || 'default'}, ReqId: ${reqId || 'none'})...`);
-        window.retryOtp(
-          channel,
-          async (data: any) => {
-            console.log('[MSG91 Headless] Resend OTP success data:', data);
-            const sData = await serverRetryPromise;
-            resolve({
-              success: true,
-              message: typeof data === 'string' ? data : (data?.message || 'New OTP passcode resent successfully via SMS.'),
-              data,
-              reqId: data?.reqId || data?.requestId || sData?.reqId || reqId
-            });
-          },
-          async (error: any) => {
-            console.warn('[MSG91 Headless] Resend OTP error, falling back to new dispatch:', error);
-            const sData = await serverRetryPromise;
-            if (sData && sData.success) {
-              resolve({
-                success: true,
-                message: 'New OTP passcode resent successfully via SMS.',
-                data: sData,
-                reqId: sData.reqId || reqId
-              });
-            } else {
-              resolve({
-                success: false,
-                error: typeof error === 'string' ? error : (error?.message || 'Failed to retry OTP delivery. Please wait a moment before requesting again.')
-              });
-            }
-          },
-          reqId
-        );
-      } catch (err: any) {
-        console.error('[MSG91 Headless] Exception calling window.retryOtp:', err);
-        serverRetryPromise.then(sData => {
-          if (sData && sData.success) {
-            resolve({
-              success: true,
-              message: 'New OTP passcode resent successfully via SMS.',
-              data: sData,
-              reqId: sData.reqId || reqId
-            });
-          } else {
-            resolve({
-              success: false,
-              error: err.message || 'Failed to trigger MSG91 retryOtp.'
-            });
-          }
+    try {
+      console.log(`[MSG91 Widget] Resending OTP via window.retryOtp (reqId: ${resolvedReqId || 'store'})...`);
+      const handleSuccess = (data: any) => {
+        console.log('[MSG91 Widget] retryOtp success response:', data);
+        const newReqId = extractReqIdFromData(data) || resolvedReqId;
+        if (newReqId) {
+          setLastDispatchedReqId(newReqId);
+        }
+
+        resolve({
+          success: true,
+          message: typeof data === 'string' ? data : (data?.message || 'OTP resent successfully via SMS.'),
+          data,
+          reqId: newReqId || undefined
         });
-      }
-    } else {
-      if (target) {
-        serverRetryPromise.then(sData => {
-          if (sData && sData.success) {
-            resolve({
-              success: true,
-              message: 'New OTP passcode resent successfully via SMS.',
-              data: sData,
-              reqId: sData.reqId || reqId
-            });
-          } else {
-            resolve({
-              success: false,
-              error: sData?.error || 'Failed to resend OTP.'
-            });
-          }
-        });
-      } else {
+      };
+
+      const handleError = (error: any) => {
+        console.warn('[MSG91 Widget] retryOtp failure response:', error);
         resolve({
           success: false,
-          error: 'MSG91 retryOtp method is not initialized.'
+          error: typeof error === 'string' ? error : (error?.message || 'Failed to resend OTP via MSG91 Widget.')
         });
+      };
+
+      if (resolvedReqId) {
+        window.retryOtp!(channel, handleSuccess, handleError, resolvedReqId);
+      } else {
+        window.retryOtp!(channel, handleSuccess, handleError);
       }
+    } catch (err: any) {
+      resolve({
+        success: false,
+        error: err.message || 'Error executing MSG91 retryOtp.'
+      });
     }
   });
 }
 
 /**
- * Headless Verify OTP using window.verifyOtp with fallback to backend validation
- * Extracts the access token on success and returns it.
- * Accepts polymorphic arguments: (otpValue, reqId, identifier) OR (identifier, otpValue, reqId)
+ * Headless Verify OTP using MSG91 Widget window.verifyOtp()
+ * Returns verified access-token from MSG91 for backend verification.
  */
 export async function verifyMSG91Otp(
   arg1: string | number,
   arg2?: string,
   arg3?: string
 ): Promise<OTPResponse> {
-  await initializeMSG91();
-
   let cleanOtp = '';
   let targetId = '';
   let reqId = '';
@@ -367,7 +419,6 @@ export async function verifyMSG91Otp(
   const str2 = String(arg2 || '').trim();
   const str3 = String(arg3 || '').trim();
 
-  // If arg1 is an identifier (email, phone starting with +, 91, or 10-digit phone) and arg2 is the OTP code
   if ((str1.includes('@') || str1.length >= 10 || str1.startsWith('+')) && /^\d{4,8}$/.test(str2)) {
     targetId = str1;
     cleanOtp = str2;
@@ -377,126 +428,156 @@ export async function verifyMSG91Otp(
     reqId = str2;
     targetId = str3;
   } else {
-    // Best-effort auto resolution
     cleanOtp = str2 || str1;
     targetId = str1.length >= 10 ? str1 : str3;
     reqId = str3;
   }
 
-  if (!targetId && typeof window !== 'undefined') {
-    targetId = window.configuration?.identifier || '';
-  }
+  // Fallback to globally cached reqId if caller did not supply one
+  const resolvedReqId = (reqId && reqId.trim()) ? reqId.trim() : getLastDispatchedReqId();
 
-  // Ensure window configuration has the matching target identifier
   if (targetId && typeof window !== 'undefined' && window.configuration) {
     window.configuration.identifier = formatMSG91Identifier(targetId);
   }
 
-  // Helper for server-side verification fallback
-  const verifyWithServer = async (): Promise<OTPResponse> => {
-    try {
-      const res = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          identifier: targetId,
-          phone: targetId,
-          code: cleanOtp,
-          reqId
-        })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        return {
-          success: true,
-          message: data.message || 'OTP verified successfully.',
-          accessToken: data.accessToken || 'server_verified_otp_session',
-          data
-        };
-      }
-      return {
-        success: false,
-        error: data.error || 'Incorrect or expired verification code. Please check your SMS for the latest OTP.'
-      };
-    } catch (err: any) {
-      return {
-        success: false,
-        error: err.message || 'Verification connection failure.'
-      };
-    }
-  };
+  const isReady = await waitForMSG91Ready(10000);
+  if (!isReady || typeof window.verifyOtp !== 'function') {
+    return {
+      success: false,
+      error: 'MSG91 OTP Widget verification method is not ready. Please refresh the page and try again.'
+    };
+  }
 
   return new Promise((resolve) => {
-    if (typeof window !== 'undefined' && typeof window.verifyOtp === 'function') {
-      try {
-        console.log(`[MSG91 Headless] Verifying OTP code: ${cleanOtp} for target: ${targetId}...`);
-        window.verifyOtp(
-          cleanOtp,
-          async (data: any) => {
-            console.log('[MSG91 Headless] OTP verify callback response:', data);
+    try {
+      console.log(`[MSG91 Widget] Verifying OTP via window.verifyOtp (code: ${cleanOtp}, reqId: ${resolvedReqId || 'store'})...`);
 
-            // Check if response contains an error status or expired message
-            const isErrorResponse = data && (
-              data.type === 'error' ||
-              data.status === 'error' ||
-              data.status === 'fail' ||
-              data.code === 705 ||
-              (typeof data === 'string' && (data.toLowerCase().includes('expired') || data.toLowerCase().includes('invalid') || data.toLowerCase().includes('fail'))) ||
-              (typeof data?.message === 'string' && (data.message.toLowerCase().includes('expired') || data.message.toLowerCase().includes('invalid') || data.message.toLowerCase().includes('fail')))
-            );
+      const handleSuccess = (data: any) => {
+        console.log('[MSG91 Widget] verifyOtp success response:', data);
 
-            if (isErrorResponse) {
-              console.warn('[MSG91 Headless] window.verifyOtp returned failure status, checking server-side validation...');
-              const serverRes = await verifyWithServer();
-              if (serverRes.success) {
-                resolve(serverRes);
-              } else {
-                const errMsg = typeof data === 'string' ? data : (data?.message || serverRes.error || 'Incorrect or expired verification code.');
-                resolve({
-                  success: false,
-                  error: errMsg,
-                  data
-                });
-              }
-              return;
-            }
-
-            // Extract the access token / JWT token from the response
-            const token = typeof data === 'string' 
-              ? (data.length > 15 ? data : '')
-              : (data?.['access-token'] || data?.accessToken || data?.token || data?.jwt || (data?.message && typeof data.message === 'string' && data.message.includes('.') ? data.message : ''));
-
-            resolve({
-              success: true,
-              message: 'OTP verified successfully.',
-              accessToken: token || (typeof data === 'string' ? data : JSON.stringify(data)),
-              data
-            });
-          },
-          async (error: any) => {
-            console.warn('[MSG91 Headless] OTP verification error from MSG91 widget, testing server fallback:', error);
-            const serverRes = await verifyWithServer();
-            if (serverRes.success) {
-              resolve(serverRes);
-            } else {
-              const errMsg = typeof error === 'string' ? error : (error?.message || error?.error || serverRes.error || 'Incorrect or expired verification code. Please check your SMS for the latest OTP.');
-              resolve({
-                success: false,
-                error: errMsg,
-                data: error
-              });
-            }
-          }
+        // Check if response contains an error status or failure
+        const isErrorResponse = Boolean(
+          !data ||
+          data.type === 'error' ||
+          data.status === 'error' ||
+          data.status === 'fail' ||
+          data.hasError === true ||
+          data.code === 705 ||
+          data.code === 401 ||
+          data.code === 400 ||
+          (typeof data.message === 'string' && data.message.toLowerCase().includes('invalid')) ||
+          (typeof data.message === 'string' && data.message.toLowerCase().includes('expired')) ||
+          (typeof data.message === 'string' && data.message.toLowerCase().includes('required'))
         );
-      } catch (err: any) {
-        console.error('[MSG91 Headless] Exception calling window.verifyOtp:', err);
-        verifyWithServer().then(resolve);
+
+        if (isErrorResponse) {
+          let errText = typeof data?.message === 'string' ? data.message : 'Invalid or expired OTP code. Please try again.';
+          if (errText.toLowerCase().includes('reqid is required')) {
+            errText = 'Verification session expired. Please tap Resend OTP to request a fresh passcode.';
+          }
+          resolve({
+            success: false,
+            error: errText,
+            data
+          });
+          return;
+        }
+
+        // Extract the access-token (JWT) from MSG91 response
+        let extractedToken = '';
+        if (typeof data === 'string') {
+          extractedToken = data;
+        } else if (data?.token) {
+          extractedToken = data.token;
+        } else if (data?.['access-token']) {
+          extractedToken = data['access-token'];
+        } else if (data?.accessToken) {
+          extractedToken = data.accessToken;
+        } else if (data?.jwt) {
+          extractedToken = data.jwt;
+        } else if (data?.data?.token) {
+          extractedToken = data.data.token;
+        } else if (data?.data?.['access-token']) {
+          extractedToken = data.data['access-token'];
+        } else if (data?.message && typeof data.message === 'string' && data.message.length > 30) {
+          extractedToken = data.message;
+        }
+
+        resolve({
+          success: true,
+          message: 'OTP verified successfully by MSG91 Widget.',
+          accessToken: extractedToken || JSON.stringify(data),
+          reqId: resolvedReqId,
+          data
+        });
+      };
+
+      const handleError = (error: any) => {
+        console.warn('[MSG91 Widget] verifyOtp failure response:', error);
+        let errText = typeof error === 'string' ? error : (error?.message || error?.error || 'Incorrect OTP code. Please check your SMS and try again.');
+        if (typeof errText === 'string' && errText.toLowerCase().includes('reqid is required')) {
+          errText = 'Verification session expired. Please tap Resend OTP to request a fresh passcode.';
+        }
+        resolve({
+          success: false,
+          error: errText,
+          data: error
+        });
+      };
+
+      // CRITICAL: Only pass reqId as 4th param if non-empty string!
+      // Passing empty string "" causes MSG91 to send reqId: "" which causes "reqId is required."
+      if (resolvedReqId) {
+        window.verifyOtp!(cleanOtp, handleSuccess, handleError, resolvedReqId);
+      } else {
+        window.verifyOtp!(cleanOtp, handleSuccess, handleError);
       }
-    } else {
-      // Fallback verification to backend API
-      verifyWithServer().then(resolve);
+    } catch (err: any) {
+      console.error('[MSG91 Widget] Exception in verifyOtp:', err);
+      resolve({
+        success: false,
+        error: err.message || 'Failed to verify OTP with MSG91 Widget.'
+      });
     }
   });
+}
+
+/**
+ * Direct OTP Login sending MSG91 verified accessToken to /api/auth/otp-login
+ */
+export async function performOtpLogin(params: {
+  identifier: string;
+  code?: string;
+  reqId?: string;
+  accessToken?: string;
+  fullName?: string;
+  email?: string;
+  autoCreate?: boolean;
+}): Promise<{ success: boolean; user?: any; token?: string; error?: string }> {
+  try {
+    const res = await fetch('/api/auth/otp-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+    const data = await res.json();
+    if (res.ok && data.user) {
+      return { success: true, user: data.user, token: data.token };
+    }
+    return { success: false, error: data.error || data.message || 'OTP Login failed' };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error during OTP Login' };
+  }
+}
+
+/**
+ * Returns current widget data
+ */
+export function getMSG91WidgetData(): any {
+  if (typeof window !== 'undefined' && typeof window.getWidgetData === 'function') {
+    return window.getWidgetData();
+  }
+  return null;
 }
 
 /**
@@ -520,16 +601,6 @@ export async function verifyServerAccessToken(accessToken: string): Promise<{ su
 }
 
 /**
- * Returns current widget data
- */
-export function getMSG91WidgetData(): any {
-  if (typeof window !== 'undefined' && typeof window.getWidgetData === 'function') {
-    return window.getWidgetData();
-  }
-  return null;
-}
-
-/**
  * Checks if Captcha is verified
  */
 export function isMSG91CaptchaVerified(): boolean {
@@ -537,98 +608,4 @@ export function isMSG91CaptchaVerified(): boolean {
     return window.isCaptchaVerified();
   }
   return false;
-}
-
-/**
- * Direct OTP Login using Identifier (Phone or Email) + Code/AccessToken
- */
-export async function performOtpLogin(params: {
-  identifier: string;
-  code?: string;
-  reqId?: string;
-  accessToken?: string;
-  fullName?: string;
-  email?: string;
-  autoCreate?: boolean;
-}): Promise<{ success: boolean; user?: any; token?: string; error?: string }> {
-  try {
-    const res = await fetch('/api/auth/otp-login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params)
-    });
-    const data = await res.json();
-    if (res.ok && data.user) {
-      return { success: true, user: data.user, token: data.token };
-    }
-    return { success: false, error: data.error || 'OTP Login failed' };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Network error during OTP Login' };
-  }
-}
-
-/**
- * Change Mobile with OTP verification
- */
-export async function performChangeMobile(params: {
-  newPhone: string;
-  code?: string;
-  reqId?: string;
-  token?: string;
-}): Promise<{ success: boolean; user?: any; error?: string; message?: string }> {
-  try {
-    const token = params.token || localStorage.getItem('token') || localStorage.getItem('grams_auth_token');
-    const res = await fetch('/api/auth/change-mobile', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        newPhone: params.newPhone,
-        code: params.code,
-        reqId: params.reqId
-      })
-    });
-    const data = await res.json();
-    if (res.ok && data.user) {
-      return { success: true, user: data.user, message: data.message };
-    }
-    return { success: false, error: data.error || 'Failed to update mobile number' };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Network error updating mobile number' };
-  }
-}
-
-/**
- * Change Email with OTP verification
- */
-export async function performChangeEmail(params: {
-  newEmail: string;
-  code?: string;
-  reqId?: string;
-  token?: string;
-}): Promise<{ success: boolean; user?: any; token?: string; error?: string; message?: string }> {
-  try {
-    const token = params.token || localStorage.getItem('token') || localStorage.getItem('grams_auth_token');
-    const res = await fetch('/api/auth/change-email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        newEmail: params.newEmail,
-        code: params.code,
-        reqId: params.reqId
-      })
-    });
-    const data = await res.json();
-    if (res.ok && data.user) {
-      return { success: true, user: data.user, token: data.token, message: data.message };
-    }
-    return { success: false, error: data.error || 'Failed to update email address' };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'Network error updating email address' };
-  }
 }

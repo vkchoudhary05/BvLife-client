@@ -9,7 +9,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [reviews, setReviews] = useState<Review[]>(() => {
     try {
-      const stored = localStorage.getItem('grams_local_reviews');
+      const stored = localStorage.getItem('Bv_local_reviews');
       return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
@@ -48,7 +48,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
       const data = await api.getReviews();
       let localRevs: Review[] = [];
       try {
-        const stored = localStorage.getItem('grams_local_reviews');
+        const stored = localStorage.getItem('Bv_local_reviews');
         localRevs = stored ? JSON.parse(stored) : [];
       } catch {}
 
@@ -99,7 +99,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
       productId: reviewData.productId,
       productName: product ? product.name : 'Ayurvedic Remedy',
       userName: reviewData.userName || (currentUser ? currentUser.fullName : 'Verified Buyer'),
-      userEmail: reviewData.userEmail || (currentUser ? currentUser.email : 'customer@gramslife.com'),
+      userEmail: reviewData.userEmail || (currentUser ? currentUser.email : 'customer@Bvlife.com'),
       rating: reviewData.rating,
       comment: reviewData.comment,
       date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
@@ -110,15 +110,15 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
     
     // Save to local storage for persistence across reloads
     try {
-      const stored = localStorage.getItem('grams_local_reviews');
+      const stored = localStorage.getItem('Bv_local_reviews');
       const list: Review[] = stored ? JSON.parse(stored) : [];
-      localStorage.setItem('grams_local_reviews', JSON.stringify([newReview, ...list.filter(r => r.id !== newReview.id)]));
+      localStorage.setItem('Bv_local_reviews', JSON.stringify([newReview, ...list.filter(r => r.id !== newReview.id)]));
       
       // Also mark this product as reviewed
-      const storedReviewed = localStorage.getItem('grams_reviewed_products');
+      const storedReviewed = localStorage.getItem('Bv_reviewed_products');
       const revIds: string[] = storedReviewed ? JSON.parse(storedReviewed) : [];
       if (!revIds.includes(reviewData.productId)) {
-        localStorage.setItem('grams_reviewed_products', JSON.stringify([...revIds, reviewData.productId]));
+        localStorage.setItem('Bv_reviewed_products', JSON.stringify([...revIds, reviewData.productId]));
       }
     } catch {}
 
@@ -147,7 +147,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
     cartItems: { product: Product; quantity: number }[],
     onSuccessClearCart: () => void
   ): Promise<Order | null> => {
-    const activeEmail = orderData.userEmail || currentUser?.email || 'guest@gramslife.com';
+    const activeEmail = orderData.userEmail || currentUser?.email || 'guest@Bvlife.com';
     const activeName = orderData.userName || currentUser?.fullName || 'Guest Customer';
 
     const fallbackOrder: Order = {
@@ -197,18 +197,18 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
         userName: activeName
       };
 
-      const currentToken = authToken || localStorage.getItem('grams_auth_token') || activeEmail;
+      const currentToken = authToken || localStorage.getItem('Bv_auth_token') || activeEmail;
       const savedOrder = await api.placeOrder(orderPayload, currentToken);
 
       if (savedOrder) {
         try {
-          const stored = localStorage.getItem('grams_recent_orders');
+          const stored = localStorage.getItem('Bv_recent_orders');
           const existingIds: string[] = stored ? JSON.parse(stored) : [];
           if (!existingIds.includes(savedOrder.id)) {
-            localStorage.setItem('grams_recent_orders', JSON.stringify([savedOrder.id, ...existingIds]));
+            localStorage.setItem('Bv_recent_orders', JSON.stringify([savedOrder.id, ...existingIds]));
           }
-          localStorage.setItem('grams_last_completed_order', JSON.stringify(savedOrder));
-          localStorage.setItem('grams_last_placed_order', JSON.stringify(savedOrder));
+          localStorage.setItem('Bv_last_completed_order', JSON.stringify(savedOrder));
+          localStorage.setItem('Bv_last_placed_order', JSON.stringify(savedOrder));
         } catch (e) {}
 
         setOrders(prev => [savedOrder, ...prev.filter(o => o.id !== savedOrder.id)]);
@@ -222,13 +222,13 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
 
     // Fallback save
     try {
-      const stored = localStorage.getItem('grams_recent_orders');
+      const stored = localStorage.getItem('Bv_recent_orders');
       const existingIds: string[] = stored ? JSON.parse(stored) : [];
       if (!existingIds.includes(fallbackOrder.id)) {
-        localStorage.setItem('grams_recent_orders', JSON.stringify([fallbackOrder.id, ...existingIds]));
+        localStorage.setItem('Bv_recent_orders', JSON.stringify([fallbackOrder.id, ...existingIds]));
       }
-      localStorage.setItem('grams_last_completed_order', JSON.stringify(fallbackOrder));
-      localStorage.setItem('grams_last_placed_order', JSON.stringify(fallbackOrder));
+      localStorage.setItem('Bv_last_completed_order', JSON.stringify(fallbackOrder));
+      localStorage.setItem('Bv_last_placed_order', JSON.stringify(fallbackOrder));
     } catch (e) {}
 
     setOrders(prev => [fallbackOrder, ...prev.filter(o => o.id !== fallbackOrder.id)]);
@@ -239,7 +239,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
   // Admin CRUDs
   const handleAdminUpdateOrderStatus = async (orderId: string, status: Order['status'], payStatus: Order['paymentStatus']) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, paymentStatus: payStatus } : o));
-    const token = authToken || localStorage.getItem('grams_auth_token') || '';
+    const token = authToken || localStorage.getItem('Bv_auth_token') || '';
     if (token) {
       const updated = await api.updateOrderStatus(orderId, status, payStatus, token);
       if (updated) {
@@ -260,7 +260,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
     } as Product;
 
     setProducts(prev => [newP, ...prev]);
-    const token = authToken || localStorage.getItem('grams_auth_token') || '';
+    const token = authToken || localStorage.getItem('Bv_auth_token') || '';
     if (token) {
       await api.addProduct(newP, token);
     }
@@ -268,7 +268,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
 
   const handleAdminEditProduct = async (id: string, prod: Partial<Product>) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, ...prod } : p));
-    const token = authToken || localStorage.getItem('grams_auth_token') || '';
+    const token = authToken || localStorage.getItem('Bv_auth_token') || '';
     if (token) {
       await api.updateProduct(id, prod, token);
     }
@@ -276,7 +276,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
 
   const handleAdminDeleteProduct = async (id: string) => {
     setProducts(prev => prev.filter(p => p.id !== id));
-    const token = authToken || localStorage.getItem('grams_auth_token') || '';
+    const token = authToken || localStorage.getItem('Bv_auth_token') || '';
     if (token) {
       await api.deleteProduct(id, token);
     }
@@ -284,7 +284,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
 
   const handleAdminAddCoupon = async (cpn: Coupon) => {
     setCoupons(prev => [cpn, ...prev]);
-    const token = authToken || localStorage.getItem('grams_auth_token') || '';
+    const token = authToken || localStorage.getItem('Bv_auth_token') || '';
     if (token) {
       await api.addCoupon(cpn, token);
     }
@@ -292,16 +292,16 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
 
   const handleUpdateSettings = async (newSettings: WebsiteSettings) => {
     setSettings(newSettings);
-    const token = authToken || localStorage.getItem('grams_auth_token') || '';
+    const token = authToken || localStorage.getItem('Bv_auth_token') || '';
     if (token) {
       await api.updateSettings(newSettings, token);
     }
   };
 
   const activeSettings: WebsiteSettings = settings || {
-    logoName: "Grams Life",
+    logoName: "Bv Life",
     logoUrl: "",
-    contactEmail: "care@gramslife.com",
+    contactEmail: "care@Bvlife.com",
     contactPhone: "+91 98765 43210",
     address: "Kerala, India",
     freeShippingThreshold: 999,

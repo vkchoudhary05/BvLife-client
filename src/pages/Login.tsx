@@ -155,53 +155,48 @@ export const Login: React.FC<LoginProps> = ({
     }
   };
 
-  // Submit handler for starting Direct OTP Login (Checks if registered before sending SMS OTP)
+  // Submit handler for starting Direct OTP Login
   const handleStartOtpLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
     setLoginSuccess('');
 
-    const query = otpLoginIdentifier.trim();
-    if (!query) {
-      setLoginError('Please enter your registered mobile number.');
+    const raw = otpLoginIdentifier.trim();
+    if (!raw) {
+      setLoginError('Please enter your mobile phone number.');
       return;
     }
 
-    const cleanPhone = query.replace(/\D/g, '');
-    if (cleanPhone.length !== 10 && !query.includes('@')) {
-      setLoginError('Please enter a valid 10-digit mobile phone number.');
+    // Smart phone normalizer: strip +91 or 91 if 12 digits, handle 10 digits
+    let digits = raw.replace(/\D/g, '');
+    if (digits.length === 12 && digits.startsWith('91')) {
+      digits = digits.slice(2);
+    } else if (digits.length > 10) {
+      digits = digits.slice(-10);
+    }
+
+    if (digits.length !== 10 && !raw.includes('@')) {
+      setLoginError('Please enter a valid 10-digit Indian mobile phone number.');
       return;
     }
+
+    const cleanTarget = digits.length === 10 ? digits : raw.toLowerCase();
 
     setAuthLoading(true);
     try {
-      // 1. Check if the mobile number / user exists in the database
-      const checkRes = await fetch('/api/auth/check-account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query })
-      });
-      const checkData = await checkRes.json();
-
-      if (!checkData.exists) {
-        setLoginError('This mobile number is not registered. Please register first or check your number.');
-        setAuthLoading(false);
-        return; // STOP! DO NOT SEND OTP!
-      }
-
-      // 2. Mobile number is registered -> Send SMS OTP
-      const target = query.includes('@') ? query.toLowerCase() : formatMSG91Identifier(query);
+      // Dispatch live SMS OTP via MSG91 widget & carrier
+      const target = raw.includes('@') ? raw.toLowerCase() : formatMSG91Identifier(cleanTarget);
       const res = await sendMSG91Otp(target);
 
       if (res.success) {
         if (res.reqId) setActiveReqId(res.reqId);
         setOtpLoginStarted(true);
-        setLoginSuccess(`Verification code dispatched via SMS to ${query}`);
+        setLoginSuccess(`Verification code dispatched via SMS to +91 ${digits}`);
       } else {
         setLoginError(res.error || 'Failed to dispatch login SMS OTP passcode.');
       }
     } catch (err: any) {
-      setLoginError(err.message || 'Connection error checking registered mobile number.');
+      setLoginError(err.message || 'Connection error sending SMS OTP.');
     } finally {
       setAuthLoading(false);
     }
@@ -212,18 +207,27 @@ export const Login: React.FC<LoginProps> = ({
     setAuthLoading(true);
     setLoginError('');
     try {
+      let raw = otpLoginIdentifier.trim();
+      let digits = raw.replace(/\D/g, '');
+      if (digits.length === 12 && digits.startsWith('91')) {
+        digits = digits.slice(2);
+      } else if (digits.length > 10) {
+        digits = digits.slice(-10);
+      }
+      const cleanTarget = digits.length === 10 ? digits : raw.toLowerCase();
+
       const res = await performOtpLogin({
-        identifier: otpLoginIdentifier.trim(),
+        identifier: cleanTarget,
         code: params.code,
         reqId: params.reqId,
-        accessToken: params.accessToken
+        accessToken: params.accessToken,
+        autoCreate: true
       });
 
       if (res.success && res.token) {
         localStorage.setItem('grams_auth_token', res.token);
         localStorage.setItem('token', res.token);
-        setLoginSuccess('Authentication successful! Welcome back.');
-        onNavigate('home');
+        setLoginSuccess('Authentication successful! Welcome to Grams Life.');
         setTimeout(() => {
           window.location.reload();
         }, 500);
@@ -263,7 +267,11 @@ export const Login: React.FC<LoginProps> = ({
       if (success) {
         setAuthEmail('');
         setAuthPassword('');
-        onNavigate('home');
+        if (loginId.toLowerCase() === 'doctor@gramslife.com') {
+          onNavigate('doctor-dashboard');
+        } else {
+          onNavigate('home');
+        }
       }
     } catch (err: any) {
       setLoginError('An unexpected error occurred during sign in.');
@@ -548,25 +556,35 @@ export const Login: React.FC<LoginProps> = ({
               </div>
             ) : (
               <form onSubmit={handleStartOtpLogin} className="space-y-4 animate-in slide-in-from-bottom duration-300">
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-[10px] uppercase tracking-wider font-bold text-brand-green-800/80 flex items-center gap-1.5 font-serif">
                     <Smartphone className="w-3.5 h-3.5 text-brand-gold-600" />
-                    <span>Registered Mobile Phone Number (10 Digits)</span>
+                    <span>Mobile Phone Number (10 Digits)</span>
                   </label>
-                  <input
-                    type="tel"
-                    required
-                    maxLength={10}
-                    placeholder="e.g., 9425011088"
-                    value={otpLoginIdentifier}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                      setOtpLoginIdentifier(val);
-                    }}
-                    className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-green-900 transition-all placeholder-brand-green-300 shadow-sm"
-                  />
-                  <p className="text-[10px] text-brand-green-700/70">
-                    We will send an SMS OTP code to your registered mobile number.
+                  <div className="flex rounded-2xl overflow-hidden border border-brand-green-200 bg-white focus-within:ring-2 focus-within:ring-brand-gold-500/20 focus-within:border-brand-gold-500 shadow-sm transition-all">
+                    <div className="flex items-center gap-1 px-3.5 bg-brand-green-50/80 border-r border-brand-green-200 text-brand-green-950 font-bold text-xs">
+                      <span>🇮🇳</span>
+                      <span>+91</span>
+                    </div>
+                    <input
+                      type="tel"
+                      required
+                      maxLength={14}
+                      placeholder="94250 11088"
+                      value={otpLoginIdentifier}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, '');
+                        if (val.startsWith('91') && val.length > 10) {
+                          val = val.slice(2);
+                        }
+                        setOtpLoginIdentifier(val.slice(0, 10));
+                      }}
+                      className="w-full px-3.5 py-2.5 bg-transparent focus:outline-none text-sm font-mono font-bold tracking-wider text-brand-green-950 placeholder-brand-green-300"
+                    />
+                  </div>
+                  <p className="text-[10px] text-brand-green-700/70 flex items-center gap-1">
+                    <span>⚡</span>
+                    <span>An official 4-digit verification code will be dispatched to your mobile via SMS.</span>
                   </p>
                 </div>
 

@@ -115,8 +115,8 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
           const isAllowedAdmin = loginData.user.role === 'admin' || [
             'iamvivekbaliyan07@gmail.com',
             'vkchoudhary050607@gmail.com',
-            'admin@gramslife.com',
-            'care@gramslife.com'
+            'admin@Bvlife.com',
+            'care@Bvlife.com'
           ].includes(lower);
 
           if (isAllowedAdmin) {
@@ -229,8 +229,8 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
 
       if (res.success && res.token) {
         // Save auth tokens
-        sessionStorage.setItem('grams_auth_token', res.token);
-        localStorage.setItem('grams_auth_token', res.token);
+        sessionStorage.setItem('Bv_auth_token', res.token);
+        localStorage.setItem('Bv_auth_token', res.token);
         localStorage.setItem('token', res.token);
 
         const adminUser = {
@@ -240,8 +240,8 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
           phone: res.user?.phone || adminPhone || '7451050607'
         };
 
-        sessionStorage.setItem('grams_admin_auth', JSON.stringify(adminUser));
-        localStorage.setItem('grams_current_user', JSON.stringify(adminUser));
+        sessionStorage.setItem('Bv_admin_auth', JSON.stringify(adminUser));
+        localStorage.setItem('Bv_current_user', JSON.stringify(adminUser));
 
         setSuccessMsg('Clearance verified! Opening Admin Panel...');
 
@@ -424,7 +424,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@gramslife.com"
+                  placeholder="admin@Bvlife.com"
                   className="w-full px-4 py-3 rounded-2xl bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 text-sm font-medium text-slate-900 placeholder-slate-400 shadow-xs transition-all"
                 />
               </div>

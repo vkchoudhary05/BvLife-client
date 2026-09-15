@@ -17,7 +17,7 @@ import { Language } from '../lib/translations';
 import { api } from '../services/api';
 import { ConsultationFeatures } from '../components/ConsultationFeatures';
 import { loadRazorpayScript } from '../utils/razorpay';
-import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin } from '../services/msg91OtpService';
+import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin, verifyMSG91Otp } from '../services/msg91OtpService';
 import drImage from "@/assets/DrSanjeev.png";
 
 const legendaryDoctorImg = drImage;
@@ -128,6 +128,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
   const [authMobile, setAuthMobile] = useState('');
   const [authOtpCode, setAuthOtpCode] = useState('');
   const [authReqId, setAuthReqId] = useState('');
+  const [authDevOtp, setAuthDevOtp] = useState('');
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
@@ -351,6 +352,9 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
       if (res.success) {
         setOtpSent(true);
         setAuthReqId(res.reqId || '');
+        if (res.otp) {
+          setAuthDevOtp(res.otp);
+        }
         setOtpTimer(30);
         setAuthSuccessMsg(`OTP sent to +91 ${clean}. Enter the 4-digit code below.`);
       } else {
@@ -375,19 +379,28 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
 
     setIsVerifyingOtp(true);
     try {
+      const msg91Target = formatMSG91Identifier(clean);
+      const verifyRes = await verifyMSG91Otp(code, authReqId, msg91Target);
+      if (!verifyRes.success) {
+        setAuthError(verifyRes.error || 'Incorrect OTP code. Please check and try again.');
+        setIsVerifyingOtp(false);
+        return;
+      }
+
       const loginRes = await performOtpLogin({
         identifier: clean,
         code,
         reqId: authReqId,
+        accessToken: verifyRes.accessToken,
         fullName: patientName.trim() || 'Ayurveda Patient',
-        email: patientEmail.trim() || `${clean}@gramslife.com`,
+        email: patientEmail.trim() || `${clean}@Bvlife.com`,
         autoCreate: true
       });
 
       if (loginRes.success && loginRes.user) {
         if (loginRes.token) {
-          sessionStorage.setItem('grams_auth_token', loginRes.token);
-          localStorage.setItem('grams_auth_token', loginRes.token);
+          sessionStorage.setItem('Bv_auth_token', loginRes.token);
+          localStorage.setItem('Bv_auth_token', loginRes.token);
           if (onLoginSuccess) {
             onLoginSuccess(loginRes.token, loginRes.user);
           }
@@ -418,8 +431,8 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     try {
       const res = await api.login({ email: patientEmail.trim(), password: authPassword.trim() });
       if (res && res.token) {
-        sessionStorage.setItem('grams_auth_token', res.token);
-        localStorage.setItem('grams_auth_token', res.token);
+        sessionStorage.setItem('Bv_auth_token', res.token);
+        localStorage.setItem('Bv_auth_token', res.token);
         if (onLoginSuccess) {
           onLoginSuccess(res.token, res.user);
         }
@@ -629,7 +642,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
           key: finalKey,
           amount: data.amount,
           currency: data.currency || 'INR',
-          name: 'Grams Life Ayurvedic Clinic',
+          name: 'Bv Life Ayurvedic Clinic',
           description: `Consultation with ${doctor.name} (${selectedMode === 'video' ? '1-on-1 HD Video' : 'Direct Phone Call'})`,
           image: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
           order_id: data.orderId,
@@ -726,7 +739,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     <div id="doctor-consultation-page" className="min-h-screen bg-[#FBF9F5] pb-24 text-slate-800">
       
       {/* 1. TOP HERO BANNER — IDENTICAL REUSABLE BANNER SYSTEM */}
-      <section className="max-w-[1440px] ">
+      <section className="max-w-[1440px]">
         <div
           id="doctor-hero-banner"
           onClick={() => {
@@ -772,6 +785,30 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
             {/* Subtle Gradient Overlay matching CustomerHome */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent sm:from-black/20 sm:via-transparent sm:to-transparent" />
           </div>
+
+          {/* Navigation Chevron Left */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setCurrentSlide((prev) => (prev - 1 + doctorHeroSlides.length) % doctorHeroSlides.length);
+            }}
+            aria-label="Previous slide"
+            className="flex absolute left-2 xs:left-3 md:left-4 lg:left-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
+          >
+            <ChevronLeft className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
+          </button>
+
+          {/* Navigation Chevron Right */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setCurrentSlide((prev) => (prev + 1) % doctorHeroSlides.length);
+            }}
+            aria-label="Next slide"
+            className="flex absolute right-2 xs:right-3 md:right-4 lg:right-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
+          >
+            <ChevronRight className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
+          </button>
 
           {/* Banner Slide Indicator Dots */}
           <div className="absolute bottom-2 xs:bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 xs:gap-2">
@@ -1038,9 +1075,9 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                         <span>Payment Verified via Razorpay • Paid ₹{bookingConfirmed.fee}</span>
                       </span>
                     ) : (
-                      <span className="px-3 py-1 rounded-full bg-amber-500/30 border border-amber-400/50 text-amber-300 font-bold flex items-center gap-1.5 text-[11px]">
-                        <Coins className="w-3.5 h-3.5 text-amber-300" />
-                        <span>Payment: Pay Later after Consultation (₹{bookingConfirmed.fee})</span>
+                      <span className="px-3 py-1 rounded-full bg-emerald-500/30 border border-emerald-400/50 text-emerald-300 font-bold flex items-center gap-1.5 text-[11px]">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                        <span>Payment Status: Confirmed (₹{bookingConfirmed.fee})</span>
                       </span>
                     )}
                     {bookingConfirmed.paymentId && (
@@ -1071,14 +1108,14 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                     <a
                       href={`https://wa.me/919425011088?text=${encodeURIComponent(
                         `🌿 *NEW DOCTOR APPOINTMENT BOOKED* 🌿\n\n` +
-                        `Namaste Grams Life Clinic Desk, I have scheduled a doctor consultation:\n\n` +
+                        `Namaste Bv Life Clinic Desk, I have scheduled a doctor consultation:\n\n` +
                         `• *Appointment ID:* #${bookingConfirmed.id}\n` +
                         `• *Patient Name:* ${bookingConfirmed.patientName}\n` +
                         `• *Patient Phone:* ${bookingConfirmed.patientPhone}\n` +
                         `• *Doctor:* ${bookingConfirmed.doctorName}\n` +
                         `• *Date & Slot:* ${bookingConfirmed.date} • ${bookingConfirmed.timeSlot}\n` +
                         `• *Format:* ${bookingConfirmed.consultationMode.toUpperCase()}\n` +
-                        `• *Payment Status:* ${bookingConfirmed.paymentStatus === 'Paid' ? `Verified (₹${bookingConfirmed.fee})` : `Pay Later (₹${bookingConfirmed.fee})`}\n` +
+                        `• *Payment Status:* ${bookingConfirmed.paymentStatus === 'Paid' ? `Verified (₹${bookingConfirmed.fee})` : `Online Paid (₹${bookingConfirmed.fee})`}\n` +
                         (bookingConfirmed.paymentId ? `• *Transaction Ref:* ${bookingConfirmed.paymentId}\n` : '') +
                         `• *Health Concern:* ${bookingConfirmed.healthConcern || 'Ayurvedic Wellness Evaluation'}\n\n` +
                         `Please verify the booking on the Doctor Dashboard.`
@@ -1095,14 +1132,14 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                     {bookingConfirmed.patientPhone && (
                       <a
                         href={`https://wa.me/${bookingConfirmed.patientPhone.replace(/\D/g, '').length === 10 ? `91${bookingConfirmed.patientPhone.replace(/\D/g, '')}` : bookingConfirmed.patientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                          `🌿 *Grams Life Ayurvedic Clinic - Booking Confirmation* 🌿\n\n` +
+                          `🌿 *Bv Life Ayurvedic Clinic - Booking Confirmation* 🌿\n\n` +
                           `Namaste ${bookingConfirmed.patientName},\n` +
                           `Your consultation with *${bookingConfirmed.doctorName}* has been confirmed!\n\n` +
                           `📋 *Appointment Details:*\n` +
                           `• *Appointment ID:* #${bookingConfirmed.id}\n` +
                           `• *Date & Time:* ${bookingConfirmed.date} at ${bookingConfirmed.timeSlot}\n` +
                           `• *Consultation Mode:* ${bookingConfirmed.consultationMode.toUpperCase()}\n` +
-                          `• *Payment Status:* ${bookingConfirmed.paymentStatus === 'Paid' ? `Paid ₹${bookingConfirmed.fee} (Verified)` : `Pay Later (₹${bookingConfirmed.fee})`}\n` +
+                          `• *Payment Status:* ${bookingConfirmed.paymentStatus === 'Paid' ? `Paid ₹${bookingConfirmed.fee} (Verified)` : `Paid ₹${bookingConfirmed.fee}`}\n` +
                           (bookingConfirmed.meetingLink ? `• *Video Consultation Link:* ${bookingConfirmed.meetingLink}\n` : '') +
                           `\nNeed assistance? Reply here or call clinic care: +91 9425011088.`
                         )}`}
@@ -2389,18 +2426,33 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                                 id="input-auth-otp"
                                 type="text"
                                 inputMode="numeric"
-                                maxLength={6}
+                                maxLength={4}
                                 autoFocus
                                 placeholder="• • • •"
                                 value={authOtpCode}
                                 onChange={(e) => {
-                                  const digits = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                  const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
                                   setAuthOtpCode(digits);
                                   if (authError) setAuthError(null);
                                 }}
                                 className="w-full tracking-widest text-center text-xl font-bold py-3 rounded-xl border-2 border-brand-green-800 bg-white text-slate-900 focus:outline-none shadow-xs"
                               />
                             </div>
+
+                            {authDevOtp && (
+                              <div className="flex items-center justify-between text-[11px] pt-1">
+                                <span className="text-slate-500">
+                                  Session Code: <code className="font-mono font-bold text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">{authDevOtp}</code>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setAuthOtpCode(authDevOtp)}
+                                  className="text-[11px] font-bold text-brand-green-800 hover:underline cursor-pointer"
+                                >
+                                  Auto-fill
+                                </button>
+                              </div>
+                            )}
 
                             {/* Resend OTP Timer & Button */}
                             <div className="flex items-center justify-between text-xs pt-1">
