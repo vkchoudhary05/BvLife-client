@@ -3,120 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { 
-  ShieldCheck, Award, Sparkles, CheckCircle2, Clock, 
-  Activity, Users, FileText, Heart, Check, 
-  ArrowRight, Stethoscope, Zap, BookOpen, AlertCircle
+  ShieldCheck, Award, Sparkles, Clock, 
+  Activity, Users, FileText, Heart, 
+  ArrowRight, Stethoscope, Zap
 } from 'lucide-react';
 
 interface ConsultationFeaturesProps {
-  onSelectHealthConcern?: (concern: string) => void;
   onBookClick: () => void;
   doctorFee: number;
 }
 
 export const ConsultationFeatures: React.FC<ConsultationFeaturesProps> = ({
-  onSelectHealthConcern,
   onBookClick,
   doctorFee
 }) => {
-  const [selectedConcernIndex, setSelectedConcernIndex] = useState<number | null>(null);
-
-  const healthConcerns = [
-    {
-      id: 'digestion',
-      title: 'Digestion & Gut Health',
-      subtitle: 'Acidity, GERD, IBS, Bloating & Constipation',
-      icon: '🌿',
-      tag: 'Most Common',
-      description: 'Heal hyperacidity, sluggish digestion (Mandagni), and chronic inflammation by restoring metabolic fire and eliminating Ama.'
-    },
-    {
-      id: 'women-health',
-      title: 'Women’s Health & Hormones',
-      subtitle: 'PCOS/PCOD, Thyroid, Irregular Cycles & Menopause',
-      icon: '🌸',
-      tag: 'Root-Cause Care',
-      description: 'Balance endocrine channels naturally with specialized rasayanas and cyclical herbs that regulate hormonal rhythms.'
-    },
-    {
-      id: 'stress-sleep',
-      title: 'Stress, Sleep & Mental Agility',
-      subtitle: 'Chronic Insomnia, Anxiety, Fatigue & Burnout',
-      icon: '🧘',
-      tag: 'Nootropic Herbs',
-      description: 'Soothe the central nervous system (Majja Dhatu), induce deep restorative sleep, and enhance mental focus without dependence.'
-    },
-    {
-      id: 'joints-arthritis',
-      title: 'Joint, Spine & Bone Care',
-      subtitle: 'Osteoarthritis, Sciatica, Cervical & Stiffness',
-      icon: '🦴',
-      tag: 'Mobility Restored',
-      description: 'Pacify aggravated Vata dosha, lubricate synovial joints (Sleshaka Kapha), and rebuild cartilage tissue naturally.'
-    },
-    {
-      id: 'skin-hair',
-      title: 'Skin & Hair Rejuvenation',
-      subtitle: 'Acne, Melasma, Psoriasis, Eczema & Hair Fall',
-      icon: '✨',
-      tag: 'Blood Purification',
-      description: 'Purify the bloodstream (Rakta Dhatu) to eliminate deep dermatological toxins and nourish hair follicles from root.'
-    },
-    {
-      id: 'metabolism-weight',
-      title: 'Metabolism & Weight Balance',
-      subtitle: 'Stubborn Fat, Fatty Liver, Diabetes & Energy Lags',
-      icon: '⚡',
-      tag: 'Ama Pachana',
-      description: 'Stimulate cellular metabolism (Dhatu Agni) to burn visceral fat and balance post-meal glucose spikes.'
-    },
-    {
-      id: 'immunity-respiratory',
-      title: 'Immunity & Respiratory',
-      subtitle: 'Chronic Cough, Sinusitis, Allergies & Low Ojas',
-      icon: '🫁',
-      tag: 'Ojas Enhancement',
-      description: 'Strengthen lung parenchyma (Pranavaha Srotas) and build resilient bio-immunity (Vyadhikshamatva) across seasons.'
-    },
-    {
-      id: 'vitality-rejuvenation',
-      title: 'Vitality & Anti-Aging',
-      subtitle: 'Chronic Exhaustion, Stamina & Cellular Detox',
-      icon: '🌟',
-      tag: 'Rasayana Therapy',
-      description: 'Experience deep tissue regeneration with gold-grade Rasayanas that replenish vital energy (Prana & Ojas).'
-    }
-  ];
-
-  const steps = [
-    {
-      step: '01',
-      title: 'Book Your 1-on-1 Slot',
-      desc: 'Select your preferred time, consultation mode (Video/Audio/WhatsApp), and share your current health symptoms.',
-      badge: 'Takes 2 Mins'
-    },
-    {
-      step: '02',
-      title: 'Deep Classical Consultation',
-      desc: '25-minute comprehensive private session with Dr. Arundhati Sharma covering Nadi, tongue, Agni, and root causes.',
-      badge: '25 Mins Session'
-    },
-    {
-      step: '03',
-      title: 'Digital Prescription & Diet Chart',
-      desc: 'Receive an official AYUSH e-prescription, bespoke herbal formulations, and personalized Ahar-Vihar meal guidelines.',
-      badge: 'Within 30 Mins'
-    },
-    {
-      step: '04',
-      title: '7 Days Free Follow-Up Support',
-      desc: 'Connect with our clinical Vaidya team over WhatsApp for dosage guidance, diet adjustments, and healing tracking.',
-      badge: '100% Complimentary'
-    }
-  ];
-
   const benefits = [
     {
       title: 'Prakriti & Dosha Mapping',
@@ -196,47 +98,7 @@ export const ConsultationFeatures: React.FC<ConsultationFeaturesProps> = ({
         </div>
       </div>
 
-      {/* 2. HOW ONLINE CONSULTATION WORKS: 4-STEP HEALING ROADMAP */}
-      <section className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-xs space-y-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 border-b border-slate-100 pb-6">
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-brand-green-700">Simple & Seamless Process</span>
-            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900">
-              How Your Online Vaidya Consultation Works
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-500 max-w-2xl">
-              Experience the ancient art of Ayurvedic diagnosis from the comfort of your home in four structured steps.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onBookClick}
-            className="px-5 py-2.5 rounded-xl bg-brand-green-800 hover:bg-brand-green-900 text-white font-bold text-xs shadow-sm flex items-center gap-2 transition-transform hover:scale-105 shrink-0"
-          >
-            <span>Book Consultation (₹{doctorFee})</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {steps.map((s, idx) => (
-            <div key={idx} className="bg-brand-cream-50/70 p-5 rounded-2xl border border-slate-200 relative group hover:border-brand-green-600/30 transition-all">
-              <div className="flex items-center justify-between mb-3">
-                <span className="w-8 h-8 rounded-xl bg-brand-green-800 text-brand-gold-300 font-bold text-xs flex items-center justify-center shadow-xs">
-                  {s.step}
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  {s.badge}
-                </span>
-              </div>
-              <h4 className="font-bold text-sm text-slate-900 mb-1.5">{s.title}</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">{s.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 3. WHAT YOUR CONSULTATION INCLUDES: 6-CARD GRID */}
+      {/* 2. WHAT YOUR CONSULTATION INCLUDES: 6-CARD GRID */}
       <section className="bg-gradient-to-br from-brand-green-950 via-[#072d1a] to-[#04190e] text-brand-cream-50 rounded-3xl p-6 sm:p-10 border border-brand-gold-500/25 shadow-xl space-y-8">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-[11px] font-bold uppercase tracking-widest text-brand-gold-400">Comprehensive Clinical Care</span>
@@ -270,79 +132,21 @@ export const ConsultationFeatures: React.FC<ConsultationFeaturesProps> = ({
             className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-brand-gold-500 via-brand-gold-400 to-amber-500 hover:from-brand-gold-400 hover:to-amber-400 text-brand-green-950 font-bold text-sm shadow-xl transition-all hover:scale-105 inline-flex items-center gap-2"
           >
             <Stethoscope className="w-4 h-4" />
-            <span>Schedule Session with Dr. Arundhati (₹{doctorFee})</span>
+            <span>Schedule Session with Dr. Sanjeev Rastogi (₹{doctorFee})</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </section>
 
-      {/* 4. HEALTH CONCERNS WE TREAT: INTERACTIVE GRID */}
-      <section className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-xs space-y-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 border-b border-slate-100 pb-6">
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-brand-green-700">Holistic Specialties</span>
-            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900">
-              Health Concerns We Treat & Reverse
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-500 max-w-2xl">
-              Select your primary health concern to understand how Dr. Arundhati Sharma’s classical protocols address the root cause.
-            </p>
-          </div>
-          <span className="text-xs text-slate-500 font-medium">Click any card to select for booking</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {healthConcerns.map((concern, idx) => {
-            const isSelected = selectedConcernIndex === idx;
-            return (
-              <div 
-                key={concern.id}
-                onClick={() => {
-                  setSelectedConcernIndex(idx);
-                  if (onSelectHealthConcern) onSelectHealthConcern(concern.title);
-                  onBookClick();
-                }}
-                className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
-                  isSelected 
-                    ? 'border-brand-green-800 bg-brand-green-50 shadow-md ring-1 ring-brand-green-800' 
-                    : 'border-slate-200 hover:border-brand-gold-400/80 bg-white hover:shadow-md'
-                }`}
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl">{concern.icon}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                      {concern.tag}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-slate-900 leading-tight">{concern.title}</h4>
-                    <p className="text-[11px] text-brand-green-800 font-semibold mt-0.5">{concern.subtitle}</p>
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed pt-1">
-                    {concern.description}
-                  </p>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-brand-green-800 group">
-                  <span>Book for this concern</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 5. WHY CONSULT OUR VAIDYA: TRUST PILLARS */}
+      {/* 4. WHY CONSULT OUR VAIDYA: TRUST PILLARS */}
       <section className="bg-brand-cream-100/60 rounded-3xl p-6 sm:p-10 border border-brand-gold-500/20 shadow-xs space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-[11px] font-bold uppercase tracking-widest text-brand-green-800">The Classical Difference</span>
           <h3 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900">
-            Why Consult With Vaidya Ratna Dr. Arundhati Sharma?
+            Why Consult With Vaidya Ratna Dr. Sanjeev Rastogi?
           </h3>
           <p className="text-xs sm:text-sm text-slate-600">
-            Experience unadulterated Ayurvedic healthcare backed by 22+ years of hospital and clinical excellence
+            Experience unadulterated Ayurvedic healthcare backed by 30+ years of hospital and academic excellence
           </p>
         </div>
 

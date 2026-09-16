@@ -301,7 +301,7 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
   const activeSettings: WebsiteSettings = settings || {
     logoName: "Bv Life",
     logoUrl: "",
-    contactEmail: "care@Bvlife.com",
+    contactEmail: "care@bvlife.in",
     contactPhone: "+91 98765 43210",
     address: "Kerala, India",
     freeShippingThreshold: 999,

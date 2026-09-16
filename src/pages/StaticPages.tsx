@@ -627,7 +627,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-brand-green-900 uppercase tracking-wider">Email Correspondence</h4>
-                    <p className="text-sm font-semibold text-brand-gold-700 mt-0.5">care@Bvlife.com</p>
+                    <p className="text-sm font-semibold text-brand-gold-700 mt-0.5">care@bvlife.in</p>
                     <p className="text-[10px] text-brand-green-600/60 mt-0.5">For queries, order tracking, and custom botanical mixtures.</p>
                   </div>
                 </div>

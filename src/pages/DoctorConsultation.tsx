@@ -17,6 +17,7 @@ import { Language } from '../lib/translations';
 import { api } from '../services/api';
 import { ConsultationFeatures } from '../components/ConsultationFeatures';
 import { loadRazorpayScript } from '../utils/razorpay';
+// import { Msg91Captcha } from '../components/Msg91Captcha';
 import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin, verifyMSG91Otp } from '../services/msg91OtpService';
 import drImage from "@/assets/DrSanjeev.png";
 
@@ -187,7 +188,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
         const found = data[0];
         setDoctor({
           ...found,
-          image: found.image || legendaryDoctorImg || LEGEND_DOCTOR.image
+          image: drImage
         });
       }
     }).catch(err => {
@@ -393,14 +394,14 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
         reqId: authReqId,
         accessToken: verifyRes.accessToken,
         fullName: patientName.trim() || 'Ayurveda Patient',
-        email: patientEmail.trim() || `${clean}@Bvlife.com`,
+        email: patientEmail.trim() || `${clean}@gramslife.com`,
         autoCreate: true
       });
 
       if (loginRes.success && loginRes.user) {
         if (loginRes.token) {
-          sessionStorage.setItem('Bv_auth_token', loginRes.token);
-          localStorage.setItem('Bv_auth_token', loginRes.token);
+          sessionStorage.setItem('grams_auth_token', loginRes.token);
+          localStorage.setItem('grams_auth_token', loginRes.token);
           if (onLoginSuccess) {
             onLoginSuccess(loginRes.token, loginRes.user);
           }
@@ -431,8 +432,8 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     try {
       const res = await api.login({ email: patientEmail.trim(), password: authPassword.trim() });
       if (res && res.token) {
-        sessionStorage.setItem('Bv_auth_token', res.token);
-        localStorage.setItem('Bv_auth_token', res.token);
+        sessionStorage.setItem('grams_auth_token', res.token);
+        localStorage.setItem('grams_auth_token', res.token);
         if (onLoginSuccess) {
           onLoginSuccess(res.token, res.user);
         }
@@ -642,8 +643,8 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
           key: finalKey,
           amount: data.amount,
           currency: data.currency || 'INR',
-          name: 'Bv Life Ayurvedic Clinic',
-          description: `Consultation with ${doctor.name} (${selectedMode === 'video' ? '1-on-1 HD Video' : 'Direct Phone Call'})`,
+          name: 'Bv Life Doctor Consultation',
+          description: `Consultation with ${doctor.name} (${selectedMode === 'video' ? '1-on-1 HD Video' : selectedMode === 'audio' ? 'Direct Phone Call' : 'WhatsApp Live Chat'})`,
           image: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
           order_id: data.orderId,
           prefill: {
@@ -739,7 +740,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     <div id="doctor-consultation-page" className="min-h-screen bg-[#FBF9F5] pb-24 text-slate-800">
       
       {/* 1. TOP HERO BANNER — IDENTICAL REUSABLE BANNER SYSTEM */}
-      <section className="max-w-[1440px]">
+      <section className="max-w-[1440px] ">
         <div
           id="doctor-hero-banner"
           onClick={() => {
@@ -1074,17 +1075,17 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                       <MessageSquare className="w-4 h-4 text-[#25D366]" />
                       <span>WhatsApp Confirmation & Alert Dispatch</span>
                     </span>
-                    <span className="text-[10px] text-slate-300 font-mono">Clinic Desk: +91 9425011088</span>
+                    <span className="text-[10px] text-slate-300 font-mono">Doctor Helpline: +91 7451050607</span>
                   </div>
                   <p className="text-[11px] text-slate-300">
-                    Your appointment has been registered in the clinic system. You can also send a direct confirmation copy to our WhatsApp desk or receive it on your own phone:
+                    Your appointment has been registered in our system. You can also send a direct confirmation copy to our WhatsApp doctor desk or receive it on your own phone:
                   </p>
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     {/* Notify Clinic Desk */}
                     <a
-                      href={`https://wa.me/919425011088?text=${encodeURIComponent(
+                      href={`https://wa.me/917451050607?text=${encodeURIComponent(
                         `🌿 *NEW DOCTOR APPOINTMENT BOOKED* 🌿\n\n` +
-                        `Namaste Bv Life Clinic Desk, I have scheduled a doctor consultation:\n\n` +
+                        `Namaste Bv Life Doctor Helpline, I have scheduled a consultation:\n\n` +
                         `• *Appointment ID:* #${bookingConfirmed.id}\n` +
                         `• *Patient Name:* ${bookingConfirmed.patientName}\n` +
                         `• *Patient Phone:* ${bookingConfirmed.patientPhone}\n` +
@@ -1101,14 +1102,14 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                       className="px-3.5 py-2 rounded-lg bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Send Slip to Clinic WhatsApp Desk (+91 9425011088)</span>
+                      <span>Send Slip to Doctor Helpline (+91 7451050607)</span>
                     </a>
 
                     {/* Send to Patient's Own WhatsApp */}
                     {bookingConfirmed.patientPhone && (
                       <a
                         href={`https://wa.me/${bookingConfirmed.patientPhone.replace(/\D/g, '').length === 10 ? `91${bookingConfirmed.patientPhone.replace(/\D/g, '')}` : bookingConfirmed.patientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                          `🌿 *Bv Life Ayurvedic Clinic - Booking Confirmation* 🌿\n\n` +
+                          `🌿 *Bv Life Doctor Consultation - Booking Confirmation* 🌿\n\n` +
                           `Namaste ${bookingConfirmed.patientName},\n` +
                           `Your consultation with *${bookingConfirmed.doctorName}* has been confirmed!\n\n` +
                           `📋 *Appointment Details:*\n` +
@@ -1117,7 +1118,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                           `• *Consultation Mode:* ${bookingConfirmed.consultationMode.toUpperCase()}\n` +
                           `• *Payment Status:* ${bookingConfirmed.paymentStatus === 'Paid' ? `Paid ₹${bookingConfirmed.fee} (Verified)` : `Paid ₹${bookingConfirmed.fee}`}\n` +
                           (bookingConfirmed.meetingLink ? `• *Video Consultation Link:* ${bookingConfirmed.meetingLink}\n` : '') +
-                          `\nNeed assistance? Reply here or call clinic care: +91 9425011088.`
+                          `\nNeed assistance? Reply here or call doctor helpline: +91 7451050607 | care@bvlife.in.`
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -1842,7 +1843,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                       <div>
                         <p className="font-bold text-slate-900">{doctor.name}</p>
                         <p className="text-[11px] text-slate-500">
-                          {selectedMode === 'video' ? '1-on-1 Video Call' : selectedMode === 'audio' ? 'Direct Phone Call' : 'In-Person Clinic Visit (OPD)'} • <strong className="text-slate-800">{selectedDate} at {selectedTimeSlot}</strong>
+                          {selectedMode === 'video' ? '1-on-1 Video Call' : selectedMode === 'audio' ? 'Direct Phone Call' : 'WhatsApp Live Chat'} • <strong className="text-slate-800">{selectedDate} at {selectedTimeSlot}</strong>
                         </p>
                       </div>
                     </div>
@@ -2384,6 +2385,8 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                             )}
                           </div>
                         </div>
+
+                        {/* {!otpSent && <Msg91Captcha />} */}
 
                         {/* OTP Input Field */}
                         {otpSent && (

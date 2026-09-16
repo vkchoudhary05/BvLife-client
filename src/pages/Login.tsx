@@ -13,13 +13,24 @@ import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 interface LoginProps {
   onNavigate: (page: string, params?: any) => void;
   handleLogin: (credentials: { email: string; password?: string }) => Promise<boolean>;
-  handleRegister: (data: { name: string; email: string; phone: string; role: string; password?: string; accessToken?: string; code?: string; reqId?: string }) => Promise<boolean>;
+  handleRegister: (data: {
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    password?: string;
+    accessToken?: string;
+    code?: string;
+    reqId?: string;
+  }) => Promise<boolean>;
+  onLoginSuccess: (token: string, user?: any) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({
   onNavigate,
   handleLogin,
-  handleRegister
+  handleRegister,
+  onLoginSuccess
 }) => {
   // Auth view states
   const [isRegistering, setIsRegistering] = useState(false);
@@ -224,14 +235,20 @@ export const Login: React.FC<LoginProps> = ({
         autoCreate: true
       });
 
-      if (res.success && res.token) {
-        localStorage.setItem('grams_auth_token', res.token);
-        localStorage.setItem('token', res.token);
-        setLoginSuccess('Authentication successful! Welcome to Grams Life.');
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      } else {
+if (res.success && res.token) {
+  // Save authentication token
+  localStorage.setItem('grams_auth_token', res.token);
+  localStorage.setItem('token', res.token);
+
+  // IMPORTANT:
+  // Update the global authentication state in useAuth()
+  onLoginSuccess(res.token, res.user);
+
+  setLoginSuccess('Authentication successful! Welcome to Grams Life.');
+
+  // Navigate to Home
+  onNavigate('home');
+} else {
         setLoginError(res.error || 'OTP login verification failed.');
       }
     } catch (err: any) {

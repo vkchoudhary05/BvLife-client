@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { DoctorAppointment, DoctorPrescription, PrescribedMedicine, User as UserType } from '../types';
 import { api } from '../services/api';
+import drImage from "@/assets/DrSanjeev.png";
 
 interface DoctorDashboardProps {
   currentUser: UserType | null;
@@ -86,7 +87,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   const [localDoctorUser, setLocalDoctorUser] = useState<UserType | null>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const stored = localStorage.getItem('Bv_doctor_session');
+        const stored = localStorage.getItem('grams_doctor_session');
         if (stored) return JSON.parse(stored);
       } catch {
         // ignore
@@ -95,7 +96,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     return null;
   });
 
-  const [loginEmail, setLoginEmail] = useState<string>('doctor@Bvlife.com');
+  const [loginEmail, setLoginEmail] = useState<string>('doctor@bvlife.in');
   const [loginPassword, setLoginPassword] = useState<string>('123123123');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
@@ -106,7 +107,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     if (!active) return false;
     const email = (active.email || '').toLowerCase().trim();
     return active.role === 'admin' || 
-      ['doctor@Bvlife.com', 'admin@Bvlife.com', 'iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com'].includes(email);
+      ['doctor@bvlife.in', 'doctor@gramslife.com', 'admin@bvlife.in', 'admin@gramslife.com', 'iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com'].includes(email);
   }, [localDoctorUser, currentUser]);
 
   const handleDoctorLogin = async (e?: React.FormEvent, customEmail?: string, customPassword?: string) => {
@@ -117,27 +118,27 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     let emailToUse = (customEmail !== undefined ? customEmail : loginEmail).trim();
     let passToUse = (customPassword !== undefined ? customPassword : loginPassword).trim();
 
-    // Sanitize in case user copied "Doctor ID: doctor@Bvlife.com" or label prefixes
+    // Sanitize in case user copied "Doctor ID: doctor@bvlife.in" or label prefixes
     emailToUse = emailToUse.replace(/^(doctor\s*id\s*[:\-]?\s*|email\s*[:\-]?\s*|id\s*[:\-]?\s*|username\s*[:\-]?\s*)/i, '').trim();
     passToUse = passToUse.replace(/^(password\s*[:\-]?\s*|pass\s*[:\-]?\s*)/i, '').trim();
 
-    if (emailToUse.toLowerCase().includes('doctor@Bvlife.com') || emailToUse.toLowerCase() === 'doctor') {
-      emailToUse = 'doctor@Bvlife.com';
+    if (emailToUse.toLowerCase().includes('doctor@bvlife.in') || emailToUse.toLowerCase().includes('doctor@gramslife.com') || emailToUse.toLowerCase() === 'doctor') {
+      emailToUse = emailToUse.toLowerCase().includes('gramslife.com') ? 'doctor@gramslife.com' : 'doctor@bvlife.in';
     }
 
     // Default fallback to standard clinical practitioner
-    if (!emailToUse) emailToUse = 'doctor@Bvlife.com';
+    if (!emailToUse) emailToUse = 'doctor@bvlife.in';
     if (!passToUse) passToUse = '123123123';
 
     const defaultDoctorUser: UserType = {
-      email: 'doctor@Bvlife.com',
-      fullName: 'Dr. Arundhati Sharma',
+      email: 'doctor@bvlife.in',
+      fullName: 'Dr. Sanjeev Rastogi',
       role: 'admin',
-      phone: '9876543210',
+      phone: '7451050607',
       addresses: []
     };
 
-    const isVerifiedDoctorCreds = emailToUse.toLowerCase() === 'doctor@Bvlife.com' && 
+    const isVerifiedDoctorCreds = (emailToUse.toLowerCase() === 'doctor@bvlife.in' || emailToUse.toLowerCase() === 'doctor@gramslife.com') && 
       (passToUse === '123123123' || passToUse === 'password123' || passToUse === '');
 
     try {
@@ -145,9 +146,9 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
       if (res && res.user && res.token) {
         setLocalDoctorUser(res.user);
         try {
-          localStorage.setItem('Bv_doctor_session', JSON.stringify(res.user));
-          localStorage.setItem('Bv_auth_token', res.token);
-          sessionStorage.setItem('Bv_auth_token', res.token);
+          localStorage.setItem('grams_doctor_session', JSON.stringify(res.user));
+          localStorage.setItem('grams_auth_token', res.token);
+          sessionStorage.setItem('grams_auth_token', res.token);
         } catch {
           // ignore
         }
@@ -165,9 +166,9 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
       const fallbackToken = 'doc_auth_token_' + Date.now();
       setLocalDoctorUser(defaultDoctorUser);
       try {
-        localStorage.setItem('Bv_doctor_session', JSON.stringify(defaultDoctorUser));
-        localStorage.setItem('Bv_auth_token', fallbackToken);
-        sessionStorage.setItem('Bv_auth_token', fallbackToken);
+        localStorage.setItem('grams_doctor_session', JSON.stringify(defaultDoctorUser));
+        localStorage.setItem('grams_auth_token', fallbackToken);
+        sessionStorage.setItem('grams_auth_token', fallbackToken);
       } catch {
         // ignore
       }
@@ -175,14 +176,14 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
         onLoginSuccess(defaultDoctorUser, fallbackToken);
       }
     } else {
-      setLoginError('Invalid Doctor credentials. Please check Doctor ID (doctor@Bvlife.com) and Password (123123123).');
+      setLoginError('Invalid Doctor credentials. Please check Doctor ID (doctor@bvlife.in) and Password (123123123).');
     }
     setIsLoggingIn(false);
   };
 
   const handleDoctorSignOut = () => {
     try {
-      localStorage.removeItem('Bv_doctor_session');
+      localStorage.removeItem('grams_doctor_session');
     } catch {
       // ignore
     }
@@ -218,7 +219,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   const [newBookingAlert, setNewBookingAlert] = useState<DoctorAppointment | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('Bv_doctor_sound_enabled') !== 'false';
+      return localStorage.getItem('grams_doctor_sound_enabled') !== 'false';
     }
     return true;
   });
@@ -268,7 +269,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   const [isDoctorAvailable, setIsDoctorAvailable] = useState<boolean>(true);
   const [activeDoctorProfile, setActiveDoctorProfile] = useState<any>(null);
 
-  // Load appointments
+  // Load appointments - strictly prioritizes real backend data
   const fetchAppointments = async () => {
     setIsLoading(true);
     try {
@@ -278,31 +279,34 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
       if (backendData && backendData.length > 0) {
         combined = backendData;
       } else {
-        // Fallback to local storage
+        // Fallback to local storage if network offline
         if (typeof window !== 'undefined') {
           const stored = localStorage.getItem('bvlife_doctor_appointments');
           if (stored) {
-            combined = JSON.parse(stored);
+            try {
+              combined = JSON.parse(stored);
+            } catch {
+              combined = [];
+            }
           }
         }
       }
 
-      // If empty or lacking in-person clinic visits, generate realistic seed appointments covering all 3 formats
-      const hasClinicMode = combined.some(a => a.consultationMode === 'clinic');
-      if (combined.length === 0 || !hasClinicMode) {
+      // Initial clean seeds ONLY if database is totally empty
+      if (combined.length === 0) {
         const todayIso = new Date().toISOString().split('T')[0];
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowIso = tomorrow.toISOString().split('T')[0];
 
-        const seedList: DoctorAppointment[] = [
+        combined = [
           {
             id: 'BVL-DOC-772910',
             doctorId: 'doc-legend-1',
-            doctorName: 'Dr. Arundhati Sharma',
-            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
-            doctorImage: '/images/legendary_doctor.jpg',
-            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
+            doctorName: 'Dr. Sanjeev Rastogi',
+            doctorSpecialty: 'Chief Ayurvedic Physician & Master Nadi Vaidya',
+            doctorImage: '/images/DrSanjeev.png',
+            doctorQualification: 'Ph.D, MD (Ayurveda), Banaras Hindu University (BHU)',
             patientName: 'Rahul Verma',
             patientAge: 34,
             patientGender: 'Male',
@@ -322,10 +326,10 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
           {
             id: 'BVL-DOC-551829',
             doctorId: 'doc-legend-1',
-            doctorName: 'Dr. Arundhati Sharma',
-            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
-            doctorImage: '/images/legendary_doctor.jpg',
-            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
+            doctorName: 'Dr. Sanjeev Rastogi',
+            doctorSpecialty: 'Chief Ayurvedic Physician & Master Nadi Vaidya',
+            doctorImage: '/images/DrSanjeev.png',
+            doctorQualification: 'Ph.D, MD (Ayurveda), Banaras Hindu University (BHU)',
             patientName: 'Priya Sundaram',
             patientAge: 29,
             patientGender: 'Female',
@@ -343,10 +347,10 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
           {
             id: 'BVL-DOC-663820',
             doctorId: 'doc-legend-1',
-            doctorName: 'Dr. Arundhati Sharma',
-            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
-            doctorImage: '/images/legendary_doctor.jpg',
-            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
+            doctorName: 'Dr. Sanjeev Rastogi',
+            doctorSpecialty: 'Chief Ayurvedic Physician & Master Nadi Vaidya',
+            doctorImage: '/images/DrSanjeev.png',
+            doctorQualification: 'Ph.D, MD (Ayurveda), Banaras Hindu University (BHU)',
             patientName: 'Meera Nambiar',
             patientAge: 42,
             patientGender: 'Female',
@@ -354,8 +358,8 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
             patientEmail: 'meera.nambiar@example.com',
             date: todayIso,
             timeSlot: '01:30 PM',
-            consultationMode: 'clinic',
-            healthConcern: 'Cervical spondylosis & neck stiffness, seeking Panchakarma & Marma therapy evaluation',
+            consultationMode: 'chat',
+            healthConcern: 'Cervical spondylosis & neck stiffness, seeking personalized Ayurvedic regimen',
             fee: 499,
             status: 'Confirmed',
             roomStatus: 'waiting',
@@ -364,10 +368,10 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
           {
             id: 'BVL-DOC-442190',
             doctorId: 'doc-legend-1',
-            doctorName: 'Dr. Arundhati Sharma',
-            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
-            doctorImage: '/images/legendary_doctor.jpg',
-            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
+            doctorName: 'Dr. Sanjeev Rastogi',
+            doctorSpecialty: 'Chief Ayurvedic Physician & Master Nadi Vaidya',
+            doctorImage: '/images/DrSanjeev.png',
+            doctorQualification: 'Ph.D, MD (Ayurveda), Banaras Hindu University (BHU)',
             patientName: 'Sunil Deshmukh',
             patientAge: 48,
             patientGender: 'Male',
@@ -384,8 +388,8 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
             prescription: {
               id: 'RX-99410',
               appointmentId: 'BVL-DOC-442190',
-              doctorName: 'Dr. Arundhati Sharma',
-              doctorQualification: 'BAMS, MD (Ayurveda), Ayush Reg. #AY-24890',
+              doctorName: 'Dr. Sanjeev Rastogi',
+              doctorQualification: 'Ph.D, MD (Ayurveda), Banaras Hindu University (BHU)',
               patientName: 'Sunil Deshmukh',
               patientAge: 48,
               patientGender: 'Male',
@@ -421,16 +425,16 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
               ],
               doctorNotes: 'Patient shows good response to herbal regimen. Blood lipid panel scheduled after 6 weeks.',
               followUpDate: 'In 4 weeks',
-              signedAt: 'Signed Digitally by Dr. Arundhati Sharma'
+              signedAt: 'Signed Digitally by Dr. Sanjeev Rastogi'
             }
           },
           {
             id: 'BVL-DOC-889123',
             doctorId: 'doc-legend-1',
-            doctorName: 'Dr. Arundhati Sharma',
-            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
-            doctorImage: '/images/legendary_doctor.jpg',
-            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
+            doctorName: 'Dr. Sanjeev Rastogi',
+            doctorSpecialty: 'Chief Ayurvedic Physician & Master Nadi Vaidya',
+            doctorImage: '/images/DrSanjeev.png',
+            doctorQualification: 'Ph.D, MD (Ayurveda), Banaras Hindu University (BHU)',
             patientName: 'Ananya Roy',
             patientAge: 26,
             patientGender: 'Female',
@@ -450,10 +454,10 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
           {
             id: 'BVL-DOC-992384',
             doctorId: 'doc-legend-1',
-            doctorName: 'Dr. Arundhati Sharma',
-            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
-            doctorImage: '/images/legendary_doctor.jpg',
-            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
+            doctorName: 'Dr. Sanjeev Rastogi',
+            doctorSpecialty: 'Chief Ayurvedic Physician & Master Nadi Vaidya',
+            doctorImage: '/images/DrSanjeev.png',
+            doctorQualification: 'Ph.D, MD (Ayurveda), Banaras Hindu University (BHU)',
             patientName: 'Rajesh Gupta',
             patientAge: 53,
             patientGender: 'Male',
@@ -461,88 +465,26 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
             patientEmail: 'rajesh.gupta@example.com',
             date: tomorrowIso,
             timeSlot: '04:00 PM',
-            consultationMode: 'clinic',
-            healthConcern: 'Knee osteoarthritis and joint inflammation, seeking herbal taila massage & basti',
+            consultationMode: 'chat',
+            healthConcern: 'Knee osteoarthritis and joint inflammation, seeking herbal taila massage advice',
             fee: 499,
             status: 'Confirmed',
             roomStatus: 'waiting',
             bookingDate: 'Today'
-          },
-          {
-            id: 'BVL-DOC-331298',
-            doctorId: 'doc-legend-1',
-            doctorName: 'Dr. Arundhati Sharma',
-            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
-            doctorImage: '/images/legendary_doctor.jpg',
-            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
-            patientName: 'Vikram Malhotra',
-            patientAge: 38,
-            patientGender: 'Male',
-            patientPhone: '+91 98230 77112',
-            patientEmail: 'vikram.malhotra@example.com',
-            date: todayIso,
-            timeSlot: '03:15 PM',
-            consultationMode: 'clinic',
-            healthConcern: 'Severe migraine headaches & Pitta flare-ups during work stress',
-            fee: 499,
-            status: 'Confirmed',
-            roomStatus: 'waiting',
-            bookingDate: 'Today'
-          },
-          {
-            id: 'BVL-DOC-229415',
-            doctorId: 'doc-legend-1',
-            doctorName: 'Dr. Arundhati Sharma',
-            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
-            doctorImage: '/images/legendary_doctor.jpg',
-            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
-            patientName: 'Kavita Joshi',
-            patientAge: 31,
-            patientGender: 'Female',
-            patientPhone: '+91 99114 66200',
-            patientEmail: 'kavita.joshi@example.com',
-            date: tomorrowIso,
-            timeSlot: '11:00 AM',
-            consultationMode: 'audio',
-            healthConcern: 'Post-viral chronic weakness and low immunity, requests Chyawanprash & herbal rasayana',
-            fee: 499,
-            status: 'Confirmed',
-            roomStatus: 'waiting',
-            bookingDate: 'Today'
-          },
-          {
-            id: 'BVL-DOC-118472',
-            doctorId: 'doc-legend-1',
-            doctorName: 'Dr. Arundhati Sharma',
-            doctorSpecialty: 'Senior Ayurvedic Vaidya & Nadi Pariksha Master',
-            doctorImage: '/images/legendary_doctor.jpg',
-            doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist)',
-            patientName: 'Arjun Nair',
-            patientAge: 45,
-            patientGender: 'Male',
-            patientPhone: '+91 98840 33219',
-            patientEmail: 'arjun.nair@example.com',
-            date: tomorrowIso,
-            timeSlot: '05:30 PM',
-            consultationMode: 'video',
-            healthConcern: 'Elevated fasting blood sugar and metabolic lethargy, seeking herbal diet chart',
-            fee: 499,
-            status: 'Confirmed',
-            roomStatus: 'waiting',
-            bookingDate: 'Yesterday',
-            meetingPlatform: 'google-meet',
-            meetingLink: 'https://meet.jit.si/BVLife-Consult-BVL-DOC-118472'
           }
         ];
+      }
 
-        // Merge existing with seedList avoiding ID collision
-        const existingIds = new Set(combined.map(a => a.id));
-        const newSeeds = seedList.filter(s => !existingIds.has(s.id));
-        combined = [...combined, ...newSeeds];
-
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('bvlife_doctor_appointments', JSON.stringify(combined));
+      // Sanitize any legacy clinic mode to chat mode
+      combined = combined.map(app => {
+        if ((app.consultationMode as string) === 'clinic') {
+          return { ...app, consultationMode: 'chat' as any };
         }
+        return app;
+      });
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('bvlife_doctor_appointments', JSON.stringify(combined));
       }
 
       setAppointments(combined);
@@ -633,35 +575,35 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     }
     const app = whatsAppModalApp;
     const meetUrl = app.meetingLink || `https://meet.jit.si/BVLife-Consult-${app.id}`;
-    const docName = app.doctorName || activeDoctorProfile?.name || localDoctorUser?.fullName || 'Dr. Arundhati Sharma';
+    const docName = app.doctorName || activeDoctorProfile?.name || localDoctorUser?.fullName || 'Dr. Sanjeev Rastogi';
 
     if (whatsAppTemplate === 'confirmation') {
       setWhatsAppCustomText(
-`🌿 *Bv Life Ayurvedic Clinic - Consultation Confirmed* 🌿
+`🌿 *BV Life Ayurvedic Clinic - Consultation Confirmed* 🌿
 
 Namaste *${app.patientName}*,
 Your consultation with *${docName}* has been officially confirmed!
 
 📋 *Appointment Details:*
 • *Appointment ID:* #${app.id}
-• *Doctor:* ${docName} (${app.doctorSpecialty || 'Senior Vaidya'})
+• *Doctor:* ${docName} (${app.doctorSpecialty || 'Chief Ayurvedic Physician'})
 • *Date:* ${app.date}
 • *Time Slot:* ${app.timeSlot}
 • *Format:* ${app.consultationMode.toUpperCase()}
 • *Payment Status:* ${app.paymentStatus === 'Paid' ? `Verified Paid (₹${app.fee})` : `Online Fee (₹${app.fee})`}${app.paymentId ? `\n• *Txn Ref:* ${app.paymentId}` : ''}
-${app.consultationMode === 'video' ? `\n📹 *Video Consultation Link:*\n${meetUrl}\n(No app download required. Open on mobile/laptop 5 mins prior to slot.)\n` : ''}${app.consultationMode === 'audio' ? `\n📞 *Call Information:*\nDoctor will initiate telephone consultation directly to your mobile (${app.patientPhone}) at ${app.timeSlot}.\n` : ''}${app.consultationMode === 'clinic' ? `\n🏥 *Clinic Venue:*\nBv Life Ayurvedic Center, Chamber 102, Ground Floor, Ayur Marg, New Delhi.\n` : ''}
+${app.consultationMode === 'video' ? `\n📹 *Video Consultation Link:*\n${meetUrl}\n(No app download required. Open on mobile/laptop 5 mins prior to slot.)\n` : ''}${app.consultationMode === 'audio' ? `\n📞 *Call Information:*\nDoctor will initiate telephone consultation directly to your mobile (${app.patientPhone}) at ${app.timeSlot}.\n` : ''}${app.consultationMode === 'clinic' ? `\n🏥 *Clinic Venue:*\nBV Life Ayurvedic Center, Ayur Marg, Near Metro Pillar 42, New Delhi.\n` : ''}
 📌 *Patient Guidelines:*
 Please keep your previous medical files or blood test reports ready.
 
 For any questions or rescheduling, reply directly to this WhatsApp message or call our care desk.
 
 Warm regards,
-*Bv Life Care Desk*
-📞 +91 9425011088`
+*BV Life Care Desk*
+📞 +91 7451050607`
       );
     } else if (whatsAppTemplate === 'link') {
       setWhatsAppCustomText(
-`📹 *Bv Life Clinic - Secure Video Consultation Link*
+`📹 *BV Life Clinic - Secure Video Consultation Link*
 
 Namaste *${app.patientName}*,
 Here is your direct Video Room link for your upcoming consultation with *${docName}*:
@@ -674,8 +616,8 @@ ${meetUrl}
 • Please ensure good lighting and microphone access.
 
 Warm regards,
-*Bv Life Medical Team*
-📞 +91 9425011088`
+*BV Life Medical Team*
+📞 +91 7451050607`
       );
     } else if (whatsAppTemplate === 'reminder') {
       setWhatsAppCustomText(
@@ -684,34 +626,34 @@ Warm regards,
 Namaste *${app.patientName}*,
 This is a gentle reminder that your consultation with *${docName}* will begin at *${app.timeSlot}* today (${app.date}).
 
-${app.consultationMode === 'video' ? `🔗 *Video Room Link:*\n${meetUrl}\n` : ''}${app.consultationMode === 'audio' ? `📞 The doctor will call your registered phone (${app.patientPhone}) shortly.\n` : ''}${app.consultationMode === 'clinic' ? `🏥 Please report to OPD Chamber 102.\n` : ''}
+${app.consultationMode === 'video' ? `🔗 *Video Room Link:*\n${meetUrl}\n` : ''}${app.consultationMode === 'audio' ? `📞 The doctor will call your registered phone (${app.patientPhone}) shortly.\n` : ''}${app.consultationMode === 'clinic' ? `🏥 Please report to OPD Chamber.\n` : ''}
 Please keep your recent medical files handy.
 
 Best regards,
-*Bv Life Clinic*`
+*BV Life Clinic*`
       );
     } else if (whatsAppTemplate === 'opd') {
       setWhatsAppCustomText(
-`🏥 *Bv Life Ayurvedic Clinic - In-Person OPD Appointment Pass* 🏥
+`🏥 *BV Life Ayurvedic Clinic - In-Person OPD Appointment Pass* 🏥
 
 Namaste *${app.patientName}*,
 Your In-Person OPD visit with *${docName}* is confirmed.
 
 📋 *OPD Token:* #OPD-${app.id.slice(-4)}
 • *Date & Time:* ${app.date} at ${app.timeSlot}
-• *Clinic Address:* Bv Life Ayurvedic Wellness Center, Chamber 102, Ground Floor, Ayur Marg, Near Metro Pillar 42, New Delhi.
-• *Contact Desk:* +91 9425011088
+• *Clinic Address:* BV Life Ayurvedic Wellness Center, Ayur Marg, Near Metro Pillar 42, New Delhi.
+• *Contact Desk:* +91 7451050607
 
 Kindly arrive 10 minutes prior to your slot and carry previous health records or prescriptions.
 
 Warm regards,
-*Bv Life OPD Desk*`
+*BV Life OPD Desk*`
       );
     } else if (whatsAppTemplate === 'prescription') {
       const rx = app.prescription;
       const medsList = rx?.medicines?.map(m => `• *${m.name}*: ${m.dosage} (${m.frequency} - ${m.timing})`).join('\n') || '• Prescribed Ayurvedic formulations';
       setWhatsAppCustomText(
-`🌿 *Bv Life Clinic - Official Prescription & Care Plan* 🌿
+`🌿 *BV Life Clinic - Official Prescription & Care Plan* 🌿
 
 Namaste *${app.patientName}*,
 Here is your official consultation summary from *${docName}*:
@@ -730,7 +672,7 @@ ${rx?.dietRecommendations?.join('\n• ') || '• Eat freshly prepared warm Satt
 🧘 *Lifestyle & Dinacharya:*
 ${rx?.lifestyleAdvice?.join('\n• ') || '• 15 mins daily morning Pranayama and adequate hydration.'}
 
-To order your pure herbal formulations with direct home delivery, visit Bvlife.com or WhatsApp our pharmacy desk at +91 9425011088.
+To order your pure herbal formulations with direct home delivery, visit bvlife.in or WhatsApp our pharmacy desk at +91 7451050607.
 
 Wishing you swift recovery and holistic health,
 *${docName}*`
@@ -775,14 +717,14 @@ Wishing you swift recovery and holistic health,
       `🚨 *NEW BOOKING ALERT FOR CLINIC DESK* 🚨\n\n` +
       `• *Appointment ID:* #${app.id}\n` +
       `• *Patient:* ${app.patientName} (${app.patientPhone})\n` +
-      `• *Doctor:* ${app.doctorName || 'Dr. Arundhati Sharma'}\n` +
+      `• *Doctor:* ${app.doctorName || 'Dr. Sanjeev Rastogi'}\n` +
       `• *Date & Slot:* ${app.date} at ${app.timeSlot}\n` +
       `• *Mode:* ${app.consultationMode.toUpperCase()}\n` +
       `• *Status:* ${app.status} • Payment: ${app.paymentStatus || 'Paid'}\n` +
       `• *Concern:* ${app.healthConcern || 'General Checkup'}\n\n` +
-      `Logged on Bv Life Doctor Dashboard.`
+      `Logged on BV Life Doctor Dashboard.`
     );
-    window.open(`https://wa.me/919425011088?text=${text}`, '_blank');
+    window.open(`https://wa.me/917451050607?text=${text}`, '_blank');
   };
 
   // Re-trigger MSG91 Automated WhatsApp API dispatch
@@ -790,7 +732,7 @@ Wishing you swift recovery and holistic health,
     try {
       const res = await api.resendAppointmentWhatsAppAlert(app.id);
       if (res.success) {
-        setWhatsAppToastMsg(`Automated MSG91 WhatsApp alert sent to Clinic (+91 9425011088) and Patient!`);
+        setWhatsAppToastMsg(`Automated MSG91 WhatsApp alert sent to Clinic (+91 7451050607) and Patient!`);
       } else {
         setWhatsAppToastMsg(`Automated alert queued. (Check MSG91 credentials in .env)`);
       }
@@ -927,9 +869,10 @@ Wishing you swift recovery and holistic health,
   const handleShareOnWhatsApp = (app: DoctorAppointment) => {
     const cleanPhone = (app.patientPhone || '').replace(/\D/g, '');
     const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    const meetUrl = app.meetingLink || `https://meet.google.com/new`;
+    const meetUrl = app.meetingLink || `https://meet.jit.si/BVLife-Consult-${app.id}`;
+    const docName = app.doctorName || activeDoctorProfile?.name || 'Dr. Sanjeev Rastogi';
     const message = encodeURIComponent(
-      `Namaste ${app.patientName}, this is Dr. Arundhati Sharma's Ayurvedic Clinic. Your Video Consultation is scheduled for ${app.date} at ${app.timeSlot}.\n\nPlease join the Video Call room using this secure link:\n${meetUrl}\n\nKindly ensure good lighting and keep any previous reports ready.`
+      `Namaste ${app.patientName}, this is ${docName}'s Ayurvedic Clinic (BV Life). Your Video Consultation is scheduled for ${app.date} at ${app.timeSlot}.\n\nPlease join the Video Call room using this secure link:\n${meetUrl}\n\nKindly ensure good lighting and keep any previous reports ready.`
     );
     window.open(`https://wa.me/${phoneWithCountry}?text=${message}`, '_blank');
   };
@@ -938,8 +881,9 @@ Wishing you swift recovery and holistic health,
   const handleWhatsAppPhoneCall = (app: DoctorAppointment) => {
     const cleanPhone = (app.patientPhone || '').replace(/\D/g, '');
     const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const docName = app.doctorName || activeDoctorProfile?.name || 'Dr. Sanjeev Rastogi';
     const message = encodeURIComponent(
-      `Namaste ${app.patientName}, this is Dr. Arundhati Sharma from BvLife Ayurvedic Clinic. I am calling you for your scheduled Telephonic Consultation (${app.date} at ${app.timeSlot}). Please let me know if you are ready to speak on ${app.patientPhone}.`
+      `Namaste ${app.patientName}, this is ${docName} from BV Life Ayurvedic Clinic. I am calling you for your scheduled Telephonic Consultation (${app.date} at ${app.timeSlot}). Please let me know if you are ready to speak on ${app.patientPhone}.`
     );
     window.open(`https://wa.me/${phoneWithCountry}?text=${message}`, '_blank');
   };
@@ -948,8 +892,9 @@ Wishing you swift recovery and holistic health,
   const handleWhatsAppClinicVisit = (app: DoctorAppointment, tokenIndex: number) => {
     const cleanPhone = (app.patientPhone || '').replace(/\D/g, '');
     const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const docName = app.doctorName || activeDoctorProfile?.name || 'Dr. Sanjeev Rastogi';
     const message = encodeURIComponent(
-      `Namaste ${app.patientName}, this is Bv Life Ayurvedic Wellness Center. Your In-Person Clinic Visit (OPD) with Dr. Arundhati Sharma is confirmed for ${app.date} at ${app.timeSlot}.\n\n🏥 OPD Token: #OPD-${tokenIndex}\n📍 Location: Bv Life Center, Chamber 102, Ground Floor, Ayur Marg, New Delhi.\n\nKindly arrive 10 minutes before your slot and bring your previous health reports.`
+      `Namaste ${app.patientName}, this is BV Life Ayurvedic Wellness Center. Your In-Person Clinic Visit (OPD) with ${docName} is confirmed for ${app.date} at ${app.timeSlot}.\n\n🏥 OPD Token: #OPD-${tokenIndex}\n📍 Location: BV Life Ayurvedic Center, Ayur Marg, Near Metro Pillar 42, New Delhi.\n\nKindly arrive 10 minutes before your slot and bring your previous health reports.`
     );
     window.open(`https://wa.me/${phoneWithCountry}?text=${message}`, '_blank');
   };
@@ -1043,9 +988,9 @@ Wishing you swift recovery and holistic health,
     const prescriptionPayload: DoctorPrescription = {
       id: `RX-${Math.floor(10000 + Math.random() * 90000)}`,
       appointmentId: prescriptionAppointment.id,
-      doctorId: prescriptionAppointment.doctorId,
-      doctorName: 'Dr. Arundhati Sharma',
-      doctorQualification: 'BAMS, MD (Ayurveda - BHU Gold Medalist), Ayush Reg. #AY-24890',
+      doctorId: prescriptionAppointment.doctorId || 'doc-legend-1',
+      doctorName: activeDoctorProfile?.name || 'Dr. Sanjeev Rastogi',
+      doctorQualification: activeDoctorProfile?.qualification || 'Ph.D, MD (Ayurveda), Banaras Hindu University (BHU) • Ayush Reg. #AYUSH-IND-8842-SR',
       patientName: prescriptionAppointment.patientName,
       patientAge: prescriptionAppointment.patientAge,
       patientGender: prescriptionAppointment.patientGender,
@@ -1057,7 +1002,7 @@ Wishing you swift recovery and holistic health,
       medicines: medicinesList.filter(m => m.name.trim()),
       doctorNotes: doctorNotes.trim(),
       followUpDate: `In ${followUpDays} days`,
-      signedAt: `Digitally Signed by Dr. Arundhati Sharma (Ayush Reg #AY-24890)`
+      signedAt: `Digitally Signed by ${activeDoctorProfile?.name || 'Dr. Sanjeev Rastogi'} (Ayush Reg #AYUSH-IND-8842-SR)`
     };
 
     try {
@@ -1097,7 +1042,7 @@ Wishing you swift recovery and holistic health,
               Doctor & Vaidya Portal
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1.5 max-w-sm mx-auto">
-              Clinical consultations & digital Ayurvedic prescriptions for Dr. Arundhati Sharma & AYUSH practitioners
+              Clinical consultations & digital Ayurvedic prescriptions for Dr. Sanjeev Rastogi & AYUSH practitioners
             </p>
           </div>
 
@@ -1113,7 +1058,7 @@ Wishing you swift recovery and holistic health,
                 <button
                   type="button"
                   onClick={() => {
-                    setLoginEmail('doctor@Bvlife.com');
+                    setLoginEmail('doctor@bvlife.in');
                     setLoginPassword('123123123');
                     setLoginError('');
                   }}
@@ -1125,7 +1070,7 @@ Wishing you swift recovery and holistic health,
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-slate-600">
                 <div>
                   <span className="font-semibold text-slate-500">Doctor ID:</span>{' '}
-                  <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-800 font-mono">doctor@Bvlife.com</code>
+                  <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-800 font-mono">doctor@bvlife.in</code>
                 </div>
                 <div>
                   <span className="font-semibold text-slate-500">Password:</span>{' '}
@@ -1156,7 +1101,7 @@ Wishing you swift recovery and holistic health,
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     required
-                    placeholder="doctor@Bvlife.com"
+                    placeholder="doctor@bvlife.in"
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand-green-700 focus:ring-1 focus:ring-brand-green-700 text-sm font-medium outline-none transition-all"
                   />
                 </div>
@@ -1206,15 +1151,15 @@ Wishing you swift recovery and holistic health,
                 type="button"
                 id="btn-quick-doctor-login-card"
                 onClick={() => {
-                  setLoginEmail('doctor@Bvlife.com');
+                  setLoginEmail('doctor@bvlife.in');
                   setLoginPassword('123123123');
-                  handleDoctorLogin(undefined, 'doctor@Bvlife.com', '123123123');
+                  handleDoctorLogin(undefined, 'doctor@bvlife.in', '123123123');
                 }}
                 disabled={isLoggingIn}
                 className="w-full py-2.5 px-3 bg-brand-gold-400/20 hover:bg-brand-gold-400/30 text-brand-green-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-brand-gold-400/40"
               >
                 <Sparkles className="w-3.5 h-3.5 text-brand-gold-600" />
-                <span>1-Click Sign In (Dr. Arundhati)</span>
+                <span>1-Click Sign In (Dr. Sanjeev Rastogi)</span>
               </button>
             </div>
 
@@ -1233,6 +1178,7 @@ Wishing you swift recovery and holistic health,
       </div>
     );
   }
+
   return (
     <div id="doctor-dashboard-container" className="min-h-screen bg-[#FBF9F5] text-slate-800 pb-24">
       
@@ -1245,11 +1191,11 @@ Wishing you swift recovery and holistic health,
             <div className="flex items-center gap-4">
               <div className="relative">
                 <img 
-                  src={activeDoctorProfile?.image || "/images/legendary_doctor.jpg"} 
-                  alt={activeDoctorProfile?.name || "Doctor"}
-                  className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl object-cover border-2 border-brand-gold-400 shadow-md"
+                  src={activeDoctorProfile?.image || drImage || "/images/DrSanjeev.png"} 
+                  alt={activeDoctorProfile?.name || "Dr. Sanjeev Rastogi"}
+                  className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl object-cover object-top border-2 border-brand-gold-400 shadow-md"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300';
+                    (e.target as HTMLImageElement).src = '/images/DrSanjeev.png';
                   }}
                 />
                 <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-brand-green-950 ${isDoctorAvailable ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
@@ -1258,17 +1204,17 @@ Wishing you swift recovery and holistic health,
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl sm:text-2xl font-bold font-serif text-brand-gold-300">
-                    {activeDoctorProfile?.name || localDoctorUser?.fullName || "Dr. Arundhati Sharma"}
+                    {activeDoctorProfile?.name || localDoctorUser?.fullName || "Dr. Sanjeev Rastogi"}
                   </h1>
                   <span className="px-2.5 py-0.5 rounded-full bg-brand-gold-400/20 text-brand-gold-300 text-[11px] font-semibold tracking-wide border border-brand-gold-400/30">
                     Doctor Portal
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-brand-cream-200/90 font-medium">
-                  {activeDoctorProfile?.qualification || "BAMS, MD (Ayurveda - BHU Gold Medalist) • Reg. #AY-24890"}
+                  {activeDoctorProfile?.qualification || "Ph.D, MD (Ayurveda), Banaras Hindu University (BHU) • Ayush Reg. #AYUSH-IND-8842-SR"}
                 </p>
                 <p className="text-[11px] text-brand-gold-400/80 mt-0.5">
-                  {activeDoctorProfile?.title || "Chief Ayurvedic Vaidya & Nadi Pariksha Master"} • Bv Life Clinic
+                  {activeDoctorProfile?.title || "Chief Ayurvedic Physician & Master Nadi Vaidya"} • BV Life Clinic
                 </p>
               </div>
             </div>
@@ -1307,7 +1253,7 @@ Wishing you swift recovery and holistic health,
                     const next = !soundEnabled;
                     setSoundEnabled(next);
                     if (typeof window !== 'undefined') {
-                      localStorage.setItem('Bv_doctor_sound_enabled', String(next));
+                      localStorage.setItem('grams_doctor_sound_enabled', String(next));
                     }
                     if (next) playDoctorChime();
                   }}
@@ -1910,7 +1856,7 @@ Wishing you swift recovery and holistic health,
                                   <div className="flex items-center gap-2">
                                     <span className="text-[11px] text-emerald-700 font-medium">WhatsApp:</span>
                                     <a
-                                      href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Namaste ${app.patientName}, this is ${activeDoctorProfile?.name || "Dr. Arundhati Sharma"}'s Ayurvedic Consultation desk. We are connected for your appointment #${app.id}.`)}`}
+                                      href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Namaste ${app.patientName}, this is ${activeDoctorProfile?.name || "Dr. Sanjeev Rastogi"}'s Ayurvedic Consultation desk (BV Life). We are connected for your appointment #${app.id}.`)}`}
                                       target="_blank"
                                       rel="noreferrer"
                                       className="font-mono font-bold text-xs bg-[#25D366] px-2.5 py-1 rounded-lg text-white hover:bg-[#1EBE5D] inline-flex items-center gap-1.5 transition-colors shadow-2xs"
@@ -1952,7 +1898,7 @@ Wishing you swift recovery and holistic health,
                                     <Building2 className="w-4 h-4 text-amber-700 shrink-0" />
                                     <div>
                                       <span className="font-bold">In-Person OPD Consultation: </span>
-                                      <span className="text-amber-900">Patient arrives at Bv Life Wellness Center at <strong>{app.timeSlot}</strong>. Chamber 102.</span>
+                                      <span className="text-amber-900">Patient arrives at BV Life Wellness Center at <strong>{app.timeSlot}</strong>. Ayur Marg Center.</span>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -2081,7 +2027,7 @@ Wishing you swift recovery and holistic health,
                             {isChat && (
                               <div className="flex items-center gap-1.5">
                                 <a
-                                  href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Namaste ${app.patientName}, this is ${activeDoctorProfile?.name || "Dr. Arundhati Sharma"}. We are connected for your Ayurvedic Consultation #${app.id}.`)}`}
+                                  href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Namaste ${app.patientName}, this is ${activeDoctorProfile?.name || "Dr. Sanjeev Rastogi"}. We are connected for your Ayurvedic Consultation #${app.id}.`)}`}
                                   target="_blank"
                                   rel="noreferrer"
                                   onClick={() => {
@@ -2817,7 +2763,7 @@ Wishing you swift recovery and holistic health,
                   In-Person Clinic Visits (OPD)
                 </h2>
                 <p className="text-sm text-amber-100/90 leading-relaxed">
-                  Patients scheduled for physical OPD visits at Bv Life Wellness Center. Conduct physical <strong>Nadi Pariksha (Pulse Examination)</strong>, tongue and posture analysis, issue electronic OPD tokens, and draft authenticated prescriptions.
+                  Patients scheduled for physical OPD visits at BV Life Wellness Center. Conduct physical <strong>Nadi Pariksha (Pulse Examination)</strong>, tongue and posture analysis, issue electronic OPD tokens, and draft authenticated prescriptions.
                 </p>
                 <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-amber-200">
                   <span className="flex items-center gap-1.5 font-semibold bg-amber-800/40 px-3 py-1.5 rounded-xl border border-amber-700/40">
@@ -3454,7 +3400,7 @@ Wishing you swift recovery and holistic health,
               <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/60 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-amber-950">Digitally Authenticated Signature</p>
-                  <p className="text-[11px] text-amber-800">Dr. Arundhati Sharma • Ayush Reg. #AY-24890</p>
+                  <p className="text-[11px] text-amber-800">Dr. Sanjeev Rastogi • Ayush Reg. #AYUSH-IND-8842-SR</p>
                 </div>
                 <span className="px-3 py-1 rounded-full bg-amber-200/60 text-amber-900 font-serif font-bold text-xs">
                   ✓ Verified Vaidya Stamp
@@ -3530,13 +3476,13 @@ Wishing you swift recovery and holistic health,
               <div className="flex items-start justify-between border-b-2 border-brand-green-900 pb-4">
                 <div>
                   <h3 className="text-xl font-bold font-serif text-brand-green-950">
-                    Bv LIFE AYURVEDIC CLINIC
+                    BV LIFE AYURVEDIC CLINIC
                   </h3>
                   <p className="text-xs text-brand-green-800 font-medium mt-0.5">
                     Department of Kayachikitsa & Classical Nadi Pariksha
                   </p>
                   <p className="text-[11px] text-slate-500">
-                    Ayush Reg. #AY-24890 • Silicon City & BHU Lineage
+                    Ayush Reg. #AYUSH-IND-8842-SR • Banaras Hindu University Lineage
                   </p>
                 </div>
 
@@ -3649,15 +3595,15 @@ Wishing you swift recovery and holistic health,
               {/* Doctor Digital Stamp & Signature */}
               <div className="pt-6 border-t border-slate-200 flex items-center justify-between text-xs">
                 <div className="text-slate-400 text-[10px]">
-                  Generated via Bv Life Telemedicine • Option B WebRTC Secure
+                  Generated via BV Life Telemedicine • Option B WebRTC Secure
                 </div>
 
                 <div className="text-right space-y-0.5">
                   <div className="font-serif italic text-brand-green-900 text-sm font-bold">
-                    Dr. Arundhati Sharma
+                    {viewPrescriptionData.doctorName || "Dr. Sanjeev Rastogi"}
                   </div>
                   <div className="text-[10px] text-slate-500">
-                    BAMS, MD (Ayurveda), Ayush Reg. #AY-24890
+                    {viewPrescriptionData.doctorQualification || "Ph.D, MD (Ayurveda - BHU), Ayush Reg. #AYUSH-IND-8842-SR"}
                   </div>
                   <div className="text-[10px] font-mono text-emerald-700">
                     ✓ Valid Digitally Signed Electronic Prescription

@@ -38,8 +38,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
               <ShieldCheck className="w-7 h-7" />
             </div>
             <div>
-              <h4 className="font-bold text-white text-base">100% Certified Organic</h4>
-              <p className="text-sm text-brand-cream-200/80 mt-1">AYUSH approved, GMP certified, chemical & heavy-metal tested.</p>
+              <h4 className="font-bold text-white text-base">Quality Assured</h4>
+              <p className="text-sm text-brand-cream-200/80 mt-1">
+                Carefully selected Ayurvedic products made with quality-focused standards.
+              </p>
             </div>
           </div>
           <div className="flex flex-col md:flex-row items-center gap-4">
@@ -56,9 +58,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
               <HeartHandshake className="w-7 h-7" />
             </div>
             <div>
-              <h4 className="font-bold text-white text-base">Our Sacred Trust</h4>
-              <p className="text-sm text-brand-cream-200/80 mt-1">14-day risk free satisfaction refunds and round-the-clock supportive care.</p>
+              <h4 className="font-bold text-white text-base">Care You Can Trust</h4>
+              <p className="text-sm text-brand-cream-200/80 mt-1">
+                Thoughtfully selected Ayurvedic products with a focus on quality and customer care.
+              </p>
             </div>
+
           </div>
         </div>
       </div>
@@ -84,7 +89,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
             </div>
             <div className="flex items-center gap-2.5">
               <Mail className="w-5 h-5 text-brand-green-800 flex-shrink-0" />
-              <span>care@bvlife.com</span>
+              <span>care@bvlife.in</span>
             </div>
             <div className="flex items-center gap-2.5">
               <MapPin className="w-5 h-5 text-brand-green-800 flex-shrink-0" />
@@ -160,7 +165,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
       <div className="bg-brand-green-900 border-t border-gray-200 py-4 text-sm text-white font-semibold">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
           <p>© 2026 BV Life Inc. All Ayurvedic herbs strictly sourced from sustainable high-altitude farms.</p>
-         
+
         </div>
       </div>
 

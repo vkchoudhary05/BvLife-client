@@ -393,7 +393,7 @@ export default function App() {
         {currentPage === 'admin' && (
           (currentUser && (
             currentUser.role === 'admin' ||
-            ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@Bvlife.com', 'doctor@Bvlife.com'].includes((currentUser.email || '').toLowerCase()) ||
+            ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@bvlife.in', 'doctor@Bvlife.com'].includes((currentUser.email || '').toLowerCase()) ||
             ['7451050607', '9425011088'].includes((currentUser.phone || '').replace(/\D/g, '').slice(-10))
           )) ? (
             <Dashboard
@@ -452,11 +452,18 @@ export default function App() {
 
         {/* Login & Register Portal */}
         {currentPage === 'login' && (
-          <Login
-            onNavigate={handleNavigate}
-            handleLogin={handleLogin}
-            handleRegister={handleRegister}
-          />
+<Login
+  onNavigate={handleNavigate}
+  handleLogin={handleLogin}
+  handleRegister={handleRegister}
+  onLoginSuccess={(token, user) => {
+    if (user) {
+      setCurrentUser(user);
+    }
+
+    handleLoginSuccess(token, false);
+  }}
+/>
         )}
 
       </main>

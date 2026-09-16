@@ -116,7 +116,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
             'iamvivekbaliyan07@gmail.com',
             'vkchoudhary050607@gmail.com',
             'admin@Bvlife.com',
-            'care@Bvlife.com'
+            'care@bvlife.in'
           ].includes(lower);
 
           if (isAllowedAdmin) {

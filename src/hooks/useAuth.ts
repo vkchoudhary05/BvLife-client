@@ -36,7 +36,7 @@ export function useAuth() {
       const data = await api.login(credentials);
       if (data) {
         const cleanEmail = (data.user?.email || credentials.email).toLowerCase();
-        const isUserAdmin = data.user?.role === 'admin' || ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@Bvlife.com', 'doctor@Bvlife.com'].includes(cleanEmail);
+        const isUserAdmin = data.user?.role === 'admin' || ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@bvlife.in', 'doctor@Bvlife.com'].includes(cleanEmail);
 
         handleLoginSuccess(data.token, isUserAdmin);
         setCurrentUser(data.user);
@@ -62,7 +62,7 @@ export function useAuth() {
       });
       if (regData) {
         const cleanEmail = (regData.user?.email || data.email).toLowerCase();
-        const isUserAdmin = regData.user?.role === 'admin' || ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@Bvlife.com'].includes(cleanEmail);
+        const isUserAdmin = regData.user?.role === 'admin' || ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@bvlife.in'].includes(cleanEmail);
 
         handleLoginSuccess(regData.token, isUserAdmin);
         setCurrentUser(regData.user);
@@ -87,7 +87,7 @@ export function useAuth() {
         const cleanPhone = (user.phone || '').replace(/\D/g, '').slice(-10);
         if (
           user.role === 'admin' ||
-          ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@Bvlife.com', 'doctor@Bvlife.com'].includes(lowerEmail) ||
+          ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@bvlife.in', 'doctor@Bvlife.com'].includes(lowerEmail) ||
           ['7451050607', '9425011088'].includes(cleanPhone)
         ) {
           user.role = 'admin';
