@@ -786,30 +786,6 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
             <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent sm:from-black/20 sm:via-transparent sm:to-transparent" />
           </div>
 
-          {/* Navigation Chevron Left */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentSlide((prev) => (prev - 1 + doctorHeroSlides.length) % doctorHeroSlides.length);
-            }}
-            aria-label="Previous slide"
-            className="flex absolute left-2 xs:left-3 md:left-4 lg:left-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
-          >
-            <ChevronLeft className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
-          </button>
-
-          {/* Navigation Chevron Right */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentSlide((prev) => (prev + 1) % doctorHeroSlides.length);
-            }}
-            aria-label="Next slide"
-            className="flex absolute right-2 xs:right-3 md:right-4 lg:right-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
-          >
-            <ChevronRight className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
-          </button>
-
           {/* Banner Slide Indicator Dots */}
           <div className="absolute bottom-2 xs:bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 xs:gap-2">
             {doctorHeroSlides.map((_, i) => (

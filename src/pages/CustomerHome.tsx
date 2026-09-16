@@ -325,9 +325,6 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
   >
     Consult Dr. Sanjeev Rastogi
     <br />
-    <span className="text-[20px] sm:text-[23px] lg:text-[24px] xl:text-[28px]">
-      Ayurveda Consultant
-    </span>
   </h2>
 
   {/* Qualifications Badge */}
