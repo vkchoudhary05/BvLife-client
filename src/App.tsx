@@ -123,8 +123,10 @@ export default function App() {
 
   // Fetch contextual data lazily based on active page route
   useEffect(() => {
-    if (currentPage === 'static') {
-      if (pageParams?.page === 'blog') fetchBlogs();
+    if (currentPage === 'home') {
+      fetchBlogs();
+    } else if (currentPage === 'static') {
+      if (pageParams?.page === 'blog' || pageParams?.page === 'blog-post') fetchBlogs();
       if (pageParams?.page === 'faq') fetchFaqs();
     } else if (currentPage === 'cart' || currentPage === 'checkout') {
       fetchCoupons();
@@ -145,12 +147,17 @@ export default function App() {
         const searchParams = new URLSearchParams();
         if (params?.search) searchParams.set('search', params.search);
         if (params?.category) searchParams.set('category', params.category);
+        if (params?.featured) searchParams.set('featured', 'true');
+        if (params?.bestSeller) searchParams.set('bestSeller', 'true');
         const q = searchParams.toString();
         path = q ? `/shop?${q}` : '/shop';
       } else if (page === 'product') {
         path = `/product?id=${params?.id || ''}`;
       } else if (page === 'static') {
         path = `/${params?.page || 'faq'}`;
+        if (params?.page === 'blog-post' && params?.id) {
+          path += `?id=${encodeURIComponent(params.id)}`;
+        }
       } else if (page === 'admin') {
         path = '/admin';
       } else if (page === 'order-confirmation' || page === 'order-success') {
@@ -251,6 +258,8 @@ export default function App() {
             onToggleWishlist={handleToggleWishlist}
             searchQuery={pageParams?.search || ''}
             categoryFilter={pageParams?.category || ''}
+            featuredOnly={Boolean(pageParams?.featured)}
+            bestSellerOnly={Boolean(pageParams?.bestSeller)}
             language={language}
             onBuyNow={(prod, qty, variant) => {
               setBuyNowProduct(prod);

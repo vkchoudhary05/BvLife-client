@@ -3,13 +3,33 @@ import { Product, ProductVariant, Blog, FAQ, Coupon, Review, WebsiteSettings, Us
 export const api = {
   async getBaselineData(): Promise<{ products: Product[]; settings: WebsiteSettings | null }> {
     try {
-      const [pRes, sRes] = await Promise.all([
-        fetch('/api/products').then(r => r.json()),
-        fetch('/api/settings').then(r => r.json())
+      // Product loading must not depend on settings being available (or vice versa).
+      const [pResult, sResult] = await Promise.allSettled([
+        fetch('/api/products'),
+        fetch('/api/settings')
       ]);
+      let products: Product[] = [];
+      let settings: WebsiteSettings | null = null;
+
+      if (pResult.status === 'fulfilled' && pResult.value.ok) {
+        try {
+          const data = await pResult.value.json();
+          if (Array.isArray(data)) products = data;
+        } catch (err) {
+          console.warn('Could not parse initial products response:', err);
+        }
+      }
+      if (sResult.status === 'fulfilled' && sResult.value.ok) {
+        try {
+          const data = await sResult.value.json();
+          if (data && data.defaultTaxPercentage !== undefined) settings = data;
+        } catch (err) {
+          console.warn('Could not parse initial settings response:', err);
+        }
+      }
       return {
-        products: Array.isArray(pRes) ? pRes : [],
-        settings: sRes && sRes.defaultTaxPercentage !== undefined ? sRes : null
+        products,
+        settings
       };
     } catch (err) {
       console.error('Error fetching baseline data:', err);

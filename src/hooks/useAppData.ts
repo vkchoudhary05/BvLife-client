@@ -20,16 +20,39 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
 
   // Baseline data fetch
   useEffect(() => {
-    api.getBaselineData().then(({ products, settings }) => {
-      if (products.length > 0) setProducts(products);
-      if (settings) setSettings(settings);
-    });
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    const retryDelays = [1000, 2500, 5000];
+
+    const loadBaseline = async (attempt = 0) => {
+      const { products: loadedProducts, settings: loadedSettings } = await api.getBaselineData();
+      if (cancelled) return;
+
+      if (loadedProducts.length > 0) setProducts(loadedProducts);
+      if (loadedSettings) setSettings(loadedSettings);
+
+      // A cold server or temporary network failure should not leave a first
+      // visit permanently empty; retry while there are no products to display.
+      if (loadedProducts.length === 0 && attempt < retryDelays.length) {
+        retryTimer = setTimeout(() => loadBaseline(attempt + 1), retryDelays[attempt]);
+      }
+    };
+
+    void loadBaseline();
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, []);
 
   // Targeted fetchers
   const fetchBlogs = useCallback(async () => {
-    const data = await api.getBlogs();
-    if (data.length > 0) setBlogs(data);
+    try {
+      const data = await api.getBlogs();
+      if (data.length > 0) setBlogs(data);
+    } catch (err) {
+      console.warn('Unable to load articles:', err);
+    }
   }, []);
 
   const fetchFaqs = useCallback(async () => {

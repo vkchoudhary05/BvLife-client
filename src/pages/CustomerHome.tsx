@@ -4,20 +4,23 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Sparkles, Award, Star, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, Award, Star, BookOpen } from 'lucide-react';
 import { Product, Blog, ProductVariant } from '../types';
 import { ProductCard } from '../components/ProductCard';
 import { Language, t } from '../lib/translations';
 
-import productImage from "@/assets/banner5.png";
-import productImage2 from "@/assets/banner5.png";
-import productImage3 from "@/assets/banner5.png";
+import productImage from "@/assets/NewBv1.jpeg";
+import productImage2 from "@/assets/NewBv2.jpeg";
+import productImage3 from "@/assets/NewBv4.jpeg";
+import productImageMobile from "@/assets/bannarMobile1.png";
 import drImage from "../../assets/Dr6.png"
+import chatting from "../../assets/Chatting.jpg"
 
-// Mobile (tall/square, portrait-friendly) hero banners
-import productImageMobile from "@/assets/banner009.png";
-import productImageMobile2 from "@/assets/banner009.png";
-import productImageMobile3 from "@/assets/banner009.png";
+const heroSlides = [
+  { id: 'hero-1', desktopImage: productImage, mobileImage: productImage },
+  { id: 'hero-2', desktopImage: productImage2, mobileImage: productImage2 },
+  { id: 'hero-3', desktopImage: productImage3, mobileImage: productImage3 }
+];
 
 interface CustomerHomeProps {
   products: Product[];
@@ -31,27 +34,6 @@ interface CustomerHomeProps {
   language: Language;
   onBuyNow?: (product: Product, qty: number, selectedVariant?: ProductVariant) => void;
 }
-
-const heroSlides = [
-  {
-    id: "slide-1",
-    desktopImage: productImage,
-    mobileImage: productImageMobile,
-    productId: "prod-2",
-  },
-  {
-    id: "slide-2",
-    desktopImage: productImage2,
-    mobileImage: productImageMobile2,
-    productId: "prod-12",
-  },
-  {
-    id: "slide-3",
-    desktopImage: productImage3,
-    mobileImage: productImageMobile3,
-    productId: "prod-4",
-  }
-];
 
 export const CustomerHome: React.FC<CustomerHomeProps> = ({
   products,
@@ -68,9 +50,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showAcharyaBadge, setShowAcharyaBadge] = useState(false);
-  const [showAllArticles, setShowAllArticles] = useState(false);
   const SLIDE_DURATION = 6000;
-
   useEffect(() => {
     if (isPaused) return;
     const timer = setInterval(() => {
@@ -90,8 +70,8 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
     };
   }, []);
 
-  const featuredProds = products.filter(p => p.featured).slice(0, 4);
-  const bestSellers = products.filter(p => p.bestSeller).slice(0, 4);
+  const featuredProds = products.filter(p => p.featured);
+  const bestSellers = products.filter(p => p.bestSeller);
 
   const categories = [
     { name: "Immunity", count: 12, img: "https://i.pinimg.com/736x/45/5b/ef/455befde743efeb9efb34a553d8223c1.jpg" },
@@ -106,92 +86,34 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
 
   const slide = heroSlides[currentSlide];
 
-  const handleHeroClick = () => {
-    onNavigate('shop');
-  };
-
   return (
     <div id="customar-home-page" className=" space-y-9">
 
-      {/* ===== HERO BANNER — separate mobile / desktop art, fully responsive ===== */}
+      {/* Full-width image-only home banner */}
       <section
         id="hero-banner"
-        onClick={handleHeroClick}
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
-        className="
-          relative
-          w-full
-          h-[195px]
-          xs:h-[280px]
-          sm:h-[335px]
-          md:h-[350px]
-          lg:h-[368px]
-          xl:h-[400px]
-          2xl:h-[550px]
-          rounded
-          overflow-hidden
-          flex
-          items-center
-          justify-center
-          cursor-pointer
-          group
-          shadow-sm
-        "
+        className="relative w-full overflow-hidden bg-[#f8f6ea]"
       >
-        <div className="absolute inset-0">
-          <picture>
-            <source
-              media="(max-width:768px)"
-              srcSet={slide.mobileImage}
-            />
-            <img
-              src={slide.desktopImage}
-              alt="BV Life"
-              className="w-full h-full object-cover"
-            />
-          </picture>
-          {/* Gradient overlay: subtle on desktop, stronger on mobile for dot/button contrast */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent sm:from-black/20 sm:via-transparent sm:to-transparent" />
-        </div>
-
-        {/* ===== NAVIGATION BUTTONS ===== */}
-        {/* <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
-          }}
-          aria-label="Previous slide"
-          className="flex absolute left-2 xs:left-3 md:left-4 lg:left-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
-        >
-          <ChevronLeft className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
-        </button>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-          }}
-          aria-label="Next slide"
-          className="flex absolute right-2 xs:right-3 md:right-4 lg:right-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
-        >
-          <ChevronRight className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
-        </button> */}
-
-        {/* ===== SLIDE INDICATOR DOTS ===== */}
-        <div className="absolute bottom-2 xs:bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 xs:gap-2">
-          {heroSlides.map((_, i) => (
+        <picture className="block w-full">
+          <source media="(max-width: 767px)" srcSet={slide.mobileImage} />
+          <img
+            key={slide.id}
+            src={slide.desktopImage}
+            alt="BV Life Ayurvedic wellness banner"
+            className="block h-auto w-full object-contain object-center"
+          />
+        </picture>
+        <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-4" aria-label="Banner slides">
+          {heroSlides.map((item, index) => (
             <button
-              key={i}
-              aria-label={`Go to slide ${i + 1}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setCurrentSlide(i);
-              }}
-              className={`transition-all duration-300 rounded-full ${currentSlide === i
-                  ? 'bg-white w-4 xs:w-5 sm:w-6 md:w-8 h-1.5 xs:h-2'
-                  : 'bg-white/40 hover:bg-white/60 w-1.5 xs:w-2 h-1.5 xs:h-2'
-                }`}
+              key={item.id}
+              type="button"
+              aria-label={`Show banner ${index + 1}`}
+              aria-current={currentSlide === index ? 'true' : undefined}
+              onClick={() => setCurrentSlide(index)}
+              className={`h-2.5 rounded-full border border-white/80 shadow transition-all ${currentSlide === index ? 'w-7 bg-brand-green-800' : 'w-2.5 bg-white/75 hover:bg-white'}`}
             />
           ))}
         </div>
@@ -456,11 +378,13 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
 </section>
 
       {/* 3. FEATURED PRODUCTS GRID */}
-      <section id="featured-products" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 mt-15">
-        <div className="flex flex-col sm:flex-row justify-between items-baseline gap-4 mb-10 border-b border-brand-green-600/10 pb-5">
+      <section id="featured-products" className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 mt-12">
+        <div className="rounded-3xl border border-brand-green-700/10 bg-gradient-to-br from-white via-white to-brand-green-50/70 p-4 shadow-sm sm:p-6 lg:p-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6 border-b border-brand-green-600/10 pb-4">
           <div>
             <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">{t('section_feat_subtitle', language)}</span>
             <h3 className="font-serif text-2xl sm:text-3xl font-bold text-brand-green-900">{t('section_feat_title', language)}</h3>
+            <p className="mt-1 text-xs sm:text-sm text-brand-green-800/60">A handpicked selection from our full range.</p>
           </div>
           <button 
             onClick={() => onNavigate('shop', { featured: true })} 
@@ -471,7 +395,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+        {featuredProds.length > 0 ? <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
           {featuredProds.map(p => {
             const isWishlisted = wishlist.includes(p.id);
             return (
@@ -488,15 +412,18 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
               />
             );
           })}
+        </div> : <p className="rounded-2xl bg-brand-green-50/70 px-4 py-8 text-center text-sm text-brand-green-800/70">No featured products are available right now.</p>}
         </div>
       </section>
 
       {/* 3.5. TOP SELLING PRODUCTS SECTION */}
-      <section id="top-selling-products" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row justify-between items-baseline gap-4 mb-10 border-b border-brand-green-600/10 pb-5">
+      <section id="top-selling-products" className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="rounded-3xl border border-brand-green-700/10 bg-gradient-to-br from-[#f7f6ed] via-white to-brand-gold-500/10 p-4 shadow-sm sm:p-6 lg:p-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6 border-b border-brand-green-600/10 pb-4">
           <div>
             <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">{t('section_top_subtitle', language)}</span>
             <h3 className="font-serif text-2xl sm:text-3xl font-bold text-brand-green-900">{t('section_top_title', language)}</h3>
+            <p className="mt-1 text-xs sm:text-sm text-brand-green-800/60">Popular choices from our complete collection.</p>
           </div>
           <button 
             onClick={() => onNavigate('shop', { bestSeller: true })} 
@@ -507,7 +434,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+        {bestSellers.length > 0 ? <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
           {bestSellers.map(p => {
             const isWishlisted = wishlist.includes(p.id);
             return (
@@ -524,6 +451,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
               />
             );
           })}
+        </div> : <p className="rounded-2xl bg-white/80 px-4 py-8 text-center text-sm text-brand-green-800/70">No best sellers are available right now.</p>}
         </div>
       </section>
 
@@ -600,18 +528,16 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
             <h3 className="font-serif text-2xl sm:text-3xl font-bold text-brand-green-900">{t('section_blog_title', language)}</h3>
           </div>
           <button 
-            onClick={() => setShowAllArticles((showingAll) => !showingAll)}
+            onClick={() => onNavigate('static', { page: 'blog' })}
             className="text-sm text-brand-green-800 hover:text-brand-gold-600 font-bold flex items-center gap-1 cursor-pointer"
-            aria-expanded={showAllArticles}
-            aria-controls="home-articles"
           >
-            <span>{showAllArticles ? 'Show fewer articles' : t('section_blog_browse', language)}</span>
+            <span>Read all articles</span>
             <BookOpen className="w-4 h-4" />
           </button>
         </div>
 
         <div id="home-articles" className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {(showAllArticles ? blogs : blogs.slice(0, 2)).map((blog) => (
+          {blogs.slice(0, 3).map((blog) => (
             <button key={blog.id} type="button" onClick={() => onNavigate('static', { page: 'blog-post', id: blog.id })} className="group flex flex-col gap-5 rounded-2xl border border-brand-green-600/5 bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold-500 sm:flex-row" aria-label={`Read article: ${blog.title}`}>
               <div className="w-full sm:w-1/3 aspect-[4/3] rounded-xl overflow-hidden flex-shrink-0">
                 <img src={blog.image} alt={blog.title} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300" />
@@ -636,6 +562,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
             </button>
           ))}
         </div>
+        {blogs.length === 0 && <p className="rounded-2xl border border-brand-green-700/10 bg-white px-5 py-8 text-center text-sm text-brand-green-800/70">Articles are loading. Please check back in a moment.</p>}
       </section>
 
       {/* Floating Action Button for AI Acharya Consultant */}
@@ -663,23 +590,39 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
           <div className="absolute inset-0 rounded-full bg-brand-gold-500/25 blur-md animate-pulse pointer-events-none scale-105" />
           <div className="absolute -inset-[3px] rounded-full bg-gradient-to-r from-brand-gold-500 via-brand-gold-400 to-brand-gold-600 opacity-70 blur-xs group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-          <button
-            onClick={() => {
-              setShowAcharyaBadge(false);
-              onOpenConsultant();
-            }}
-            aria-label="Open Ask Acharya AI consultation"
-            className="relative grid h-15 w-15 place-items-center rounded-full bg-brand-green-900 shadow-[0_8px_25px_rgba(0,0,0,0.45)] transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer border-2 border-brand-gold-400/80 shrink-0"
-            title={t('btnAskAcharya', language)}
-          >
-            <div className="relative shrink-0">
-              <div className="h-12 w-12 overflow-hidden rounded-full border border-brand-gold-200 bg-brand-gold-100">
-                <img src={drImage} alt="Acharya wellness guide" className="h-full w-full object-cover object-[50%_20%] scale-[1.7]" />
-              </div>
-              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-brand-green-900 bg-emerald-400" aria-label="Available now" />
-              {showAcharyaBadge && <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full border-2 border-brand-cream-50 bg-brand-gold-500 text-[10px] font-black text-brand-green-950 shadow-sm" aria-label="1 new message">1</span>}
-            </div>
-          </button>
+<button
+  onClick={() => {
+    setShowAcharyaBadge(false);
+    onOpenConsultant();
+  }}
+  aria-label="Open Ask Acharya AI consultation"
+  className="relative grid h-15 w-15 place-items-center rounded-full bg-brand-green-900 shadow-[0_8px_25px_rgba(0,0,0,0.45)] transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer border-2 border-brand-gold-400/80 shrink-0"
+  title={t('btnAskAcharya', language)}
+>
+  <div className="relative shrink-0">
+    <div className="h-12 w-12 overflow-hidden rounded-full border border-brand-gold-200 bg-brand-gold-100">
+      <img
+        src={chatting}
+        alt="Acharya wellness guide"
+        className="h-full w-full object-cover object-[50%_10%] scale-[1.5]"
+      />
+    </div>
+
+    <span
+      className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-400"
+      aria-label="Available now"
+    />
+
+    {showAcharyaBadge && (
+      <span
+        className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full border-2 border-brand-cream-50 bg-brand-gold-500 text-[10px] font-black text-brand-green-950 shadow-sm"
+        aria-label="1 new message"
+      >
+        1
+      </span>
+    )}
+  </div>
+</button>
         </div>
       </div>
 

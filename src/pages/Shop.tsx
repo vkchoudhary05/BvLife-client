@@ -20,6 +20,8 @@ interface ShopProps {
   onToggleWishlist: (product: Product) => void;
   searchQuery?: string;
   categoryFilter?: string;
+  featuredOnly?: boolean;
+  bestSellerOnly?: boolean;
   language: Language;
   onBuyNow?: (product: Product, qty: number, selectedVariant?: ProductVariant) => void;
 }
@@ -33,6 +35,8 @@ export const Shop: React.FC<ShopProps> = ({
   onToggleWishlist,
   searchQuery = '',
   categoryFilter = '',
+  featuredOnly = false,
+  bestSellerOnly = false,
   language,
   onBuyNow
 }) => {
@@ -80,6 +84,9 @@ export const Shop: React.FC<ShopProps> = ({
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
+    if (featuredOnly) result = result.filter(p => p.featured);
+    if (bestSellerOnly) result = result.filter(p => p.bestSeller);
+
     // Search query filter
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -110,7 +117,7 @@ export const Shop: React.FC<ShopProps> = ({
     }
 
     return result;
-  }, [products, search, selectedCategory, priceRange, sortBy]);
+  }, [products, search, selectedCategory, priceRange, sortBy, featuredOnly, bestSellerOnly]);
 
   const paginatedProducts = useMemo(() => {
     const totalPages = Math.ceil(filteredProducts.length / shopPageSize) || 1;

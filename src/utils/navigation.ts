@@ -17,7 +17,9 @@ export const getPageFromUrl = () => {
   if (cleanPath === 'shop') {
     const search = searchParams.get('search') || '';
     const category = searchParams.get('category') || '';
-    return { page: 'shop', params: { search, category } };
+    const featured = searchParams.get('featured') === 'true';
+    const bestSeller = searchParams.get('bestSeller') === 'true';
+    return { page: 'shop', params: { search, category, featured, bestSeller } };
   }
   
   if (cleanPath === 'product') {
@@ -35,9 +37,9 @@ export const getPageFromUrl = () => {
   }
 
   // Check if it is a static page or blogs / faqs
-  const staticPages = ['blogs', 'faqs', 'about', 'contact', 'terms', 'privacy', 'expert-panel', 'impact', 'shipping-policy'];
+  const staticPages = ['blog', 'blogs', 'blog-post', 'faqs', 'about', 'contact', 'terms', 'privacy', 'expert-panel', 'impact', 'shipping-policy'];
   if (staticPages.includes(cleanPath)) {
-    return { page: 'static', params: { page: cleanPath } };
+    return { page: 'static', params: { page: cleanPath, id: searchParams.get('id') || '' } };
   }
   
   // Default match for other pages

@@ -6,7 +6,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Search, ShoppingCart, User, Sparkles, LogOut, LayoutDashboard, 
+  Search, ShoppingCart, User, Truck, Sparkles, LogOut, LayoutDashboard, 
   Menu, X, Home, Package, BookOpen, Info, Phone, ChevronDown, 
   ChevronRight, ArrowLeft, Stethoscope, Layers, ShieldCheck, Flame, 
   Activity, Moon, Users, HeartPulse, Sparkle, Wind, Grid, Heart, Crown
@@ -229,7 +229,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     <>
     <header id="site-header" className="sticky top-0 z-40 w-full bg-white backdrop-blur-md border-b border-brand-green-600/10">
       {/* Top Banner Alert - Running Marquee Line */}
-      <div id="top-promo-banner" className="bg-brand-green-900 text-white text-[12px] sm:text-xs py-1.5 sm:py-2 px-0 overflow-hidden whitespace-nowrap border-b border-brand-gold-500/20 font-bold uppercase tracking-widest">
+     <div id="top-promo-banner" className="bg-gradient-to-br from-brand-green-800 via-brand-green-700 to-emerald-700 text-white text-[11px] sm:text-xs py-1.5 sm:py-2 px-0 overflow-hidden whitespace-nowrap border-b border-brand-gold-500/20 font-bold uppercase tracking-widest">
         <div className="flex animate-marquee select-none">
           <div className="flex shrink-0 items-center gap-10 sm:gap-16 px-4">
             <span className="text-white">|</span>
@@ -415,7 +415,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {/* Search Dropdown/Popover */}
               {isMobileSearchOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[300px] sm:w-[360px] bg-white rounded-2xl shadow-2xl border border-brand-green-600/15 p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="fixed left-1/2 top-[5.25rem] -translate-x-1/2 w-[min(360px,calc(100vw-1.5rem))] bg-white rounded-2xl shadow-2xl border border-brand-green-600/15 p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[360px] sm:translate-x-0">
                   <form onSubmit={handleSearchSubmit} className="relative">
                     <input
                       type="text"
@@ -453,14 +453,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Track Order Icon - Present on both Desktop and Mobile */}
-            <button 
-              onClick={() => onNavigate('track-order')}
-              className="p-1.5 sm:p-2 text-brand-green-950 hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 rounded-lg sm:rounded-full hover:bg-brand-green-50"
-              aria-label="Track Order"
-              title="Track Order"
-            >
-              <Package className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-brand-green-900" strokeWidth={2} />
-            </button>
+<button
+  onClick={() => onNavigate('track-order')}
+  className="p-1.5 sm:p-2 text-brand-green-950 hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 rounded-lg sm:rounded-full hover:bg-brand-green-50"
+  aria-label="Track Order"
+  title="Track Order"
+>
+  <Truck
+    className="w-5 h-5 sm:w-[22px] sm:h-[22px] text-brand-green-900"
+    strokeWidth={2}
+  />
+</button>
 
             {/* My Account Profile Icon */}
             <div
