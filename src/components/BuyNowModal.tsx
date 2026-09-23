@@ -10,8 +10,8 @@ import { Product, Order, Address, ProductVariant } from '../types';
 import { Language, t } from '../lib/translations';
 import { validateAndFormatIndianPhone } from '../utils';
 import { loadRazorpayScript } from '../utils/razorpay';
-import { ForgotPasswordModal } from './ForgotPasswordModal';
-import { sendMSG91Otp, formatMSG91Identifier, verifyMSG91Otp } from '../services/msg91OtpService';
+// import { Msg91Captcha } from './Msg91Captcha';
+import { sendMSG91Otp, formatMSG91Identifier, verifyMSG91Otp, performOtpLogin } from '../services/msg91OtpService';
 
 interface BuyNowModalProps {
   product: Product;
@@ -48,12 +48,12 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   // Checkout flow step: 'verify' -> 'address' -> 'payment' -> 'success'
   const [step, setStep] = useState<'verify' | 'address' | 'payment' | 'success'>('verify');
 
-  // Step 1: Verification states
+  // Step 1: Mobile OTP & Account Verification states (Password-Free)
+  const [authSubStep, setAuthSubStep] = useState<'phone' | 'otp' | 'profile'>('phone');
   const [fullName, setFullName] = useState(currentUser?.fullName || '');
   const [mobilePhone, setMobilePhone] = useState('');
   const [email, setEmail] = useState(currentUser?.email || '');
-  const [password, setPassword] = useState('');
-  const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
+  const [verifiedAccessToken, setVerifiedAccessToken] = useState('');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
@@ -61,8 +61,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   const [devTestOtp, setDevTestOtp] = useState('');
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [verificationError, setVerificationError] = useState('');
-  const [accountExists, setAccountExists] = useState(false);
-  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [verificationSuccess, setVerificationSuccess] = useState('');
 
   // Step 2: Address states
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
@@ -137,44 +136,19 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   const shippingCharge = itemTotal >= 999 ? 0 : 50; // free above 999
   const finalTotal = itemTotal + taxAmount + shippingCharge;
 
-  // Handles requesting OTP
+  // Handles requesting OTP (Step 1: Phone input)
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setVerificationError('');
-
-    if (!fullName.trim()) {
-      setVerificationError(language === 'hi' ? 'कृपया अपना पूरा नाम दर्ज करें।' : 'Please enter your full name.');
-      return;
-    }
-
-    if (!currentUser && !email.trim()) {
-      setVerificationError(language === 'hi' ? 'कृपया अपना ईमेल पता दर्ज करें।' : 'Please enter your email address.');
-      return;
-    }
-
-    if (!currentUser && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setVerificationError(language === 'hi' ? 'कृपया एक वैध ईमेल पता दर्ज करें।' : 'Please enter a valid email address.');
-      return;
-    }
-
-    if (!currentUser && !password.trim()) {
-      setVerificationError(language === 'hi' ? 'कृपया अपना पासवर्ड दर्ज करें।' : 'Please choose a password.');
-      return;
-    }
-
-    if (!currentUser && password.length < 6) {
-      setVerificationError(language === 'hi' ? 'पासवर्ड कम से कम 6 वर्णों का होना चाहिए।' : 'Password must be at least 6 characters.');
-      return;
-    }
+    setVerificationSuccess('');
 
     const formatted = validateAndFormatIndianPhone(mobilePhone);
     if (!formatted) {
-      setVerificationError(language === 'hi' ? 'कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit mobile number.');
+      setVerificationError(language === 'hi' ? 'कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें।' : 'Please enter a valid 10-digit Indian mobile number.');
       return;
     }
 
     setIsAuthLoading(true);
-    setVerificationError('');
     try {
       const msg91Target = formatMSG91Identifier(mobilePhone);
       const res = await sendMSG91Otp(msg91Target);
@@ -184,8 +158,14 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
         if (res.otp) {
           setDevTestOtp(res.otp);
         }
+        setAuthSubStep('otp');
+        setVerificationSuccess(
+          language === 'hi'
+            ? `सत्यापन कोड +91 ${mobilePhone} पर भेजा गया है।`
+            : `SMS verification code sent to +91 ${mobilePhone}.`
+        );
       } else {
-        setVerificationError(res.error || 'Failed to dispatch verification OTP. Please verify number.');
+        setVerificationError(res.error || 'Failed to dispatch verification OTP. Please verify your mobile number.');
       }
     } catch (err: any) {
       setVerificationError(err.message || 'SMS service temporary failure. Please try again.');
@@ -194,68 +174,15 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
     }
   };
 
-  // Handles logging in existing users
-  const handleLoginAndContinue = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setVerificationError('');
-    setAccountExists(false);
-    setIsAuthLoading(true);
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (onLoginSuccess) {
-          onLoginSuccess(data.token);
-        }
-        
-        // If they already have addresses, the userAddresses list hook will trigger step to 'payment'
-        if (data.user && data.user.addresses && data.user.addresses.length > 0) {
-          const defaultAddr = data.user.addresses.find((a: Address) => a.isDefault) || data.user.addresses[0];
-          setSelectedAddressId(defaultAddr.id);
-          setFullName(defaultAddr.fullName || defaultAddr.name || data.user.fullName || '');
-          setMobilePhone((defaultAddr.phone || data.user.phone || '').replace('+91', ''));
-          setIsPhoneVerified(true);
-          setAddressLine1(defaultAddr.addressLine1 || defaultAddr.street || '');
-          setAddressLine2(defaultAddr.addressLine2 || '');
-          setCity(defaultAddr.city || '');
-          setStateName(defaultAddr.state || '');
-          setZipCode(defaultAddr.zipCode || defaultAddr.pincode || '');
-          setStep('payment');
-        } else {
-          setFullName(data.user.fullName || '');
-          if (data.user.phone) {
-            setMobilePhone(data.user.phone.replace('+91', ''));
-            setIsPhoneVerified(true);
-          }
-          setStep('address');
-        }
-      } else {
-        const data = await res.json();
-        setVerificationError(data.error || 'Invalid credentials or incorrect password.');
-      }
-    } catch (err) {
-      console.error(err);
-      setVerificationError('Failed to establish connection. Please try again.');
-    } finally {
-      setIsAuthLoading(false);
-    }
-  };
-
-  // Handles verifying OTP and registering
+  // Handles verifying OTP (Step 2: Single OTP Verification)
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setVerificationError('');
-    setAccountExists(false);
+    setVerificationSuccess('');
 
     const cleanCode = otpCode.trim();
-    if (!cleanCode || cleanCode.length < 4) {
-      setVerificationError(language === 'hi' ? 'कृपया सत्यापन कोड दर्ज करें।' : 'Please enter the verification code.');
+    if (!cleanCode || cleanCode.length !== 4) {
+      setVerificationError(language === 'hi' ? 'कृपया 4 अंकों का सत्यापन कोड दर्ज करें।' : 'Please enter the 4-digit verification code.');
       return;
     }
 
@@ -265,48 +192,115 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
       const verifyRes = await verifyMSG91Otp(cleanCode, otpReqId, msg91Target);
 
       if (!verifyRes.success) {
-        setVerificationError(verifyRes.error || (language === 'hi' ? 'गलत ओटीपी। कृपया पुनः प्रयास करें।' : 'Invalid or expired OTP. Please try again.'));
+        setVerificationError(verifyRes.error || (language === 'hi' ? 'गलत ओटीपी कोड। कृपया पुनः प्रयास करें।' : 'Invalid or expired verification passcode.'));
+        setIsAuthLoading(false);
+        return;
+      }
+
+      if (!verifyRes.accessToken) {
+        setVerificationError(language === 'hi' ? 'सत्यापन टोकन प्राप्त नहीं हुआ। कृपया पुनः प्रयास करें।' : 'Verification token was not received from MSG91. Please try again.');
         setIsAuthLoading(false);
         return;
       }
 
       setIsPhoneVerified(true);
-      
-      if (!currentUser && authMode === 'register') {
-        const res = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.trim().toLowerCase(),
-            fullName,
-            phone: `+91${mobilePhone}`,
-            password: password,
-            role: 'customer',
-            code: cleanCode,
-            reqId: otpReqId,
-            accessToken: verifyRes.accessToken
-          })
-        });
+      const tokenProof = verifyRes.accessToken;
+      setVerifiedAccessToken(tokenProof);
 
-        if (res.ok) {
-          const data = await res.json();
-          if (onLoginSuccess) {
-            onLoginSuccess(data.token);
-          }
-          setStep('address');
-        } else {
-          const data = await res.json();
-          setVerificationError(data.error || 'Registration failed. Email or mobile might already be registered.');
-          if (data.accountExists || (data.error && data.error.toLowerCase().includes('already'))) {
-            setAccountExists(true);
-          }
+      // Single verification flow: Send token proof to backend
+      const loginRes = await performOtpLogin({
+        identifier: msg91Target,
+        accessToken: tokenProof
+      });
+
+      if (!loginRes.success) {
+        setVerificationError(loginRes.error || 'Authentication failed. Please try again.');
+        setIsAuthLoading(false);
+        return;
+      }
+
+      // Existing User -> Immediate login and proceed
+      if (loginRes.user && loginRes.token) {
+        if (onLoginSuccess) {
+          onLoginSuccess(loginRes.token);
         }
-      } else {
+
+        if (loginRes.user.addresses && loginRes.user.addresses.length > 0) {
+          const defaultAddr = loginRes.user.addresses.find((a: Address) => a.isDefault) || loginRes.user.addresses[0];
+          setSelectedAddressId(defaultAddr.id);
+          setFullName(defaultAddr.fullName || defaultAddr.name || loginRes.user.fullName || '');
+          setMobilePhone((defaultAddr.phone || loginRes.user.phone || '').replace('+91', ''));
+          setAddressLine1(defaultAddr.addressLine1 || defaultAddr.street || '');
+          setAddressLine2(defaultAddr.addressLine2 || '');
+          setCity(defaultAddr.city || '');
+          setStateName(defaultAddr.state || '');
+          setZipCode(defaultAddr.zipCode || defaultAddr.pincode || '');
+          setStep('payment');
+        } else {
+          setFullName(loginRes.user.fullName || '');
+          setStep('address');
+        }
+        return;
+      }
+
+      // New User -> Ask ONLY Full Name and Email (No password!)
+      if (loginRes.isNewUser) {
+        setVerificationSuccess(
+          language === 'hi'
+            ? 'मोबाइल नंबर सत्यापित हो गया! कृपया वितरण के लिए अपना नाम और ईमेल दर्ज करें।'
+            : 'Mobile verified! Please provide your name and email to proceed.'
+        );
+        setAuthSubStep('profile');
+        return;
+      }
+
+      setVerificationError('Unexpected response from server. Please try again.');
+    } catch (err: any) {
+      console.error(err);
+      setVerificationError(err.message || 'Failed to verify OTP. Please try again.');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  // Handles completing registration for new users (Step 3: Name & Email only)
+  const handleCompleteNewUserProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVerificationError('');
+    setVerificationSuccess('');
+
+    if (!fullName.trim()) {
+      setVerificationError(language === 'hi' ? 'कृपया अपना पूरा नाम दर्ज करें।' : 'Please enter your full name.');
+      return;
+    }
+
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setVerificationError(language === 'hi' ? 'कृपया एक वैध ईमेल पता दर्ज करें।' : 'Please enter a valid email address.');
+      return;
+    }
+
+    setIsAuthLoading(true);
+    try {
+      const msg91Target = formatMSG91Identifier(mobilePhone);
+      const regRes = await performOtpLogin({
+        identifier: msg91Target,
+        accessToken: verifiedAccessToken,
+        fullName: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        autoCreate: true
+      });
+
+      if (regRes.success && regRes.token) {
+        if (onLoginSuccess) {
+          onLoginSuccess(regRes.token);
+        }
         setStep('address');
+      } else {
+        setVerificationError(regRes.error || 'Registration failed. Mobile or email may already be in use.');
       }
     } catch (err: any) {
       console.error(err);
-      setVerificationError(err.message || 'Failed to establish account. Please try again.');
+      setVerificationError(err.message || 'Failed to complete profile. Please try again.');
     } finally {
       setIsAuthLoading(false);
     }
@@ -493,7 +487,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
             key: finalKey,
             amount: data.amount,
             currency: data.currency || 'INR',
-            name: 'Bv Life',
+            name: 'BV Life',
             description: product.name,
             image: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
             order_id: data.orderId,
@@ -726,222 +720,76 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
             <div className="space-y-4">
               <div className="space-y-1">
                 <h4 className="font-serif text-sm font-bold text-brand-green-900">
-                  {language === 'hi' ? 'चरण 1: पहचान और मोबाइल सत्यापन' : 'Verify Mobile Contact'}
+                  {language === 'hi' ? 'चरण 1: त्वरित मोबाइल सत्यापन' : 'Express Mobile Verification'}
                 </h4>
                 <p className="text-xs text-brand-green-600/80">
-                  {language === 'hi' ? 'ऑर्डर की जानकारी भेजने के लिए ओटीपी सत्यापित करें।' : 'Secure your express delivery with a quick one-time mobile verification.'}
+                  {language === 'hi' ? 'ऑर्डर की जानकारी और ट्रैकिंग के लिए केवल मोबाइल ओटीपी से सत्यापित करें।' : 'Instant login or register with mobile OTP. No password required.'}
                 </p>
               </div>
 
-              {/* Interactive Tab Switcher for Guest/New user vs Existing login */}
-              {!currentUser && !otpSent && (
-                <div className="grid grid-cols-2 p-1 bg-brand-cream-100/90 rounded-2xl border border-brand-green-200/40 shadow-inner text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthMode('register');
-                      setVerificationError('');
-                    }}
-                    className={`py-2.5 font-bold rounded-xl transition-all duration-300 cursor-pointer ${
-                      authMode === 'register'
-                        ? "bg-brand-green-800 text-brand-cream-50 shadow-sm border border-brand-gold-500/20 font-serif"
-                        : "text-brand-green-700/60 hover:text-brand-green-900"
-                    }`}
-                  >
-                    {language === 'hi' ? 'नया खाता बनाएं' : 'New Seeker (Sign Up)'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthMode('login');
-                      setVerificationError('');
-                    }}
-                    className={`py-2.5 font-bold rounded-xl transition-all duration-300 cursor-pointer ${
-                      authMode === 'login'
-                        ? "bg-brand-green-800 text-brand-cream-50 shadow-sm border border-brand-gold-500/20 font-serif"
-                        : "text-brand-green-700/60 hover:text-brand-green-900"
-                    }`}
-                  >
-                    {language === 'hi' ? 'लॉग इन करें' : 'Existing Seeker (Login)'}
-                  </button>
-                </div>
-              )}
-
               {verificationError && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex flex-col gap-2 font-semibold text-left">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                    <p className="leading-relaxed flex-1">{verificationError}</p>
-                  </div>
-                  {accountExists && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthMode('login');
-                        setVerificationError('');
-                        setAccountExists(false);
-                      }}
-                      className="self-start text-[10px] uppercase tracking-wider font-extrabold bg-brand-green-800 text-brand-cream-50 px-3 py-1.5 rounded-lg hover:bg-brand-green-900 transition-all cursor-pointer shadow-sm flex items-center gap-1"
-                    >
-                      <span>Log In to Existing Account</span>
-                      <ArrowRight className="w-3 h-3 text-brand-gold-400" />
-                    </button>
-                  )}
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-start gap-2 font-semibold text-left">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed flex-1">{verificationError}</p>
                 </div>
               )}
 
-              {/* SMS Verification Notice */}
-              {otpSent && (
-                <div className="p-3.5 bg-brand-green-50 border border-brand-green-200/70 rounded-xl space-y-1">
-                  <p className="text-xs text-brand-green-900 font-medium">
-                    {language === 'hi' 
-                      ? `सत्यापन कोड आपके नंबर पर भेजा गया है।` 
-                      : `SMS Verification code sent to +91 ${mobilePhone}.`}
-                  </p>
+              {verificationSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{verificationSuccess}</span>
                 </div>
               )}
 
-              {!otpSent ? (
-                authMode === 'register' || currentUser ? (
-                  /* REGISTER FORM OR LOGGED-IN MOBILE VERIFY */
-                  <form onSubmit={handleRequestOtp} className="space-y-4 text-xs">
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-brand-green-800 flex items-center gap-1">
-                        <User className="w-3.5 h-3.5" />
-                        <span>{language === 'hi' ? 'पूरा नाम' : 'Recipient Full Name'}</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g., Vipin Choudhary"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 rounded-xl text-brand-green-900 font-semibold placeholder-brand-green-300"
-                      />
-                    </div>
-
-                    {!currentUser && (
-                      <>
-                        <div className="space-y-1.5">
-                          <label className="font-bold text-brand-green-800 flex items-center gap-1">
-                            <Mail className="w-3.5 h-3.5" />
-                            <span>{language === 'hi' ? 'ईमेल आईडी' : 'Email Address'}</span>
-                          </label>
-                          <input
-                            type="email"
-                            required
-                            placeholder="e.g., vipin@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 rounded-xl text-brand-green-900 font-semibold placeholder-brand-green-300"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="font-bold text-brand-green-800 flex items-center gap-1">
-                            <Lock className="w-3.5 h-3.5" />
-                            <span>{language === 'hi' ? 'पासवर्ड चुनें' : 'Choose Account Password'}</span>
-                          </label>
-                          <input
-                            type="password"
-                            required
-                            minLength={6}
-                            placeholder="At least 6 characters"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 rounded-xl text-brand-green-900 font-semibold placeholder-brand-green-300"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-brand-green-800 flex items-center gap-1">
-                        <Phone className="w-3.5 h-3.5" />
-                        <span>{language === 'hi' ? 'मोबाइल नंबर' : 'Mobile Phone Number'}</span>
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-green-600/50 font-bold font-mono">+91</span>
-                        <input
-                          type="tel"
-                          required
-                          maxLength={10}
-                          placeholder="Enter 10-digit mobile number"
-                          value={mobilePhone}
-                          onChange={(e) => setMobilePhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                          className="w-full pl-12 pr-4 py-3 bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 rounded-xl text-brand-green-900 font-bold font-mono tracking-wider placeholder-brand-green-300"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isAuthLoading}
-                      className="w-full py-3.5 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-2xl uppercase tracking-wider cursor-pointer shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] disabled:opacity-50"
-                    >
-                      <span>{isAuthLoading ? (language === 'hi' ? 'कृपया प्रतीक्षा करें...' : 'Processing...') : (language === 'hi' ? 'ओटीपी प्राप्त करें' : 'Verify Mobile Contact')}</span>
-                      <ArrowRight className="w-4 h-4 text-brand-gold-400" />
-                    </button>
-                  </form>
-                ) : (
-                  /* PASSWORD LOGIN FORM */
-                  <form onSubmit={handleLoginAndContinue} className="space-y-4 text-xs">
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-brand-green-800 flex items-center gap-1">
-                        <Mail className="w-3.5 h-3.5" />
-                        <span>{language === 'hi' ? 'ईमेल आईडी या मोबाइल' : 'Email Address / Mobile'}</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g., vipin@example.com or 9425011088"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 rounded-xl text-brand-green-900 font-semibold placeholder-brand-green-300"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between items-center">
-                        <label className="font-bold text-brand-green-800 flex items-center gap-1">
-                          <Lock className="w-3.5 h-3.5" />
-                          <span>{language === 'hi' ? 'पासवर्ड' : 'Account Password'}</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setIsForgotPasswordOpen(true)}
-                          className="text-[10px] font-bold text-brand-gold-700 hover:text-brand-gold-800 underline cursor-pointer"
-                        >
-                          Forgot Password?
-                        </button>
-                      </div>
-                      <input
-                        type="password"
-                        required
-                        placeholder="Enter your account password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 rounded-xl text-brand-green-900 font-semibold placeholder-brand-green-300"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isAuthLoading}
-                      className="w-full py-3.5 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-2xl uppercase tracking-wider cursor-pointer shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] disabled:opacity-50 font-serif"
-                    >
-                      <span>{isAuthLoading ? (language === 'hi' ? 'सत्यापन हो रहा है...' : 'Authenticating...') : (language === 'hi' ? 'लॉग इन करें और जारी रखें' : 'Sign In & Continue')}</span>
-                      <ArrowRight className="w-4 h-4 text-brand-gold-400" />
-                    </button>
-                  </form>
-                )
-              ) : (
-                <form onSubmit={handleVerifyOtp} className="space-y-4 text-xs">
+              {/* Sub-step 1: Mobile Phone input */}
+              {authSubStep === 'phone' && (
+                <form onSubmit={handleRequestOtp} className="space-y-4 text-xs">
                   <div className="space-y-1.5">
                     <label className="font-bold text-brand-green-800 flex items-center gap-1">
-                      <Lock className="w-3.5 h-3.5" />
-                      <span>{language === 'hi' ? 'ओटीपी सत्यापन कोड' : 'SMS Verification Passcode'}</span>
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>{language === 'hi' ? 'मोबाइल नंबर' : 'Mobile Phone Number'}</span>
                     </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-green-600/50 font-bold font-mono">+91</span>
+                      <input
+                        type="tel"
+                        required
+                        maxLength={10}
+                        placeholder="Enter 10-digit mobile number"
+                        value={mobilePhone}
+                        onChange={(e) => setMobilePhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        className="w-full pl-12 pr-4 py-3 bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 rounded-xl text-brand-green-900 font-bold font-mono tracking-wider placeholder-brand-green-300"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      {language === 'hi' ? 'हम आपके मोबाइल नंबर पर 4 अंकों का सत्यापन कोड भेजेंगे।' : 'We will send a 4-digit OTP to confirm your express order.'}
+                    </p>
+                  </div>
+
+                  {/* <Msg91Captcha /> */}
+
+                  <button
+                    type="submit"
+                    disabled={isAuthLoading || mobilePhone.length !== 10}
+                    className="w-full py-3.5 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-2xl uppercase tracking-wider cursor-pointer shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <span>{isAuthLoading ? (language === 'hi' ? 'कृपया प्रतीक्षा करें...' : 'Sending Passcode...') : (language === 'hi' ? 'ओटीपी प्राप्त करें' : 'Get Verification Passcode')}</span>
+                    <ArrowRight className="w-4 h-4 text-brand-gold-400" />
+                  </button>
+                </form>
+              )}
+
+              {/* Sub-step 2: OTP verification */}
+              {authSubStep === 'otp' && (
+                <form onSubmit={handleVerifyOtp} className="space-y-4 text-xs">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="font-bold text-brand-green-800 flex items-center gap-1">
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>{language === 'hi' ? 'ओटीपी सत्यापन कोड' : 'Enter 4-Digit Passcode'}</span>
+                      </label>
+                      <span className="text-[11px] text-brand-green-700 font-mono font-semibold">+91 {mobilePhone}</span>
+                    </div>
                     <input
                       type="text"
                       required
@@ -970,20 +818,68 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                   <div className="flex gap-2.5">
                     <button
                       type="button"
-                      onClick={() => setOtpSent(false)}
+                      onClick={() => {
+                        setAuthSubStep('phone');
+                        setOtpSent(false);
+                        setOtpCode('');
+                      }}
                       className="w-1/3 py-3 bg-brand-cream-200 hover:bg-brand-cream-300 text-brand-green-900 font-bold rounded-2xl cursor-pointer"
                     >
-                      {language === 'hi' ? 'पीछे' : 'Back'}
+                      {language === 'hi' ? 'नंबर बदलें' : 'Change No.'}
                     </button>
                     <button
                       type="submit"
                       disabled={otpCode.length < 4 || isAuthLoading}
                       className="w-2/3 py-3 bg-brand-green-800 hover:bg-brand-green-900 disabled:opacity-55 text-brand-cream-50 font-bold rounded-2xl uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-1.5"
                     >
-                      <span>{isAuthLoading ? (language === 'hi' ? 'सत्यापन हो रहा है...' : 'Verifying...') : (language === 'hi' ? 'ओटीपी सत्यापित करें' : 'Confirm OTP')}</span>
+                      <span>{isAuthLoading ? (language === 'hi' ? 'सत्यापन हो रहा है...' : 'Verifying...') : (language === 'hi' ? 'ओटीपी सत्यापित करें' : 'Confirm Passcode')}</span>
                       <ShieldCheck className="w-4 h-4 text-brand-gold-400" />
                     </button>
                   </div>
+                </form>
+              )}
+
+              {/* Sub-step 3: New User Name & Email only */}
+              {authSubStep === 'profile' && (
+                <form onSubmit={handleCompleteNewUserProfile} className="space-y-4 text-xs">
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-brand-green-800 flex items-center gap-1">
+                      <User className="w-3.5 h-3.5" />
+                      <span>{language === 'hi' ? 'पूरा नाम' : 'Full Name'}</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g., Priya Sharma"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full px-4 py-3 bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 rounded-xl text-brand-green-900 font-semibold placeholder-brand-green-300"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-brand-green-800 flex items-center gap-1">
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>{language === 'hi' ? 'ईमेल पता (ऑर्डर इनवॉइस के लिए)' : 'Email Address (for order invoice)'}</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g., priya@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 bg-white border border-brand-green-200 focus:outline-none focus:border-brand-green-700 rounded-xl text-brand-green-900 font-semibold placeholder-brand-green-300"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isAuthLoading || !fullName.trim() || !email.trim()}
+                    className="w-full py-3.5 bg-brand-green-800 hover:bg-brand-green-900 text-brand-cream-50 font-bold rounded-2xl uppercase tracking-wider cursor-pointer shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <span>{isAuthLoading ? (language === 'hi' ? 'सहेजा जा रहा है...' : 'Saving Details...') : (language === 'hi' ? 'वितरण पते पर जाएं' : 'Proceed to Delivery Address')}</span>
+                    <ArrowRight className="w-4 h-4 text-brand-gold-400" />
+                  </button>
                 </form>
               )}
             </div>
@@ -1740,20 +1636,6 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
         </div>
 
       </div>
-
-      {/* Forgot Password Recovery Modal */}
-      <ForgotPasswordModal
-        isOpen={isForgotPasswordOpen}
-        onClose={() => setIsForgotPasswordOpen(false)}
-        onSuccessLogin={(token) => {
-          if (onLoginSuccess) {
-            onLoginSuccess(token);
-          } else {
-            localStorage.setItem('Bv_auth_token', token);
-            window.location.reload();
-          }
-        }}
-      />
     </div>
   );
 };

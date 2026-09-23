@@ -17,7 +17,6 @@ import { Language } from '../lib/translations';
 import { api } from '../services/api';
 import { ConsultationFeatures } from '../components/ConsultationFeatures';
 import { loadRazorpayScript } from '../utils/razorpay';
-// import { Msg91Captcha } from '../components/Msg91Captcha';
 import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin, verifyMSG91Otp } from '../services/msg91OtpService';
 import drImage from "@/assets/DrSanjeev.png";
 
@@ -388,20 +387,24 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
         return;
       }
 
+      if (!verifyRes.accessToken) {
+        setAuthError('Verification token was not received from MSG91. Please try again.');
+        setIsVerifyingOtp(false);
+        return;
+      }
+
       const loginRes = await performOtpLogin({
         identifier: clean,
-        code,
-        reqId: authReqId,
         accessToken: verifyRes.accessToken,
         fullName: patientName.trim() || 'Ayurveda Patient',
-        email: patientEmail.trim() || `${clean}@gramslife.com`,
+        email: patientEmail.trim() || `${clean}@Bvlife.com`,
         autoCreate: true
       });
 
       if (loginRes.success && loginRes.user) {
         if (loginRes.token) {
-          sessionStorage.setItem('grams_auth_token', loginRes.token);
-          localStorage.setItem('grams_auth_token', loginRes.token);
+          sessionStorage.setItem('Bv_auth_token', loginRes.token);
+          localStorage.setItem('Bv_auth_token', loginRes.token);
           if (onLoginSuccess) {
             onLoginSuccess(loginRes.token, loginRes.user);
           }
@@ -432,8 +435,8 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     try {
       const res = await api.login({ email: patientEmail.trim(), password: authPassword.trim() });
       if (res && res.token) {
-        sessionStorage.setItem('grams_auth_token', res.token);
-        localStorage.setItem('grams_auth_token', res.token);
+        sessionStorage.setItem('Bv_auth_token', res.token);
+        localStorage.setItem('Bv_auth_token', res.token);
         if (onLoginSuccess) {
           onLoginSuccess(res.token, res.user);
         }
@@ -545,11 +548,11 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
 
     const newAppointment: DoctorAppointment = {
       id: appointmentId,
-      doctorId: doctor.id,
-      doctorName: doctor.name,
-      doctorSpecialty: doctor.specialties[0],
-      doctorImage: doctor.image || legendaryDoctorImg,
-      doctorQualification: doctor.qualification,
+      doctorId: doctor.id || 'doc-legend-1',
+      doctorName: doctor.name || 'Dr. Sanjeev Rastogi',
+      doctorSpecialty: (doctor.specialties && doctor.specialties[0]) || 'Chief Ayurvedic Physician & Master Nadi Vaidya',
+      doctorImage: doctor.image || drImage || '/images/DrSanjeev.png',
+      doctorQualification: doctor.qualification || 'Ph.D, MD (Ayurveda), Banaras Hindu University (BHU)',
       patientName: patientName.trim(),
       patientAge: Number(patientAge) || 28,
       patientGender,
@@ -740,7 +743,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
     <div id="doctor-consultation-page" className="min-h-screen bg-[#FBF9F5] pb-24 text-slate-800">
       
       {/* 1. TOP HERO BANNER — IDENTICAL REUSABLE BANNER SYSTEM */}
-      <section className="max-w-[1440px] ">
+      <section className="max-w-[1440px] mx-auto px-2 sm:px-4 pt-3 sm:pt-4">
         <div
           id="doctor-hero-banner"
           onClick={() => {
@@ -786,6 +789,30 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
             {/* Subtle Gradient Overlay matching CustomerHome */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent sm:from-black/20 sm:via-transparent sm:to-transparent" />
           </div>
+
+          {/* Navigation Chevron Left */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setCurrentSlide((prev) => (prev - 1 + doctorHeroSlides.length) % doctorHeroSlides.length);
+            }}
+            aria-label="Previous slide"
+            className="flex absolute left-2 xs:left-3 md:left-4 lg:left-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
+          >
+            <ChevronLeft className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
+          </button>
+
+          {/* Navigation Chevron Right */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setCurrentSlide((prev) => (prev + 1) % doctorHeroSlides.length);
+            }}
+            aria-label="Next slide"
+            className="flex absolute right-2 xs:right-3 md:right-4 lg:right-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
+          >
+            <ChevronRight className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
+          </button>
 
           {/* Banner Slide Indicator Dots */}
           <div className="absolute bottom-2 xs:bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 xs:gap-2">
@@ -1167,11 +1194,22 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                   >
                     View in My Appointments
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBookingConfirmed(null);
+                      setBookingStep('format');
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-brand-gold-500/20 hover:bg-brand-gold-500/30 text-brand-gold-300 font-bold text-xs border border-brand-gold-500/40 cursor-pointer"
+                  >
+                    Book Another Consultation
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* MULTI-STEP INSTANT BOOKING WORKSPACE */}
+            {/* MULTI-STEP INSTANT BOOKING WORKSPACE - Only visible when not already confirmed */}
+            {!bookingConfirmed && (
             <div id="booking-step-container" className="max-w-4xl mx-auto bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-8 shadow-xs">
               
               {/* 4-STEP WIZARD PROGRESS BAR */}
@@ -2386,8 +2424,6 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                           </div>
                         </div>
 
-                        {/* {!otpSent && <Msg91Captcha />} */}
-
                         {/* OTP Input Field */}
                         {otpSent && (
                           <div className="space-y-3 animate-in fade-in duration-200">
@@ -2771,6 +2807,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
               )}
 
             </div>
+            )}
 
           </div>
         )}

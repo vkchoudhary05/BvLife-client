@@ -4,9 +4,10 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Sparkles, Send, Eye, ShieldCheck, HeartPulse, MessageSquare, FileText, Trash2, ShoppingCart, Bot, User, ArrowRight } from 'lucide-react';
+import { X, Sparkles, Send, Eye, ShieldCheck, HeartPulse, MessageSquare, FileText, Trash2, ShoppingCart, User, ArrowRight, LoaderCircle } from 'lucide-react';
 import { Product } from '../types';
 import { Language } from '../lib/translations';
+import acharyaPortrait from '../../assets/Dr6.png';
 
 interface AIConsultantModalProps {
   onClose: () => void;
@@ -27,6 +28,8 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
   currentUser,
   authToken
 }) => {
+  const getWelcomeMessage = () => `Pranam, ${currentUser?.fullName || 'seeker of wellness'}. I am Acharya. I will ask a few short questions, one at a time, to understand your wellness needs. To begin, may I know your age and gender?`;
+
   // Navigation active tab: 'chat' (default) or 'form'
   const [activeTab, setActiveTab] = useState<'chat' | 'form'>('chat');
 
@@ -37,7 +40,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
     const welcomeMsg = language === 'hi' 
       ? `प्रणाम ${currentUser?.fullName || 'प्रिय साधक'}। मैं बीवी लाइफ एआई वेलनेस गाइड (BV Life AI Wellness Guide) हूँ। आपकी शारीरिक प्रकृति और स्वास्थ्य लक्ष्यों के अनुसार सर्वोत्तम समाधान सुझाने के लिए, मैं आपके स्वास्थ्य और जीवनशैली के बारे में जानना चाहूँगा। मैं आपसे एक-एक करके कुछ छोटे सवाल पूछूँगा। शुरू करने के लिए, क्या मैं आपकी आयु (Age) और लिंग (Gender) जान सकता हूँ?` 
       : `Pranam, ${currentUser?.fullName || 'seeker of wellness'}. I am the BV Life AI Wellness Guide, your intelligent Ayurvedic assistant. To recommend the most suitable remedies for your unique constitution, I would love to learn more about your health and lifestyle. I will ask you a few quick questions one by one. To begin, may I know your age and gender?`;
-    return [{ role: 'assistant', content: welcomeMsg }];
+    return [{ role: 'assistant', content: getWelcomeMessage() }];
   });
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
@@ -163,7 +166,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
     const welcomeMsg = language === 'hi' 
       ? `प्रणाम ${currentUser?.fullName || 'साधक'}। मैं बीवी लाइफ एआई वेलनेस गाइड (BV Life AI Wellness Guide) हूँ। आपकी शारीरिक प्रकृति और स्वास्थ्य लक्ष्यों के अनुसार सर्वोत्तम समाधान सुझाने के लिए, मैं आपके स्वास्थ्य और जीवनशैली के बारे में जानना चाहूँगा। मैं आपसे एक-एक करके कुछ छोटे सवाल पूछूँगा। शुरू करने के लिए, क्या मैं आपकी आयु (Age) और लिंग (Gender) जान सकता हूँ?` 
       : `Pranam, ${currentUser?.fullName || 'seeker of wellness'}. I am the BV Life AI Wellness Guide, your intelligent Ayurvedic assistant. To recommend the most suitable remedies for your unique constitution, I would love to learn more about your health and lifestyle. I will ask you a few quick questions one by one. To begin, may I know your age and gender?`;
-    setChatMessages([{ role: 'assistant', content: welcomeMsg }]);
+    setChatMessages([{ role: 'assistant', content: getWelcomeMessage() }]);
     setChatInput('');
     setChatLoading(false);
   };
@@ -330,17 +333,17 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
       {/* Full Page Header */}
       <div className="bg-brand-green-900 text-brand-cream-100 px-4 sm:px-8 py-3.5 sm:py-4 flex justify-between items-center relative border-b border-brand-gold-500/20 shadow-md shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-brand-gold-500/20 flex items-center justify-center border border-brand-gold-500/40 shadow-inner">
-            <Sparkles className="w-5 h-5 text-brand-gold-400 animate-pulse" />
+          <div className="relative w-10 h-10 rounded-full overflow-visible shrink-0">
+            <div className="h-full w-full overflow-hidden rounded-full border-2 border-brand-gold-400/80 bg-brand-gold-100 shadow-inner">
+              <img src={acharyaPortrait} alt="Acharya wellness guide" className="h-full w-full object-cover object-[50%_20%] scale-[1.7]" />
+            </div>
+            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-brand-green-900 bg-emerald-400" title="Available now" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-serif text-base sm:text-xl font-bold text-white tracking-wide">BV Life AI Wellness Guide</h3>
-              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-brand-gold-400/20 border border-brand-gold-400/30 text-[10px] font-bold text-brand-gold-300 uppercase">
-                Ask Acharya
-              </span>
+              <h3 className="font-serif text-base sm:text-xl font-bold text-white tracking-wide">Ask Acharya</h3>
             </div>
-            <p className="text-[11px] sm:text-xs text-brand-cream-300">Intelligent Traditional Dosha Analysis & Herbal Remedies</p>
+            <p className="text-[11px] sm:text-xs text-brand-cream-300">A personal Ayurvedic wellness conversation</p>
           </div>
         </div>
         
@@ -389,7 +392,7 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
 
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
-          {!currentUser ? (
+          {false ? (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center space-y-6 max-w-md mx-auto animate-in fade-in duration-300">
               <div className="w-16 h-16 rounded-full bg-brand-green-800 text-brand-gold-400 font-serif text-2xl font-bold flex items-center justify-center border border-brand-gold-500/30 shadow-md">
                 G
@@ -443,12 +446,12 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                       className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
                     >
                       {/* Avatar */}
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border ${
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border overflow-hidden ${
                         msg.role === 'user' 
                           ? 'bg-brand-green-100 border-brand-green-200 text-brand-green-800' 
                           : 'bg-brand-green-800 border-brand-gold-500/30 text-brand-gold-400'
                       }`}>
-                        {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                        {msg.role === 'user' ? <User className="w-4 h-4" /> : <img src={acharyaPortrait} alt="Acharya" className="h-full w-full object-cover object-[50%_20%] scale-[1.7]" />}
                       </div>
 
                       {/* Content block */}
@@ -473,15 +476,11 @@ export const AIConsultantModal: React.FC<AIConsultantModalProps> = ({
                   {/* Loading animation bubble */}
                   {chatLoading && (
                     <div className="flex gap-3 max-w-[80%] mr-auto animate-pulse">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center bg-brand-green-800 text-brand-gold-400 border border-brand-gold-500/30">
-                        <Bot className="w-4 h-4" />
+                      <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-brand-green-800 text-brand-gold-400 border border-brand-gold-500/30">
+                        <img src={acharyaPortrait} alt="Acharya" className="h-full w-full object-cover object-[50%_20%] scale-[1.7]" />
                       </div>
                       <div className="bg-brand-cream-100 border border-brand-green-200 p-3.5 rounded-2xl rounded-tl-none flex items-center gap-2">
-                        <div className="flex gap-1">
-                          <span className="w-1.5 h-1.5 bg-brand-green-800 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="w-1.5 h-1.5 bg-brand-green-800 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="w-1.5 h-1.5 bg-brand-green-800 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                        </div>
+                        <LoaderCircle className="h-4 w-4 animate-spin text-brand-gold-600" aria-label="Preparing response" />
                         <span className="text-[10px] font-bold text-brand-green-800 uppercase tracking-wider pl-1">
                           {language === 'hi' ? 'गाइड विचार कर रहे हैं...' : 'Guide is brewing response...'}
                         </span>

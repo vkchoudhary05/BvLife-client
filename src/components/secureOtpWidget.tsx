@@ -16,7 +16,7 @@ import { sendMSG91Otp, formatMSG91Identifier, verifyMSG91Otp } from '../services
 export interface SecureOtpWidgetProps {
   identifier: string; // phone number (e.g. "7451050607" or "+917451050607") or email
   purpose?: string; // "Login", "Registration", "Checkout", etc.
-  widgetName?: string; // e.g. "AyurSecurity", "GramsVerify"
+  widgetName?: string; // e.g. "AyurSecurity", "BvVerify"
   smsOnly?: boolean; // strictly SMS
   allowedChannels?: string[];
   initialReqId?: string;
@@ -32,7 +32,7 @@ export interface SecureOtpWidgetProps {
 export const SecureOtpWidget: React.FC<SecureOtpWidgetProps> = ({
   identifier,
   purpose = 'Verification',
-  widgetName = 'GramsAuth',
+  widgetName = 'BvAuth',
   initialReqId,
   theme = 'light',
   onVerified,

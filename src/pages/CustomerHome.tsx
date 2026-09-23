@@ -12,7 +12,7 @@ import { Language, t } from '../lib/translations';
 import productImage from "@/assets/banner5.png";
 import productImage2 from "@/assets/banner5.png";
 import productImage3 from "@/assets/banner5.png";
-import drImage from "@/assets/Dr6.png"
+import drImage from "../../assets/Dr6.png"
 
 // Mobile (tall/square, portrait-friendly) hero banners
 import productImageMobile from "@/assets/banner009.png";
@@ -67,6 +67,8 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
 }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [showAcharyaBadge, setShowAcharyaBadge] = useState(false);
+  const [showAllArticles, setShowAllArticles] = useState(false);
   const SLIDE_DURATION = 6000;
 
   useEffect(() => {
@@ -76,6 +78,17 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
     }, SLIDE_DURATION);
     return () => clearInterval(timer);
   }, [isPaused]);
+
+  useEffect(() => {
+    if (sessionStorage.getItem('bvlife_acharya_greeting_seen')) return;
+    const badgeTimer = window.setTimeout(() => {
+      setShowAcharyaBadge(true);
+      sessionStorage.setItem('bvlife_acharya_greeting_seen', 'true');
+    }, 10000);
+    return () => {
+      window.clearTimeout(badgeTimer);
+    };
+  }, []);
 
   const featuredProds = products.filter(p => p.featured).slice(0, 4);
   const bestSellers = products.filter(p => p.bestSeller).slice(0, 4);
@@ -587,17 +600,19 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
             <h3 className="font-serif text-2xl sm:text-3xl font-bold text-brand-green-900">{t('section_blog_title', language)}</h3>
           </div>
           <button 
-            onClick={() => onNavigate('static', { page: 'blog' })} 
+            onClick={() => setShowAllArticles((showingAll) => !showingAll)}
             className="text-sm text-brand-green-800 hover:text-brand-gold-600 font-bold flex items-center gap-1 cursor-pointer"
+            aria-expanded={showAllArticles}
+            aria-controls="home-articles"
           >
-            <span>{t('section_blog_browse', language)}</span>
+            <span>{showAllArticles ? 'Show fewer articles' : t('section_blog_browse', language)}</span>
             <BookOpen className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {blogs.map((blog) => (
-            <div key={blog.id} className="group flex flex-col sm:flex-row gap-5 bg-white p-4 rounded-2xl border border-brand-green-600/5 hover:shadow-lg transition-all">
+        <div id="home-articles" className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {(showAllArticles ? blogs : blogs.slice(0, 2)).map((blog) => (
+            <button key={blog.id} type="button" onClick={() => onNavigate('static', { page: 'blog-post', id: blog.id })} className="group flex flex-col gap-5 rounded-2xl border border-brand-green-600/5 bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold-500 sm:flex-row" aria-label={`Read article: ${blog.title}`}>
               <div className="w-full sm:w-1/3 aspect-[4/3] rounded-xl overflow-hidden flex-shrink-0">
                 <img src={blog.image} alt={blog.title} className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300" />
               </div>
@@ -606,10 +621,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
                   <div className="flex gap-2 text-[10px] text-brand-gold-700 font-bold uppercase">
                     {blog.categories.map((c, i) => <span key={i}>{c}</span>)}
                   </div>
-                  <h4 
-                    onClick={() => onNavigate('static', { page: 'blog-post', id: blog.id })}
-                    className="font-serif text-sm font-bold text-brand-green-900 hover:text-brand-gold-600 cursor-pointer line-clamp-2 leading-snug"
-                  >
+                  <h4 className="font-serif text-sm font-bold text-brand-green-900 group-hover:text-brand-gold-600 line-clamp-2 leading-snug">
                     {blog.title}
                   </h4>
                   <p className="text-xs text-brand-green-800/80 line-clamp-2 leading-relaxed">
@@ -621,7 +633,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
                   <span>{blog.readTime}</span>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </section>
@@ -652,23 +664,20 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
           <div className="absolute -inset-[3px] rounded-full bg-gradient-to-r from-brand-gold-500 via-brand-gold-400 to-brand-gold-600 opacity-70 blur-xs group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
           <button
-            onClick={onOpenConsultant}
-            className="relative flex items-center gap-1.5 sm:gap-2.5 px-3.5 py-2.5 sm:px-4.5 sm:py-3.5 rounded-full bg-gradient-to-r from-brand-green-900 via-brand-green-900 to-brand-green-900 text-brand-cream-50 hover:text-brand-gold-100 font-bold transition-all duration-300 shadow-[0_8px_25px_rgba(0,0,0,0.45)] hover:scale-105 active:scale-95 cursor-pointer border border-brand-gold-400/40 shrink-0 overflow-hidden"
+            onClick={() => {
+              setShowAcharyaBadge(false);
+              onOpenConsultant();
+            }}
+            aria-label="Open Ask Acharya AI consultation"
+            className="relative grid h-15 w-15 place-items-center rounded-full bg-brand-green-900 shadow-[0_8px_25px_rgba(0,0,0,0.45)] transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer border-2 border-brand-gold-400/80 shrink-0"
             title={t('btnAskAcharya', language)}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-brand-gold-500/0 via-brand-gold-500/15 to-brand-gold-500/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
-
-            <div className="relative flex items-center justify-center bg-brand-gold-500/20 p-1 sm:p-1.5 rounded-full border border-brand-gold-400/30">
-              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-gold-300 animate-pulse" />
-            </div>
-
-            <div className="flex flex-col items-start leading-tight text-left">
-              <span className="text-[8px] sm:text-[9px] tracking-widest uppercase font-sans font-extrabold text-brand-gold-400">
-                AI Consult
-              </span>
-              <span className="text-[11px] sm:text-xs tracking-wide font-serif font-bold text-brand-cream-50 group-hover:text-brand-gold-200 transition-colors">
-                Ask Acharya
-              </span>
+            <div className="relative shrink-0">
+              <div className="h-12 w-12 overflow-hidden rounded-full border border-brand-gold-200 bg-brand-gold-100">
+                <img src={drImage} alt="Acharya wellness guide" className="h-full w-full object-cover object-[50%_20%] scale-[1.7]" />
+              </div>
+              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-brand-green-900 bg-emerald-400" aria-label="Available now" />
+              {showAcharyaBadge && <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full border-2 border-brand-cream-50 bg-brand-gold-500 text-[10px] font-black text-brand-green-950 shadow-sm" aria-label="1 new message">1</span>}
             </div>
           </button>
         </div>

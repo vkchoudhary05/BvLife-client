@@ -10,13 +10,14 @@ import {
   Printer, FileText, X, Download, Settings, Lock, Mail, Phone, ArrowRight, Eye, EyeOff, RotateCw,
   Search, Clock, Truck, AlertCircle, RefreshCw, Filter, ArrowUpDown, Layers, Radio, Copy,
   ExternalLink, SlidersHorizontal, BarChart3, TrendingUp, DollarSign, PackageCheck, AlertTriangle, CreditCard,
-  Building2, Star, MessageSquare, ChevronDown, ChevronUp, Boxes, PackagePlus, Camera, Stethoscope, Video, Send
+  Building2, Star, MessageSquare, ChevronDown, ChevronUp, Boxes, PackagePlus, Camera, Stethoscope, Video, Send, PhoneCall, Crown
 } from 'lucide-react';
 import { User as UserType, Order, Address, Product, ProductVariant, Coupon, WebsiteSettings } from '../types';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 import { SecureOtpWidget } from '../components/secureOtpWidget';
 import { WriteReviewModal } from '../components/WriteReviewModel';
 import { ImageUploadField } from '../components/ImageUploadField';
+import { MembershipCardSection } from '../components/MembershipCardSection';
 import { sendMSG91Otp, formatMSG91Identifier } from '../services/msg91OtpService';
 import { Pagination } from '../components/Pagination';
 import { FORMULATION_PRESET_IMAGES, FORMULATION_IMAGES_MAP, getVariantImage, getFormulationPresetImage } from '../utils/variantImages';
@@ -43,6 +44,7 @@ interface DashboardProps {
   onRefreshOrders?: () => void;
   onRefreshProducts?: () => void;
   initialTab?: string;
+  onUserUpdated?: (updatedUser: UserType) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -66,8 +68,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onFetchCoupons,
   onRefreshOrders,
   onRefreshProducts,
-  initialTab
+  initialTab,
+  onUserUpdated
 }) => {
+  const [currentUser, setCurrentUser] = useState<UserType | null>(user);
+
+  useEffect(() => {
+    if (user) {
+      setCurrentUser(user);
+    }
+  }, [user]);
+
+  const handleUserUpdated = (updatedUser: UserType) => {
+    setCurrentUser(updatedUser);
+    if (onUserUpdated) {
+      onUserUpdated(updatedUser);
+    }
+  };
+
   const isAdmin = (user?.role === 'admin' && isAdminPanel) || false;
   const [activeTab, setActiveTab] = useState<string>(initialTab || (isAdmin ? 'admin-stats' : 'account'));
 
@@ -81,7 +99,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [reviewModalProduct, setReviewModalProduct] = useState<{ id: string; name: string; image?: string; defaultRating?: number } | null>(null);
   const [reviewedProductIds, setReviewedProductIds] = useState<string[]>(() => {
     try {
-      const stored = localStorage.getItem('grams_reviewed_products');
+      const stored = localStorage.getItem('Bv_reviewed_products');
       return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
@@ -125,10 +143,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         const data = await res.json();
         if (res.ok && data.token) {
           setAuthSuccessMsg('Welcome back! Loading your wellbeing panel...');
-          const isUserAdmin = data.user?.role === 'admin' || ['vkchoudhary050607@gmail.com', 'admin@gramslife.com', 'care@gramslife.com'].includes((data.user?.email || authEmail).toLowerCase());
-          sessionStorage.setItem('grams_auth_token', data.token);
+          const isUserAdmin = data.user?.role === 'admin' || ['vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@Bvlife.com'].includes((data.user?.email || authEmail).toLowerCase());
+          sessionStorage.setItem('Bv_auth_token', data.token);
           if (!isUserAdmin) {
-            localStorage.setItem('grams_auth_token', data.token);
+            localStorage.setItem('Bv_auth_token', data.token);
           }
           setTimeout(() => {
             if (onLoginSuccess) {
@@ -164,7 +182,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             if (onLoginSuccess) {
               onLoginSuccess(data.token);
             } else {
-              localStorage.setItem('grams_auth_token', data.token);
+              localStorage.setItem('Bv_auth_token', data.token);
               window.location.reload();
             }
           }, 1000);
@@ -324,7 +342,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  const handleTriggerTestEmail = async (templateType: 'order' | 'booking') => {
+  const handleTriggerTestEmail = async (templateType: 'order' | 'booking', consultationMode: 'video' | 'audio' | 'clinic' = 'video') => {
     setTestEmailSending(true);
     setTestEmailResult(null);
     try {
@@ -333,13 +351,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           templateType,
+          consultationMode,
           targetEmail: testEmailTarget.trim() || 'care@bvlife.in',
           targetName: 'Care Recipient'
         })
       });
       const data = await res.json();
       if (res.ok) {
-        setTestEmailResult(`Success: Dispatched ${templateType.toUpperCase()} test template via MSG91!`);
+        setTestEmailResult(`Success: Dispatched ${templateType.toUpperCase()} (${consultationMode.toUpperCase()}) test template via MSG91!`);
         fetchCommunicationLogs();
       } else {
         setTestEmailResult(`Notice: ${data.error || 'Failed to dispatch test template'}`);
@@ -403,9 +422,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [prodImg2, setProdImg2] = useState('');
   const [prodImg3, setProdImg3] = useState('');
   const [prodImg4, setProdImg4] = useState('');
+  const [prodImg5, setProdImg5] = useState('');
   const [prodBenefits, setProdBenefits] = useState('');
   const [prodDosage, setProdDosage] = useState('');
-  const [prodBrand, setProdBrand] = useState('Grams Life');
+  const [prodBrand, setProdBrand] = useState('BV Life');
   const [prodSubcategory, setProdSubcategory] = useState('');
   const [prodUsageInstructions, setProdUsageInstructions] = useState('As directed');
   const [prodFeatured, setProdFeatured] = useState(false);
@@ -874,13 +894,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
     
     let recentOrderIds: string[] = [];
     try {
-      const stored = localStorage.getItem('grams_recent_orders');
+      const stored = localStorage.getItem('Bv_recent_orders');
       if (stored) recentOrderIds = JSON.parse(stored);
     } catch (e) {}
 
     let lastOrder: Order | null = null;
     try {
-      const lastStored = localStorage.getItem('grams_last_placed_order');
+      const lastStored = localStorage.getItem('Bv_last_placed_order');
       if (lastStored) lastOrder = JSON.parse(lastStored);
     } catch (e) {}
 
@@ -898,7 +918,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       const oPhone = o.shippingAddress?.phone ? o.shippingAddress.phone.replace(/\D/g, '') : '';
       const oName = o.userName ? o.userName.toLowerCase().trim() : (o.shippingAddress?.fullName ? o.shippingAddress.fullName.toLowerCase().trim() : '');
 
-      const matchEmail = !!(uEmail && uEmail !== 'guest@gramslife.com' && (oEmail === uEmail || oEmail.includes(uEmail) || uEmail.includes(oEmail)));
+      const matchEmail = !!(uEmail && uEmail !== 'guest@Bvlife.com' && (oEmail === uEmail || oEmail.includes(uEmail) || uEmail.includes(oEmail)));
       const matchPhone = !!(uPhone && uPhone.length >= 7 && oPhone.endsWith(uPhone.slice(-10)));
       const matchAddrPhone = userAddrPhones.some(p => p.length >= 7 && oPhone.endsWith(p.slice(-10)));
       const matchNameAndPhone = !!(uName && uName === oName && (matchPhone || matchAddrPhone || uPhone));
@@ -982,9 +1002,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg2(prod.images?.[0] || '');
     setProdImg3(prod.images?.[1] || '');
     setProdImg4(prod.images?.[2] || '');
+    setProdImg5(prod.images?.[3] || '');
     setProdBenefits(prod.benefits.join(', '));
     setProdDosage(prod.dosage);
-    setProdBrand(prod.brand || 'Grams Life');
+    setProdBrand(prod.brand || 'BV Life');
     setProdSubcategory(prod.subcategory || '');
     setProdUsageInstructions(prod.usageInstructions || 'As directed');
     setProdFeatured(prod.featured || false);
@@ -1015,9 +1036,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdImg2('');
     setProdImg3('');
     setProdImg4('');
+    setProdImg5('');
     setProdBenefits('');
     setProdDosage('');
-    setProdBrand('Grams Life');
+    setProdBrand('BV Life');
     setProdSubcategory('');
     setProdUsageInstructions('As directed');
     setProdFeatured(false);
@@ -1052,7 +1074,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdFormulation(targetForm);
     setProdFormLabel(targetLabel);
     setProdCategory(sourceProd.category);
-    setProdBrand(sourceProd.brand || 'Grams Life');
+    setProdBrand(sourceProd.brand || 'BV Life');
     setProdPrice(sourceProd.price);
     setProdOrigPrice(sourceProd.originalPrice);
     setProdStock(sourceProd.stock);
@@ -1069,7 +1091,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     e.preventDefault();
     if (!prodName || !prodDesc) return;
 
-    const extraImages = [prodImg2, prodImg3, prodImg4].map(img => img.trim()).filter(Boolean);
+    const extraImages = [prodImg2, prodImg3, prodImg4, prodImg5].map(img => img.trim()).filter(Boolean);
 
     const payload: Partial<Product> = {
       name: prodName,
@@ -1323,7 +1345,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 type="button"
                 onClick={() => {
                   setAuthTab('signin');
-                  setAuthEmail('admin@gramslife.com');
+                  setAuthEmail('admin@Bvlife.com');
                   setAuthPassword('password123');
                   setAuthError('');
                   setAuthSuccessMsg('');
@@ -1332,7 +1354,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               >
                 <div>
                   <p className="text-[10px] font-bold text-brand-green-950 group-hover:text-brand-green-800">Apothecary Director</p>
-                  <p className="text-[8px] font-mono text-brand-green-600/70">admin@gramslife.com | password123</p>
+                  <p className="text-[8px] font-mono text-brand-green-600/70">admin@Bvlife.com | password123</p>
                 </div>
                 <span className="text-[9px] font-bold text-rose-700 uppercase bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 shrink-0 group-hover:bg-rose-100">Admin Panel</span>
               </button>
@@ -1362,7 +1384,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <Building2 className="w-3.5 h-3.5 text-green-600" />
                 <span>Admin Management Gateway</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Grams Life Admin Panel</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">BV Life Admin Panel</h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
                 Director: <span className="font-semibold text-slate-900">{user.fullName}</span> ({user.email})
               </p>
@@ -1479,6 +1501,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 >
                   <User className="w-4 h-4 shrink-0" />
                   <span>My Profile & Account</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('membership')}
+                  className={`shrink-0 snap-start lg:w-full text-left px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer ${
+                    activeTab === 'membership' ? 'bg-brand-green-700 text-brand-cream-50' : 'text-brand-green-700 hover:bg-brand-green-50'
+                  }`}
+                >
+                  <Crown className="w-4 h-4 shrink-0 text-brand-gold-500" />
+                  <span>Privilege Membership Card</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('orders')}
@@ -1694,6 +1725,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               </div>
 
+              {/* Privilege Club Membership Card & Upgrade Section */}
+              <MembershipCardSection user={currentUser || user} onUserUpdated={handleUserUpdated} />
+
               {/* Detailed Personal Information Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
@@ -1786,6 +1820,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
                   <button
+                    onClick={() => setActiveTab('membership')}
+                    className="px-3.5 py-2 bg-gradient-to-r from-brand-gold-500 to-brand-gold-400 hover:from-brand-gold-400 hover:to-brand-gold-300 text-brand-green-950 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  >
+                    <Crown className="w-3.5 h-3.5" />
+                    <span>Privilege Card</span>
+                  </button>
+                  <button
                     onClick={() => setActiveTab('orders')}
                     className="px-3.5 py-2 bg-white border border-brand-green-600/20 hover:border-brand-green-600 text-brand-green-900 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                   >
@@ -1802,6 +1843,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               </div>
 
+            </div>
+          )}
+
+          {/* TAB: PRIVILEGE MEMBERSHIP CARD (CUSTOMER) */}
+          {activeTab === 'membership' && (currentUser || user) && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="border-b border-brand-green-600/10 pb-4 mb-2">
+                <div className="flex items-center gap-2 text-brand-gold-600 text-xs font-bold uppercase tracking-wider">
+                  <Crown className="w-4 h-4" />
+                  <span>VIP Privilege Club</span>
+                </div>
+                <h3 className="font-serif text-2xl font-bold text-brand-green-900">Privilege Membership & Card</h3>
+                <p className="text-xs text-brand-green-700/80 mt-0.5">
+                  Manage your exclusive BV Life member card, 30% privilege discount status, and tier renewals.
+                </p>
+              </div>
+              <MembershipCardSection user={currentUser || user} onUserUpdated={handleUserUpdated} />
             </div>
           )}
 
@@ -3051,11 +3109,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <div className="bg-white border border-slate-200 p-3 rounded-xl space-y-2">
                       <ImageUploadField
                         id="product-primary-image"
-                        label="Product Image (URL or Upload)"
+                        label="Main Product Image (shown first)"
                         value={prodImg}
                         onChange={setProdImg}
                         placeholder="https://... or upload local image file"
                       />
+                      <p className="text-[11px] text-slate-500">Add up to 4 more photos below (5 images total). Customers can tap the thumbnails on the product page to view each one. For each photo, paste its URL or use Upload to choose a file from your device.</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                        {[{ label: 'Gallery image 2 (optional)', value: prodImg2, onChange: setProdImg2 },
+                          { label: 'Gallery image 3 (optional)', value: prodImg3, onChange: setProdImg3 },
+                          { label: 'Gallery image 4 (optional)', value: prodImg4, onChange: setProdImg4 },
+                          { label: 'Gallery image 5 (optional)', value: prodImg5, onChange: setProdImg5 }].map((image, index) => (
+                          <ImageUploadField
+                            key={index}
+                            id={`product-gallery-image-${index + 1}`}
+                            label={image.label}
+                            optional
+                            compact
+                            value={image.value}
+                            onChange={image.onChange}
+                            placeholder="Paste image URL or upload"
+                          />
+                        ))}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -4944,12 +5020,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </button>
 
                   <button
-                    onClick={() => handleTriggerTestEmail('booking')}
+                    onClick={() => handleTriggerTestEmail('booking', 'video')}
                     disabled={testEmailSending}
-                    className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer border border-white/30 disabled:opacity-50"
+                    className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer border border-white/30 disabled:opacity-50"
                   >
-                    <Stethoscope className="w-3.5 h-3.5" />
-                    <span>Send Test Doctor Booking Email</span>
+                    <Video className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>Test Video Email</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleTriggerTestEmail('booking', 'audio')}
+                    disabled={testEmailSending}
+                    className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer border border-white/30 disabled:opacity-50"
+                  >
+                    <PhoneCall className="w-3.5 h-3.5 text-teal-300" />
+                    <span>Test Phone Call Email</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleTriggerTestEmail('booking', 'clinic')}
+                    disabled={testEmailSending}
+                    className="px-3.5 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer border border-white/30 disabled:opacity-50"
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Test Clinic Visit Email</span>
                   </button>
                 </div>
 
@@ -5093,7 +5187,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
                 const updatedSettings: WebsiteSettings = {
-                  logoName: fd.get('logoName') as string || 'Grams Life',
+                  logoName: fd.get('logoName') as string || 'BV Life',
                   logoUrl: fd.get('logoUrl') as string || '',
                   contactEmail: fd.get('contactEmail') as string || '',
                   contactPhone: fd.get('contactPhone') as string || '',
@@ -5326,7 +5420,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     G
                   </div>
                   <div>
-                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">Grams Life</h2>
+                    <h2 className="font-serif text-2xl font-bold tracking-tight text-brand-green-900 leading-none">BV Life</h2>
                     <span className="text-[10px] uppercase tracking-widest text-brand-gold-700 font-extrabold mt-1 block">Ayurvedic Sanctuary</span>
                   </div>
                 </div>
@@ -5427,7 +5521,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </p>
                 <div className="space-y-0.5">
                   <p className="text-[10px] font-bold text-brand-gold-700 uppercase tracking-widest">Aacharya Dhanvantari</p>
-                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • Grams Life Sanctuary</p>
+                  <p className="text-[9px] text-brand-green-600/60 uppercase">Chief Apothecary • BV Life Sanctuary</p>
                 </div>
               </div>
 
@@ -5587,10 +5681,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       RETURN ADDRESS (SHIPPER / SELLER)
                     </p>
                     <div className="text-[11px] font-bold leading-tight text-gray-800">
-                      <p className="font-black">Grams Life Ayurvedic Sanctuary</p>
+                      <p className="font-black">BV Life Ayurvedic Sanctuary</p>
                       <p>Plot 42, Veda Heritage Enclave, Mansarovar</p>
                       <p>Jaipur, Rajasthan - 302020</p>
-                      <p className="font-mono text-[10px] pt-0.5">Seller Care: +91 98765 43210 | care@gramslife.com</p>
+                      <p className="font-mono text-[10px] pt-0.5">Seller Care: +91 98765 43210 | care@Bvlife.com</p>
                     </div>
                   </div>
 
@@ -5986,7 +6080,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           if (onLoginSuccess) {
             onLoginSuccess(token);
           } else {
-            localStorage.setItem('grams_auth_token', token);
+            localStorage.setItem('Bv_auth_token', token);
             window.location.reload();
           }
         }}
@@ -6009,7 +6103,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             const updated = [...reviewedProductIds, reviewModalProduct.id];
             setReviewedProductIds(updated);
             try {
-              localStorage.setItem('grams_reviewed_products', JSON.stringify(updated));
+              localStorage.setItem('Bv_reviewed_products', JSON.stringify(updated));
             } catch {}
           }}
         />

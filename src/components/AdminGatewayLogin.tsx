@@ -184,7 +184,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
       });
       const checkData = await checkRes.json();
 
-      if (!checkData.exists) {
+      if (!checkData.exists || !checkData.isAdmin) {
         setError('This mobile number is not registered under any admin account.');
         setLoading(false);
         return;

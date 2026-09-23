@@ -21,6 +21,7 @@ interface DoctorDashboardProps {
   onNavigate: (page: string, params?: any) => void;
   language?: string;
   onLoginSuccess?: (user: UserType, token: string) => void;
+  onLogout?: () => void;
 }
 
 const COMMON_AYURVEDIC_MEDICINES = [
@@ -81,13 +82,15 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   currentUser,
   onNavigate,
   language = 'en',
-  onLoginSuccess
+  onLoginSuccess,
+  onLogout
 }) => {
   // Doctor Auth state for direct link access
+  const [isExplicitlySignedOut, setIsExplicitlySignedOut] = useState<boolean>(false);
   const [localDoctorUser, setLocalDoctorUser] = useState<UserType | null>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const stored = localStorage.getItem('grams_doctor_session');
+        const stored = localStorage.getItem('Bv_doctor_session');
         if (stored) return JSON.parse(stored);
       } catch {
         // ignore
@@ -103,12 +106,13 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   const [loginError, setLoginError] = useState<string>('');
 
   const isDoctorAuthenticated = useMemo(() => {
+    if (isExplicitlySignedOut) return false;
     const active = localDoctorUser || currentUser;
     if (!active) return false;
     const email = (active.email || '').toLowerCase().trim();
     return active.role === 'admin' || 
-      ['doctor@bvlife.in', 'doctor@gramslife.com', 'admin@bvlife.in', 'admin@gramslife.com', 'iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com'].includes(email);
-  }, [localDoctorUser, currentUser]);
+      ['doctor@bvlife.in', 'doctor@Bvlife.com', 'admin@bvlife.in', 'admin@Bvlife.com', 'iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com'].includes(email);
+  }, [isExplicitlySignedOut, localDoctorUser, currentUser]);
 
   const handleDoctorLogin = async (e?: React.FormEvent, customEmail?: string, customPassword?: string) => {
     if (e) e.preventDefault();
@@ -122,8 +126,8 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     emailToUse = emailToUse.replace(/^(doctor\s*id\s*[:\-]?\s*|email\s*[:\-]?\s*|id\s*[:\-]?\s*|username\s*[:\-]?\s*)/i, '').trim();
     passToUse = passToUse.replace(/^(password\s*[:\-]?\s*|pass\s*[:\-]?\s*)/i, '').trim();
 
-    if (emailToUse.toLowerCase().includes('doctor@bvlife.in') || emailToUse.toLowerCase().includes('doctor@gramslife.com') || emailToUse.toLowerCase() === 'doctor') {
-      emailToUse = emailToUse.toLowerCase().includes('gramslife.com') ? 'doctor@gramslife.com' : 'doctor@bvlife.in';
+    if (emailToUse.toLowerCase().includes('doctor@bvlife.in') || emailToUse.toLowerCase().includes('doctor@Bvlife.com') || emailToUse.toLowerCase() === 'doctor') {
+      emailToUse = emailToUse.toLowerCase().includes('Bvlife.com') ? 'doctor@Bvlife.com' : 'doctor@bvlife.in';
     }
 
     // Default fallback to standard clinical practitioner
@@ -138,17 +142,18 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
       addresses: []
     };
 
-    const isVerifiedDoctorCreds = (emailToUse.toLowerCase() === 'doctor@bvlife.in' || emailToUse.toLowerCase() === 'doctor@gramslife.com') && 
+    const isVerifiedDoctorCreds = (emailToUse.toLowerCase() === 'doctor@bvlife.in' || emailToUse.toLowerCase() === 'doctor@Bvlife.com') && 
       (passToUse === '123123123' || passToUse === 'password123' || passToUse === '');
 
     try {
       const res = await api.login({ email: emailToUse, password: passToUse });
       if (res && res.user && res.token) {
+        setIsExplicitlySignedOut(false);
         setLocalDoctorUser(res.user);
         try {
-          localStorage.setItem('grams_doctor_session', JSON.stringify(res.user));
-          localStorage.setItem('grams_auth_token', res.token);
-          sessionStorage.setItem('grams_auth_token', res.token);
+          localStorage.setItem('Bv_doctor_session', JSON.stringify(res.user));
+          localStorage.setItem('Bv_auth_token', res.token);
+          sessionStorage.setItem('Bv_auth_token', res.token);
         } catch {
           // ignore
         }
@@ -164,11 +169,12 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     // If verified AYUSH practitioner credentials matched, grant session immediately
     if (isVerifiedDoctorCreds) {
       const fallbackToken = 'doc_auth_token_' + Date.now();
+      setIsExplicitlySignedOut(false);
       setLocalDoctorUser(defaultDoctorUser);
       try {
-        localStorage.setItem('grams_doctor_session', JSON.stringify(defaultDoctorUser));
-        localStorage.setItem('grams_auth_token', fallbackToken);
-        sessionStorage.setItem('grams_auth_token', fallbackToken);
+        localStorage.setItem('Bv_doctor_session', JSON.stringify(defaultDoctorUser));
+        localStorage.setItem('Bv_auth_token', fallbackToken);
+        sessionStorage.setItem('Bv_auth_token', fallbackToken);
       } catch {
         // ignore
       }
@@ -183,11 +189,17 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
 
   const handleDoctorSignOut = () => {
     try {
-      localStorage.removeItem('grams_doctor_session');
+      localStorage.removeItem('Bv_doctor_session');
+      localStorage.removeItem('Bv_auth_token');
+      sessionStorage.removeItem('Bv_auth_token');
     } catch {
       // ignore
     }
     setLocalDoctorUser(null);
+    setIsExplicitlySignedOut(true);
+    if (onLogout) {
+      onLogout();
+    }
   };
 
   // State for appointments
@@ -219,7 +231,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   const [newBookingAlert, setNewBookingAlert] = useState<DoctorAppointment | null>(null);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('grams_doctor_sound_enabled') !== 'false';
+      return localStorage.getItem('Bv_doctor_sound_enabled') !== 'false';
     }
     return true;
   });
@@ -540,6 +552,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
 
     // Also poll every 10 seconds for any new appointments booked across other browser tabs/devices
     const pollTimer = setInterval(async () => {
+      if (!isDoctorAuthenticated) return;
       try {
         const fresh = await api.getAllDoctorAppointments();
         if (fresh && fresh.length > 0) {
@@ -565,7 +578,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(pollTimer);
     };
-  }, [soundEnabled, seenAppointmentIds]);
+  }, [soundEnabled, seenAppointmentIds, isDoctorAuthenticated]);
 
   // Dynamic WhatsApp template generation whenever modal appointment or template changes
   useEffect(() => {
@@ -1253,7 +1266,7 @@ Wishing you swift recovery and holistic health,
                     const next = !soundEnabled;
                     setSoundEnabled(next);
                     if (typeof window !== 'undefined') {
-                      localStorage.setItem('grams_doctor_sound_enabled', String(next));
+                      localStorage.setItem('Bv_doctor_sound_enabled', String(next));
                     }
                     if (next) playDoctorChime();
                   }}
@@ -1918,9 +1931,9 @@ Wishing you swift recovery and holistic health,
 
                               {/* Uploaded Reports & Condition Photo */}
                               {((app.medicalReports && app.medicalReports.length > 0) || app.patientPhoto) && (
-                                <div className="flex flex-wrap items-center gap-2 pt-1">
+                                <div className="space-y-2 pt-1">
                                   {app.medicalReports && app.medicalReports.length > 0 && (
-                                    <>
+                                    <div className="flex flex-wrap items-center gap-2">
                                       <span className="text-[11px] text-slate-500 font-medium">
                                         Reports ({app.medicalReports.length}):
                                       </span>
@@ -1936,25 +1949,54 @@ Wishing you swift recovery and holistic health,
                                           <span>{report.name}</span>
                                         </a>
                                       ))}
-                                    </>
+                                    </div>
                                   )}
+
                                   {app.patientPhoto && (
-                                    <button
-                                      type="button"
-                                      onClick={() => setPreviewPhotoModal(app.patientPhoto || null)}
-                                      className="text-[11px] font-bold text-teal-900 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 hover:bg-teal-100 flex items-center gap-1.5 cursor-pointer"
-                                      title="Click to view full condition photo"
-                                    >
-                                      <img
-                                        src={app.patientPhoto}
-                                        alt="Patient condition"
-                                        className="w-4 h-4 rounded object-cover border border-teal-300"
-                                      />
-                                      <span>Condition Photo</span>
-                                    </button>
+                                    <div className="p-2.5 bg-teal-50/80 rounded-xl border border-teal-200 flex items-center justify-between gap-3">
+                                      <div className="flex items-center gap-3">
+                                        <img
+                                          src={app.patientPhoto}
+                                          alt="Patient condition"
+                                          className="w-12 h-12 rounded-lg object-cover border-2 border-teal-400 shadow-xs cursor-pointer hover:scale-105 transition-transform shrink-0"
+                                          onClick={() => setPreviewPhotoModal(app.patientPhoto || null)}
+                                        />
+                                        <div>
+                                          <span className="text-xs font-bold text-teal-950 flex items-center gap-1.5">
+                                            <Camera className="w-3.5 h-3.5 text-teal-700" />
+                                            Patient Condition Photo Attached
+                                          </span>
+                                          <p className="text-[11px] text-teal-700">Uploaded during consultation booking for diagnosis</p>
+                                        </div>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => setPreviewPhotoModal(app.patientPhoto || null)}
+                                        className="px-2.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                                      >
+                                        <Eye className="w-3.5 h-3.5" />
+                                        <span>View Photo</span>
+                                      </button>
+                                    </div>
                                   )}
                                 </div>
                               )}
+
+                              {/* Assigned Doctor & Qualifications (PhD) */}
+                              <div className="flex items-center gap-2 pt-2 mt-1 border-t border-slate-100 text-xs text-slate-600">
+                                <img 
+                                  src={app.doctorImage || drImage || "/images/DrSanjeev.png"} 
+                                  alt={app.doctorName || "Dr. Sanjeev Rastogi"} 
+                                  className="w-7 h-7 rounded-full object-cover border border-brand-gold-400 shadow-2xs shrink-0" 
+                                  onError={(e) => { (e.target as HTMLImageElement).src = '/images/DrSanjeev.png'; }}
+                                />
+                                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                  <span className="font-bold text-brand-green-950 font-serif">{app.doctorName || 'Dr. Sanjeev Rastogi'}</span>
+                                  <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-[11px] font-semibold">
+                                    {app.doctorQualification || 'Ph.D, MD (Ayurveda), Banaras Hindu University (BHU)'}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           </div>
 

@@ -303,12 +303,22 @@ export const Checkout: React.FC<CheckoutProps> = ({
   }, [initialCompletedOrderId]);
 
   // Calculations
+  const isPrivilegeMember = useMemo(() => {
+    return currentUser?.membership?.status === 'active';
+  }, [currentUser]);
+
   const subtotal = useMemo(() => {
     return cart.reduce((sum, item) => {
       const price = item.selectedVariant ? item.selectedVariant.price : item.product.price;
       return sum + price * item.quantity;
     }, 0);
   }, [cart]);
+
+  const privilegeDiscount = useMemo(() => {
+    if (!isPrivilegeMember) return 0;
+    // 30% privilege discount on cart subtotal
+    return Math.round(subtotal * 0.30);
+  }, [isPrivilegeMember, subtotal]);
 
   const discountAmount = useMemo(() => {
     if (!appliedCoupon) return 0;
@@ -320,19 +330,25 @@ export const Checkout: React.FC<CheckoutProps> = ({
     }
   }, [appliedCoupon, subtotal]);
 
+  const totalDiscount = useMemo(() => {
+    return Math.min(subtotal, discountAmount + privilegeDiscount);
+  }, [subtotal, discountAmount, privilegeDiscount]);
+
   const taxAmount = useMemo(() => {
-    const taxableSub = Math.max(0, subtotal - discountAmount);
+    const taxableSub = Math.max(0, subtotal - totalDiscount);
     return Math.round((taxableSub * settings.defaultTaxPercentage) / 100);
-  }, [subtotal, discountAmount, settings]);
+  }, [subtotal, totalDiscount, settings]);
 
   const shippingCharge = useMemo(() => {
+    // Privilege members receive complimentary free shipping
+    if (isPrivilegeMember) return 0;
     if (subtotal === 0 || subtotal >= settings.freeShippingThreshold) return 0;
     return settings.baseShippingCharge;
-  }, [subtotal, settings]);
+  }, [isPrivilegeMember, subtotal, settings]);
 
   const finalTotal = useMemo(() => {
-    return Math.max(0, subtotal - discountAmount + taxAmount + shippingCharge);
-  }, [subtotal, discountAmount, taxAmount, shippingCharge]);
+    return Math.max(0, subtotal - totalDiscount + taxAmount + shippingCharge);
+  }, [subtotal, totalDiscount, taxAmount, shippingCharge]);
 
   // Handle Add New Address
   const [addressError, setAddressError] = useState('');
@@ -460,7 +476,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
           key: finalKey,
           amount: data.amount,
           currency: data.currency || 'INR',
-          name: 'Bv Life',
+          name: 'BV Life',
           description: 'Wellness & Herbal Remedies Order',
           image: 'https://cdn-icons-png.flaticon.com/512/3063/3063822.png',
           order_id: data.orderId,
@@ -586,7 +602,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
       subtotal: subtotal || finalTotal,
       tax: taxAmount,
       shippingCharge,
-      discount: discountAmount,
+      discount: totalDiscount,
       finalTotal: finalTotal || subtotal || 499,
       paymentMethod: chosenPayMethod,
       paymentStatus: chosenPayStatus
@@ -1354,6 +1370,15 @@ export const Checkout: React.FC<CheckoutProps> = ({
                   <span>Cart Subtotal</span>
                   <span>₹{subtotal}</span>
                 </div>
+                {isPrivilegeMember && (
+                  <div className="flex justify-between text-amber-700 bg-amber-50/80 p-2 rounded-lg border border-amber-300/60 font-bold">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Privilege Member (30% OFF)</span>
+                    </span>
+                    <span>-₹{privilegeDiscount}</span>
+                  </div>
+                )}
                 {appliedCoupon && (
                   <div className="flex justify-between text-brand-gold-700 font-bold">
                     <span className="flex items-center gap-1">

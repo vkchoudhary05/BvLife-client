@@ -1,695 +1,1239 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { Mail, User as UserIcon, Phone, Shield, Lock, ArrowRight, Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Phone,
+  Mail,
+  User as UserIcon,
+  Shield,
+  ArrowRight,
+  CheckCircle2,
+  RotateCcw,
+  Sparkles,
+  ArrowLeft,
+  Loader2
+} from 'lucide-react';
+
 import { validateAndFormatIndianPhone } from '../utils';
-import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin } from '../services/msg91OtpService';
-import { SecureOtpWidget } from '../components/secureOtpWidget';
-import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
+
+import {
+  sendMSG91Otp,
+  retryMSG91Otp,
+  verifyMSG91Otp,
+  performOtpLogin
+} from '../services/msg91OtpService';
 
 interface LoginProps {
   onNavigate: (page: string, params?: any) => void;
-  handleLogin: (credentials: { email: string; password?: string }) => Promise<boolean>;
-  handleRegister: (data: {
-    name: string;
-    email: string;
-    phone: string;
-    role: string;
-    password?: string;
-    accessToken?: string;
-    code?: string;
-    reqId?: string;
-  }) => Promise<boolean>;
-  onLoginSuccess: (token: string, user?: any) => void;
+  handleLogin?: (
+    credentials: { email: string; password?: string }
+  ) => Promise<boolean>;
+  handleRegister?: (
+    data: {
+      name: string;
+      email: string;
+      phone: string;
+      role: string;
+      password?: string;
+      accessToken?: string;
+      code?: string;
+      reqId?: string;
+    }
+  ) => Promise<boolean>;
+  onLoginSuccess?: (token: string, user: any) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({
   onNavigate,
-  handleLogin,
-  handleRegister,
   onLoginSuccess
 }) => {
-  // Auth view states
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [loginMode, setLoginMode] = useState<'password' | 'otp'>('password');
-  
-  // Registration Form Fields
-  const [authEmail, setAuthEmail] = useState('');
-  const [authName, setAuthName] = useState('');
-  const [authPhone, setAuthPhone] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // ------------------------------------------------------------
+  // AUTH FLOW
+  // phone -> otp -> profile
+  // ------------------------------------------------------------
+  const [step, setStep] = useState<'phone' | 'otp' | 'profile'>('phone');
 
-  // Direct OTP Sign In Fields
-  const [otpLoginIdentifier, setOtpLoginIdentifier] = useState('');
-  const [otpLoginStarted, setOtpLoginStarted] = useState(false);
-
-  // Registration OTP step state
-  const [otpStep, setOtpStep] = useState(false);
+  // ------------------------------------------------------------
+  // PHONE
+  // ------------------------------------------------------------
+  const [mobileNumber, setMobileNumber] = useState('');
   const [formattedPhone, setFormattedPhone] = useState('');
-  const [activeReqId, setActiveReqId] = useState<string | undefined>(undefined);
 
-  // Loading & error states
-  const [authLoading, setAuthLoading] = useState(false);
-  const [loginError, setLoginError] = useState('');
-  const [loginSuccess, setLoginSuccess] = useState('');
-  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  // MSG91 request ID
+  const [activeReqId, setActiveReqId] = useState<string>('');
 
-  // Submit handler for Registration Details (Step 1 -> pre-checks duplicate email/phone then triggers SMS OTP)
-  const handleRegisterDetailsSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-    setLoginSuccess('');
+  // MSG91 verified access token. This is the only OTP proof sent to backend.
+  const [msg91AccessToken, setMsg91AccessToken] = useState<string>('');
 
-    if (authPassword !== authConfirmPassword) {
-      setLoginError('Passwords do not match. Please ensure both fields are identical.');
+  // ------------------------------------------------------------
+  // OTP
+  // ------------------------------------------------------------
+  const [otpDigits, setOtpDigits] = useState(['', '', '', '']);
+
+  const otpInputRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null)
+  ];
+
+  // ------------------------------------------------------------
+  // PROFILE
+  // ------------------------------------------------------------
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+
+  // ------------------------------------------------------------
+  // UI / ASYNC
+  // ------------------------------------------------------------
+  const [isLoading, setIsLoading] = useState(false);
+  // React state is applied asynchronously, so it cannot by itself prevent two
+  // submit events that occur in the same browser tick.
+  const isSendingOtpRef = useRef(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // ------------------------------------------------------------
+  // RESEND
+  // ------------------------------------------------------------
+  const [resendTimer, setResendTimer] = useState(30);
+  const [canResend, setCanResend] = useState(false);
+
+  // ------------------------------------------------------------
+  // OTP INPUT FOCUS
+  // ------------------------------------------------------------
+  useEffect(() => {
+    if (step === 'otp') {
+      setTimeout(() => {
+        otpInputRefs[0].current?.focus();
+      }, 50);
+
+      setResendTimer(30);
+      setCanResend(false);
+    }
+  }, [step]);
+
+  // ------------------------------------------------------------
+  // RESEND COUNTDOWN
+  // ------------------------------------------------------------
+  useEffect(() => {
+    if (step !== 'otp') {
       return;
     }
-    if (authPassword.length < 6) {
-      setLoginError('Security requirement: Password must be at least 6 characters.');
+
+    if (resendTimer <= 0) {
+      setCanResend(true);
       return;
     }
 
-    const cleanPhone = authPhone.replace(/\D/g, '');
-    if (cleanPhone.length !== 10) {
-      setLoginError('Mobile number must contain exactly 10 digits.');
-      return;
-    }
-
-    if (!authEmail || !authEmail.includes('@')) {
-      setLoginError('Please enter a valid email address.');
-      return;
-    }
-
-    setAuthLoading(true);
-    try {
-      // 1. PRE-CHECK DUPLICATE: Check if email or mobile number already exists BEFORE sending OTP
-      const checkRes = await fetch('/api/auth/check-account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: authEmail.trim(), phone: authPhone.trim() })
-      });
-      const checkData = await checkRes.json();
-
-      if (checkData.exists) {
-        if (checkData.emailExists && checkData.phoneExists) {
-          setLoginError('Both this email address and mobile number are already registered. Please sign in instead.');
-        } else if (checkData.emailExists) {
-          setLoginError('This email address is already registered. Please sign in instead.');
-        } else if (checkData.phoneExists) {
-          setLoginError('This mobile number is already registered. Please sign in instead.');
-        } else {
-          setLoginError(checkData.error || 'An account with this email or mobile number already exists. Please sign in instead.');
+    const timer = setInterval(() => {
+      setResendTimer((previous) => {
+        if (previous <= 1) {
+          clearInterval(timer);
+          setCanResend(true);
+          return 0;
         }
-        setAuthLoading(false);
-        return; // STOP! DO NOT SEND OTP!
-      }
 
-      // 2. Dispatch SMS OTP only
-      const msg91Target = formatMSG91Identifier(authPhone);
-      const response = await sendMSG91Otp(msg91Target);
+        return previous - 1;
+      });
+    }, 1000);
 
-      if (response.success) {
-        if (response.reqId) setActiveReqId(response.reqId);
-        setFormattedPhone(msg91Target);
-        setOtpStep(true);
-        setLoginSuccess(`Verification passcode dispatched via SMS to +${msg91Target}`);
-      } else {
-        setLoginError(response.error || 'Could not dispatch SMS verification OTP. Please check mobile details.');
-      }
-    } catch (err: any) {
-      console.error(err);
-      setLoginError('Connection failure during registration pre-check.');
-    } finally {
-      setAuthLoading(false);
+    return () => clearInterval(timer);
+  }, [step, resendTimer]);
+
+  // ------------------------------------------------------------
+  // MOBILE INPUT
+  // ------------------------------------------------------------
+  const handleMobileChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const raw = e.target.value.replace(/\D/g, '');
+
+    if (raw.length <= 10) {
+      setMobileNumber(raw);
+      setErrorMessage('');
+      setSuccessMessage('');
     }
   };
 
-  // Callback when OTP verified for Registration
-  const handleRegisterOtpVerified = async (params: { code: string; accessToken?: string; reqId?: string }) => {
-    setAuthLoading(true);
-    setLoginError('');
+  // ============================================================
+  // STEP 1
+  // SEND OTP
+  // ============================================================
+  const handleSendOtp = async (
+    e?: React.FormEvent
+  ) => {
+    if (e) {
+      e.preventDefault();
+    }
+
+    if (isLoading || isSendingOtpRef.current) {
+      return;
+    }
+
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    const clean = mobileNumber.trim();
+
+    if (!clean || clean.length !== 10) {
+      setErrorMessage(
+        'Please enter a valid 10-digit Indian mobile number.'
+      );
+      return;
+    }
+
+    const formatted = validateAndFormatIndianPhone(clean);
+
+    if (!formatted) {
+      setErrorMessage(
+        'Invalid Indian mobile format. Expected 10 digits starting with 6-9.'
+      );
+      return;
+    }
+
+    setFormattedPhone(formatted);
+
+    // Clear previous verification state
+    setActiveReqId('');
+    setMsg91AccessToken('');
+    setOtpDigits(['', '', '', '']);
+
+    isSendingOtpRef.current = true;
+    setIsLoading(true);
+
     try {
-      const success = await handleRegister({ 
-        name: authName, 
-        email: authEmail,
-        phone: formattedPhone || authPhone,
-        role: 'customer',
-        password: authPassword,
-        accessToken: params.accessToken,
-        code: params.code,
-        reqId: params.reqId || activeReqId
+      const res = await sendMSG91Otp(formatted);
+
+      if (!res.success) {
+        setErrorMessage(
+          res.error ||
+          'Failed to send verification code. Please try again.'
+        );
+        return;
+      }
+
+      /*
+       * Save the MSG91 request ID returned by the widget. It identifies the
+       * exact MSG91 OTP session that must be verified.
+       */
+      if (res.reqId) {
+        setActiveReqId(res.reqId);
+
+        console.log(
+          '[Login] MSG91 request ID saved:',
+          res.reqId
+        );
+      } else {
+        console.warn(
+          '[Login] MSG91 did not return a request ID.'
+        );
+      }
+
+      setOtpDigits(['', '', '', '']);
+
+      setSuccessMessage(
+        `OTP passcode sent to +91 ${clean}`
+      );
+
+      setStep('otp');
+
+    } catch (err: any) {
+      console.error(
+        '[Login] Send OTP exception:',
+        err
+      );
+
+      setErrorMessage(
+        err?.message ||
+        'Connection error. Please try again.'
+      );
+    } finally {
+      isSendingOtpRef.current = false;
+      setIsLoading(false);
+    }
+  };
+
+  // ============================================================
+  // OTP DIGIT INPUT
+  // ============================================================
+  const handleDigitChange = (
+    index: number,
+    value: string
+  ) => {
+    const clean = value.replace(/\D/g, '');
+
+    const newDigits = [...otpDigits];
+
+    /*
+     * PASTE SUPPORT
+     *
+     * Example:
+     * User pastes 2532
+     *
+     * We fill:
+     * [2,5,3,2]
+     *
+     * BUT we DO NOT verify automatically.
+     */
+    if (clean.length > 1) {
+      const pasted = clean
+        .slice(0, 4)
+        .split('');
+
+      pasted.forEach((character, pastedIndex) => {
+        if (pastedIndex < 4) {
+          newDigits[pastedIndex] = character;
+        }
       });
 
-      if (success) {
-        setAuthEmail('');
-        setAuthName('');
-        setAuthPhone('');
-        setAuthPassword('');
-        setAuthConfirmPassword('');
-        setOtpStep(false);
-        setIsRegistering(false);
-        onNavigate('home');
-      } else {
-        setLoginError('Account creation failed. Please check registration parameters or try another email.');
-      }
-    } catch (err: any) {
-      setLoginError('An unexpected error occurred during account finalization.');
-      console.error(err);
-    } finally {
-      setAuthLoading(false);
+      setOtpDigits(newDigits);
+
+      const nextIndex = Math.min(
+        pasted.length,
+        3
+      );
+
+      otpInputRefs[nextIndex].current?.focus();
+
+      setErrorMessage('');
+
+      return;
+    }
+
+    // Normal single digit
+    newDigits[index] = clean
+      ? clean[clean.length - 1]
+      : '';
+
+    setOtpDigits(newDigits);
+    setErrorMessage('');
+
+    // Move to next box
+    if (clean && index < 3) {
+      otpInputRefs[index + 1].current?.focus();
+    }
+
+    /*
+     * IMPORTANT:
+     *
+     * We intentionally DO NOT call verifyPasscode()
+     * here.
+     *
+     * Verification happens only when the user presses
+     * "Verify & Continue".
+     */
+  };
+
+  // ============================================================
+  // OTP BACKSPACE
+  // ============================================================
+  const handleKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (
+      e.key === 'Backspace' &&
+      !otpDigits[index] &&
+      index > 0
+    ) {
+      otpInputRefs[index - 1].current?.focus();
     }
   };
 
-  // Submit handler for starting Direct OTP Login
-  const handleStartOtpLogin = async (e: React.FormEvent) => {
+  // ============================================================
+  // STEP 2
+  // VERIFY OTP WITH MSG91, THEN SEND ONLY ITS ACCESS TOKEN TO BACKEND
+  // ============================================================
+  const verifyPasscode = async (
+    codeToVerify?: string
+  ) => {
+    if (isLoading) {
+      return;
+    }
+
+    const code = (
+      codeToVerify ||
+      otpDigits.join('')
+    ).replace(/\D/g, '');
+
+    if (code.length !== 4) {
+      setErrorMessage(
+        'Please enter the full 4-digit passcode.'
+      );
+      return;
+    }
+
+    if (!activeReqId) {
+      setErrorMessage(
+        'Verification session is missing. Please resend the OTP and try again.'
+      );
+      return;
+    }
+
+    setErrorMessage('');
+    setSuccessMessage('');
+    setIsLoading(true);
+
+    try {
+      const msg91Result = await verifyMSG91Otp(
+        formattedPhone || mobileNumber,
+        code,
+        activeReqId
+      );
+
+      if (!msg91Result.success || !msg91Result.accessToken) {
+        setErrorMessage(
+          msg91Result.error ||
+          'MSG91 could not verify this OTP. Please check the code and try again.'
+        );
+        return;
+      }
+
+      setMsg91AccessToken(msg91Result.accessToken);
+
+      const loginRes = await performOtpLogin({
+        identifier: formattedPhone || mobileNumber,
+        accessToken: msg91Result.accessToken
+      });
+
+      console.log(
+        '[Login] Backend OTP login result:',
+        loginRes
+      );
+
+      /*
+       * Backend rejected authentication
+       */
+      if (!loginRes.success) {
+        setErrorMessage(
+          loginRes.error ||
+          'OTP was verified, but your account could not be authenticated.'
+        );
+
+        return;
+      }
+
+      /*
+       * ========================================================
+       * EXISTING USER
+       * ========================================================
+       */
+      if (
+        loginRes.user &&
+        loginRes.token
+      ) {
+        finalizeSessionAndGoHome(
+          loginRes.token,
+          loginRes.user,
+          'Welcome back!'
+        );
+
+        return;
+      }
+
+      /*
+       * ========================================================
+       * NEW USER
+       * ========================================================
+       */
+      if (loginRes.isNewUser) {
+        setSuccessMessage(
+          'Mobile verified! Please provide your name and email to complete your registration.'
+        );
+
+        setStep('profile');
+
+        return;
+      }
+
+      /*
+       * Unexpected backend response
+       */
+      setErrorMessage(
+        'Authentication response was incomplete. Please try again.'
+      );
+
+    } catch (err: any) {
+      console.error(
+        '[Login] OTP verification exception:',
+        err
+      );
+
+      setErrorMessage(
+        err?.message ||
+        'Verification failed. Please check your network and try again.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ============================================================
+  // RESEND OTP
+  // ============================================================
+  const handleResend = async () => {
+    if (!canResend || isLoading) {
+      return;
+    }
+
+    setErrorMessage('');
+    setSuccessMessage('');
+    setIsLoading(true);
+
+    try {
+      console.log(
+        '[Login] Resending OTP...'
+      );
+
+      const res = await retryMSG91Otp(null, activeReqId, formattedPhone || mobileNumber);
+
+      console.log(
+        '[Login] Resend result:',
+        res
+      );
+
+      if (!res.success) {
+        setErrorMessage(
+          res.error ||
+          'Failed to resend passcode.'
+        );
+        return;
+      }
+
+      /*
+       * MSG91 retry keeps the same verification session. If it returns a new
+       * request ID, retain it for the next verification call.
+       */
+      if (res.reqId) {
+        setActiveReqId(res.reqId);
+
+        console.log(
+          '[Login] New MSG91 request ID:',
+          res.reqId
+        );
+      }
+
+      setOtpDigits(['', '', '', '']);
+
+      setMsg91AccessToken('');
+
+      setResendTimer(30);
+      setCanResend(false);
+
+      setSuccessMessage(
+        'A fresh passcode has been sent to your mobile.'
+      );
+
+      setTimeout(() => {
+        otpInputRefs[0].current?.focus();
+      }, 50);
+
+    } catch (err: any) {
+      console.error(
+        '[Login] Resend exception:',
+        err
+      );
+
+      setErrorMessage(
+        err?.message ||
+        'Failed to resend code.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ============================================================
+  // STEP 3
+  // COMPLETE NEW USER PROFILE
+  // ============================================================
+  const handleCompleteProfile = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
-    setLoginError('');
-    setLoginSuccess('');
 
-    const raw = otpLoginIdentifier.trim();
-    if (!raw) {
-      setLoginError('Please enter your mobile phone number.');
+    if (isLoading) {
       return;
     }
 
-    // Smart phone normalizer: strip +91 or 91 if 12 digits, handle 10 digits
-    let digits = raw.replace(/\D/g, '');
-    if (digits.length === 12 && digits.startsWith('91')) {
-      digits = digits.slice(2);
-    } else if (digits.length > 10) {
-      digits = digits.slice(-10);
-    }
+    setErrorMessage('');
+    setSuccessMessage('');
 
-    if (digits.length !== 10 && !raw.includes('@')) {
-      setLoginError('Please enter a valid 10-digit Indian mobile phone number.');
+    if (!fullName.trim()) {
+      setErrorMessage(
+        'Please enter your full name.'
+      );
       return;
     }
 
-    const cleanTarget = digits.length === 10 ? digits : raw.toLowerCase();
-
-    setAuthLoading(true);
-    try {
-      // Dispatch live SMS OTP via MSG91 widget & carrier
-      const target = raw.includes('@') ? raw.toLowerCase() : formatMSG91Identifier(cleanTarget);
-      const res = await sendMSG91Otp(target);
-
-      if (res.success) {
-        if (res.reqId) setActiveReqId(res.reqId);
-        setOtpLoginStarted(true);
-        setLoginSuccess(`Verification code dispatched via SMS to +91 ${digits}`);
-      } else {
-        setLoginError(res.error || 'Failed to dispatch login SMS OTP passcode.');
-      }
-    } catch (err: any) {
-      setLoginError(err.message || 'Connection error sending SMS OTP.');
-    } finally {
-      setAuthLoading(false);
+    if (
+      !email.trim() ||
+      !email.includes('@')
+    ) {
+      setErrorMessage(
+        'Please enter a valid email address.'
+      );
+      return;
     }
-  };
 
-  // Callback when OTP verified for Direct OTP Login
-  const handleOtpLoginVerified = async (params: { code: string; accessToken?: string; reqId?: string }) => {
-    setAuthLoading(true);
-    setLoginError('');
+      if (!activeReqId || !msg91AccessToken) {
+        setErrorMessage(
+          'Verification session is missing. Please restart the OTP verification.'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+
     try {
-      let raw = otpLoginIdentifier.trim();
-      let digits = raw.replace(/\D/g, '');
-      if (digits.length === 12 && digits.startsWith('91')) {
-        digits = digits.slice(2);
-      } else if (digits.length > 10) {
-        digits = digits.slice(-10);
-      }
-      const cleanTarget = digits.length === 10 ? digits : raw.toLowerCase();
+      console.log(
+        '[Login] Completing new user profile...'
+      );
 
-      const res = await performOtpLogin({
-        identifier: cleanTarget,
-        code: params.code,
-        reqId: params.reqId,
-        accessToken: params.accessToken,
+      const regRes = await performOtpLogin({
+        identifier:
+          formattedPhone || mobileNumber,
+        accessToken: msg91AccessToken,
+
+        fullName: fullName.trim(),
+
+        email:
+          email.trim().toLowerCase(),
+
         autoCreate: true
       });
 
-if (res.success && res.token) {
-  // Save authentication token
-  localStorage.setItem('grams_auth_token', res.token);
-  localStorage.setItem('token', res.token);
+      console.log(
+        '[Login] Registration result:',
+        regRes
+      );
 
-  // IMPORTANT:
-  // Update the global authentication state in useAuth()
-  onLoginSuccess(res.token, res.user);
+      if (
+        regRes.success &&
+        regRes.user &&
+        regRes.token
+      ) {
+        finalizeSessionAndGoHome(
+          regRes.token,
+          regRes.user,
+          'Registration successful! Welcome to BV Life.'
+        );
 
-  setLoginSuccess('Authentication successful! Welcome to Grams Life.');
-
-  // Navigate to Home
-  onNavigate('home');
-} else {
-        setLoginError(res.error || 'OTP login verification failed.');
+        return;
       }
+
+      setErrorMessage(
+        regRes.error ||
+        'Registration failed. Please try again.'
+      );
+
     } catch (err: any) {
-      setLoginError(err.message || 'Error processing OTP sign in.');
+      console.error(
+        '[Login] Profile registration exception:',
+        err
+      );
+
+      setErrorMessage(
+        err?.message ||
+        'Error saving profile. Please try again.'
+      );
     } finally {
-      setAuthLoading(false);
+      setIsLoading(false);
     }
   };
 
-  // Standard Password Sign In
-  const handlePasswordLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-    setLoginSuccess('');
-    setAuthLoading(true);
+  // ============================================================
+  // FINALIZE LOGIN SESSION
+  // ============================================================
+  const finalizeSessionAndGoHome = (
+    token: string,
+    user: any,
+    toastMsg: string
+  ) => {
     try {
-      let loginId = authEmail.trim();
-      const isMaybePhone = /^[0-9+\s()-]+$/.test(loginId);
-      if (isMaybePhone) {
-        const cleanPhone = loginId.replace(/\D/g, '');
-        if (cleanPhone.length < 10 || cleanPhone.length > 12) {
-          setLoginError('Mobile number must be a valid 10-digit number.');
-          setAuthLoading(false);
-          return;
-        }
-        const formatted = validateAndFormatIndianPhone(loginId);
-        if (formatted) {
-          loginId = formatted;
-        }
-      }
+      localStorage.setItem(
+        'Bv_auth_token',
+        token
+      );
 
-      const success = await handleLogin({ email: loginId, password: authPassword });
-      if (success) {
-        setAuthEmail('');
-        setAuthPassword('');
-        if (loginId.toLowerCase() === 'doctor@gramslife.com') {
-          onNavigate('doctor-dashboard');
-        } else {
-          onNavigate('home');
-        }
-      }
-    } catch (err: any) {
-      setLoginError('An unexpected error occurred during sign in.');
-      console.error(err);
-    } finally {
-      setAuthLoading(false);
+      sessionStorage.setItem(
+        'Bv_auth_token',
+        token
+      );
+    } catch {
+      // Storage access safety
     }
+
+    if (onLoginSuccess) {
+      onLoginSuccess(token, user);
+    }
+
+    setSuccessMessage(toastMsg);
+
+    setTimeout(() => {
+      onNavigate('home');
+    }, 400);
   };
 
+  // ============================================================
+  // UI
+  // ============================================================
   return (
-    <div className="max-w-md mx-auto my-12 px-4 sm:px-6 animate-in fade-in zoom-in-95 duration-300">
-      <div className="bg-brand-cream-50 border border-brand-gold-300 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl flex flex-col space-y-6 relative overflow-hidden">
-        
-        {/* Decorative top gold line */}
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-gold-500 via-brand-cream-300 to-brand-gold-600" />
+    <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 bg-gradient-to-b from-[#FBF9F5] to-emerald-50/40 selection:bg-brand-gold-500/30">
 
-        {/* Header block with Logo and Title */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-brand-green-800 text-brand-gold-400 font-serif text-2xl font-bold border border-brand-gold-500/30 shadow-md mx-auto">
-            G
+      <div className="w-full max-w-md">
+
+        {/* TOP BRAND HEADER */}
+        <div className="text-center mb-8">
+
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/80 border border-emerald-300 text-emerald-900 text-[11px] font-bold tracking-wide uppercase shadow-xs mb-3">
+
+            <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+
+            <span>
+              BV Life Ayurvedic Health Care
+            </span>
+
           </div>
-          <div className="space-y-1">
-            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-brand-green-900 tracking-tight">
-              {isRegistering 
-                ? (otpStep ? "Verify Identity" : "Create Account") 
-                : (otpLoginStarted ? "Verify OTP Sign In" : "Welcome Back")}
-            </h2>
-            <p className="text-xs text-brand-green-800/70 max-w-xs mx-auto leading-relaxed">
-              {isRegistering 
-                ? (otpStep 
-                    ? "Enter the multi-channel verification passcode dispatched via SecureOTPWidgetM7DX." 
-                    : "Begin your digital wellness journey and access personal health profiles.")
-                : (otpLoginStarted 
-                    ? "Enter the passcode sent to authenticate your account."
-                    : "Sign in with password or instant multi-channel OTP verification.")}
-            </p>
-          </div>
+
+          <h1 className="text-2xl sm:text-3xl font-serif font-black text-brand-green-950 tracking-tight">
+
+            {step === 'phone' &&
+              'Welcome to BV Life'}
+
+            {step === 'otp' &&
+              'Verify Mobile Passcode'}
+
+            {step === 'profile' &&
+              'Complete Your Profile'}
+
+          </h1>
+
+          <p className="text-xs sm:text-sm text-slate-600 mt-1.5 font-medium">
+
+            {step === 'phone' &&
+              'Enter your 10-digit mobile number to log in or register'}
+
+            {step === 'otp' &&
+              `Enter the 4-digit code sent to +91 ${mobileNumber}`}
+
+            {step === 'profile' &&
+              'Just enter your name and email to activate your account'}
+
+          </p>
+
         </div>
 
-        {/* Primary Tab Switcher (Sign In vs Register) */}
-        {!otpStep && !otpLoginStarted && (
-          <div className="grid grid-cols-2 p-1 bg-brand-cream-100/90 rounded-2xl border border-brand-green-200/40 shadow-inner">
-            <button
-              type="button"
-              onClick={() => {
-                setIsRegistering(false);
-                setLoginError('');
-                setLoginSuccess('');
-                setOtpStep(false);
-                setOtpLoginStarted(false);
-              }}
-              className={`py-2 text-xs font-bold rounded-xl transition-all duration-300 cursor-pointer ${
-                !isRegistering
-                  ? "bg-brand-green-800 text-brand-cream-50 shadow-sm border border-brand-gold-500/20 font-serif"
-                  : "text-brand-green-700/60 hover:text-brand-green-900"
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsRegistering(true);
-                setLoginError('');
-                setLoginSuccess('');
-                setOtpStep(false);
-                setOtpLoginStarted(false);
-              }}
-              className={`py-2 text-xs font-bold rounded-xl transition-all duration-300 cursor-pointer ${
-                isRegistering
-                  ? "bg-brand-green-800 text-brand-cream-50 shadow-sm border border-brand-gold-500/20 font-serif"
-                  : "text-brand-green-700/60 hover:text-brand-green-900"
-              }`}
-            >
-              Register
-            </button>
-          </div>
-        )}
+        {/* STEP PROGRESS INDICATOR */}
+        <div className="flex items-center justify-center gap-2 mb-6">
 
-        {/* Secondary Switcher in Sign In (Password vs One-Time Passcode) */}
-        {!isRegistering && !otpLoginStarted && (
-          <div className="flex items-center justify-center gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => {
-                setLoginMode('password');
-                setLoginError('');
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-                loginMode === 'password'
-                  ? 'bg-brand-green-900 text-brand-cream-50 shadow-xs'
-                  : 'bg-white border border-brand-green-200 text-brand-green-800 hover:bg-brand-cream-100'
-              }`}
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>Password Sign In</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginMode('otp');
-                setLoginError('');
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-                loginMode === 'otp'
-                  ? 'bg-brand-green-900 text-brand-cream-50 shadow-xs'
-                  : 'bg-white border border-brand-green-200 text-brand-green-800 hover:bg-brand-cream-100'
-              }`}
-            >
-              <Smartphone className="w-3.5 h-3.5 text-brand-gold-600" />
-              <span>Sign In with OTP</span>
-            </button>
-          </div>
-        )}
+          <div
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+              step === 'phone'
+                ? 'bg-brand-green-800 text-brand-gold-300 shadow-sm'
+                : 'bg-emerald-100 text-emerald-800'
+            }`}
+          >
 
-        {/* Error Banner */}
-        {loginError && (
-          <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl text-center font-semibold animate-shake">
-            {loginError}
-          </div>
-        )}
+            <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
+              1
+            </span>
 
-        {/* Success Banner */}
-        {loginSuccess && !otpStep && !otpLoginStarted && (
-          <div className="p-3 bg-green-50 border border-green-200 text-green-800 text-xs rounded-xl text-center font-semibold">
-            {loginSuccess}
-          </div>
-        )}
+            <span>
+              Mobile
+            </span>
 
-        {/* VIEW 1: REGISTRATION FLOW */}
-        {isRegistering && (
-          otpStep ? (
-            /* STEP 2 OF REGISTER: SMS-ONLY OTP VERIFICATION WIDGET */
-            <SecureOtpWidget
-              identifier={formattedPhone || authPhone}
-              purpose="Registration"
-              widgetName="Verification"
-              smsOnly={true}
-              initialReqId={activeReqId}
-              onVerified={handleRegisterOtpVerified}
-              onCancel={() => setOtpStep(false)}
-              submitButtonText="Verify & Complete Sign Up"
-              isSubmitting={authLoading}
-            />
-          ) : (
-            /* STEP 1 OF REGISTER: FILL DETAILS */
-            <form onSubmit={handleRegisterDetailsSubmit} className="space-y-3.5 animate-in slide-in-from-bottom duration-300">
-              {/* Name field */}
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider font-bold text-brand-green-800/80 flex items-center gap-1.5 font-serif">
-                  <UserIcon className="w-3.5 h-3.5 text-brand-gold-600" />
-                  <span>Full Name</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g., Vipin Choudhary"
-                  value={authName}
-                  onChange={(e) => setAuthName(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-green-900 transition-all placeholder-brand-green-300 shadow-sm"
-                />
+          </div>
+
+          <div
+            className={`h-0.5 w-6 ${
+              step !== 'phone'
+                ? 'bg-emerald-500'
+                : 'bg-slate-200'
+            }`}
+          />
+
+          <div
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+              step === 'otp'
+                ? 'bg-brand-green-800 text-brand-gold-300 shadow-sm'
+                : step === 'profile'
+                ? 'bg-emerald-100 text-emerald-800'
+                : 'bg-slate-100 text-slate-400'
+            }`}
+          >
+
+            <span className="w-4 h-4 rounded-full bg-black/10 flex items-center justify-center text-[10px]">
+              2
+            </span>
+
+            <span>
+              OTP
+            </span>
+
+          </div>
+
+          {step === 'profile' && (
+            <>
+              <div className="h-0.5 w-6 bg-emerald-500" />
+
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-brand-green-800 text-brand-gold-300 shadow-sm">
+
+                <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
+                  3
+                </span>
+
+                <span>
+                  Profile
+                </span>
+
+              </div>
+            </>
+          )}
+
+        </div>
+
+        {/* MAIN AUTH CARD */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-xl shadow-emerald-950/5 relative overflow-hidden">
+
+          {/* ACCENT GLOW */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-100/50 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-brand-gold-100/40 rounded-full blur-3xl pointer-events-none" />
+
+          {/* ERROR */}
+          {errorMessage && (
+            <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-start gap-2.5 animate-in fade-in duration-200">
+
+              <span className="w-2 h-2 rounded-full bg-rose-600 mt-1.5 shrink-0" />
+
+              <div className="flex-1 leading-relaxed">
+                {errorMessage}
               </div>
 
-              {/* Phone field */}
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider font-bold text-brand-green-800/80 flex items-center gap-1.5 font-serif">
-                  <Phone className="w-3.5 h-3.5 text-brand-gold-600" />
-                  <span>Mobile Phone Number (10 Digits)</span>
-                </label>
-                <input
-                  type="tel"
-                  required
-                  maxLength={10}
-                  placeholder="e.g., 9425011088"
-                  value={authPhone}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                    setAuthPhone(val);
-                  }}
-                  className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-green-900 transition-all placeholder-brand-green-300 shadow-sm"
-                />
-              </div>
+            </div>
+          )}
 
-              {/* Email Address */}
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider font-bold text-brand-green-800/80 flex items-center gap-1.5 font-serif">
-                  <Mail className="w-3.5 h-3.5 text-brand-gold-600" />
-                  <span>Email Address</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g., vkchoudhary050607@gmail.com"
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-green-900 transition-all placeholder-brand-green-300 shadow-sm"
-                />
-              </div>
+          {/* SUCCESS */}
+          {successMessage && (
+            <div className="mb-5 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2.5 animate-in fade-in duration-200">
 
-              {/* Password and Confirm Password fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider font-bold text-brand-green-800/80 flex items-center gap-1.5 font-serif">
-                    <Lock className="w-3.5 h-3.5 text-brand-gold-600" />
-                    <span>Password</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      minLength={6}
-                      placeholder="6+ chars"
-                      value={authPassword}
-                      onChange={(e) => setAuthPassword(e.target.value)}
-                      className="w-full pl-4 pr-9 py-2.5 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-green-900 transition-all placeholder-brand-green-300 shadow-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-green-700/60 hover:text-brand-green-900 transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+
+              <span>
+                {successMessage}
+              </span>
+
+            </div>
+          )}
+
+          {/* ====================================================
+              STEP 1
+          ==================================================== */}
+          {step === 'phone' && (
+            <form
+              onSubmit={handleSendOtp}
+              className="space-y-5"
+            >
+
+              <div>
+
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                  Mobile Number
+                </label>
+
+                <div className="relative flex items-center rounded-2xl border-2 border-slate-200 bg-slate-50/70 focus-within:border-brand-green-800 focus-within:bg-white transition-all shadow-xs">
+
+                  <div className="pl-4 pr-3 py-3.5 flex items-center gap-2 border-r border-slate-200 text-slate-700 font-bold text-sm select-none">
+
+                    <span className="text-base leading-none">
+                      🇮🇳
+                    </span>
+
+                    <span>
+                      +91
+                    </span>
+
                   </div>
+
+                  <input
+                    type="tel"
+                    id="mobile-login-input"
+                    inputMode="numeric"
+                    autoFocus
+                    placeholder="Enter 10-digit number"
+                    value={mobileNumber}
+                    onChange={handleMobileChange}
+                    maxLength={10}
+                    disabled={isLoading}
+                    className="w-full pl-3 pr-4 py-3.5 text-base font-bold tracking-wider text-slate-900 bg-transparent focus:outline-none placeholder:text-slate-400 placeholder:font-normal"
+                  />
+
+                  <div className="pr-4 text-slate-400">
+
+                    <Phone className="w-5 h-5 text-slate-400" />
+
+                  </div>
+
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider font-bold text-brand-green-800/80 flex items-center gap-1.5 font-serif">
-                    <Lock className="w-3.5 h-3.5 text-brand-gold-600" />
-                    <span>Confirm</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      required
-                      placeholder="Retype password"
-                      value={authConfirmPassword}
-                      onChange={(e) => setAuthConfirmPassword(e.target.value)}
-                      className="w-full pl-4 pr-9 py-2.5 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-green-900 transition-all placeholder-brand-green-300 shadow-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-green-700/60 hover:text-brand-green-900 transition-colors"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
+                <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5">
+
+                  <Shield className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+
+                  <span>
+                    We will send a 4-digit verification code via SMS.
+                  </span>
+
+                </p>
+
               </div>
 
-              {/* Submit Details */}
               <button
                 type="submit"
-                disabled={authLoading}
-                className="w-full py-3.5 bg-brand-green-800 hover:bg-brand-green-900 disabled:bg-brand-green-800/45 text-brand-cream-50 font-bold rounded-2xl text-xs uppercase tracking-wider transition-all duration-200 shadow-lg hover:shadow-brand-green-900/10 flex items-center justify-center gap-1.5 cursor-pointer mt-3 border border-brand-gold-500/25 font-serif"
+                id="btn-get-otp"
+                disabled={
+                  isLoading ||
+                  mobileNumber.length !== 10
+                }
+                className="w-full py-4 rounded-2xl bg-brand-green-800 hover:bg-brand-green-900 disabled:opacity-50 text-brand-gold-300 font-bold text-sm tracking-wide shadow-lg shadow-emerald-950/15 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>{authLoading ? "Checking & Requesting OTP..." : "Continue with SMS OTP Verification"}</span>
-                <ArrowRight className="w-4 h-4 text-brand-gold-400" />
-              </button>
-            </form>
-          )
-        )}
 
-        {/* VIEW 2: LOGIN FLOW */}
-        {!isRegistering && (
-          loginMode === 'otp' ? (
-            /* DIRECT SMS OTP SIGN IN */
-            otpLoginStarted ? (
-              <div className="space-y-3">
-                <SecureOtpWidget
-                  identifier={otpLoginIdentifier}
-                  purpose="Login"
-                  widgetName="SMS Login"
-                  smsOnly={true}
-                  initialReqId={activeReqId}
-                  onVerified={handleOtpLoginVerified}
-                  onCancel={() => setOtpLoginStarted(false)}
-                  submitButtonText="Verify OTP & Sign In"
-                  isSubmitting={authLoading}
-                />
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-brand-gold-300" />
+
+                    <span>
+                      Sending Code...
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span>
+                      Get Verification Passcode
+                    </span>
+
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+
+              </button>
+
+              <div className="pt-2 text-center">
+
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  Existing users are logged in instantly. New patients complete a 1-step profile after OTP verification.
+                </p>
+
               </div>
-            ) : (
-              <form onSubmit={handleStartOtpLogin} className="space-y-4 animate-in slide-in-from-bottom duration-300">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase tracking-wider font-bold text-brand-green-800/80 flex items-center gap-1.5 font-serif">
-                    <Smartphone className="w-3.5 h-3.5 text-brand-gold-600" />
-                    <span>Mobile Phone Number (10 Digits)</span>
-                  </label>
-                  <div className="flex rounded-2xl overflow-hidden border border-brand-green-200 bg-white focus-within:ring-2 focus-within:ring-brand-gold-500/20 focus-within:border-brand-gold-500 shadow-sm transition-all">
-                    <div className="flex items-center gap-1 px-3.5 bg-brand-green-50/80 border-r border-brand-green-200 text-brand-green-950 font-bold text-xs">
-                      <span>🇮🇳</span>
-                      <span>+91</span>
-                    </div>
-                    <input
-                      type="tel"
-                      required
-                      maxLength={14}
-                      placeholder="94250 11088"
-                      value={otpLoginIdentifier}
-                      onChange={(e) => {
-                        let val = e.target.value.replace(/\D/g, '');
-                        if (val.startsWith('91') && val.length > 10) {
-                          val = val.slice(2);
-                        }
-                        setOtpLoginIdentifier(val.slice(0, 10));
-                      }}
-                      className="w-full px-3.5 py-2.5 bg-transparent focus:outline-none text-sm font-mono font-bold tracking-wider text-brand-green-950 placeholder-brand-green-300"
-                    />
-                  </div>
-                  <p className="text-[10px] text-brand-green-700/70 flex items-center gap-1">
-                    <span>⚡</span>
-                    <span>An official 4-digit verification code will be dispatched to your mobile via SMS.</span>
-                  </p>
+
+            </form>
+          )}
+
+          {/* ====================================================
+              STEP 2
+          ==================================================== */}
+          {step === 'otp' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+
+              {/* PHONE */}
+              <div className="flex items-center justify-between bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-200">
+
+                <div className="text-xs">
+
+                  <span className="text-slate-500">
+                    Sending to:{' '}
+                  </span>
+
+                  <span className="font-bold text-slate-900">
+                    +91 {mobileNumber}
+                  </span>
+
                 </div>
 
                 <button
-                  type="submit"
-                  disabled={authLoading}
-                  className="w-full py-3.5 bg-brand-green-800 hover:bg-brand-green-900 disabled:bg-brand-green-800/45 text-brand-cream-50 font-bold rounded-2xl text-xs uppercase tracking-wider transition-all duration-200 shadow-lg hover:shadow-brand-green-900/10 flex items-center justify-center gap-1.5 cursor-pointer border border-brand-gold-500/25 font-serif"
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => {
+                    setStep('phone');
+                    setErrorMessage('');
+                    setSuccessMessage('');
+                    setOtpDigits(['', '', '', '']);
+                    setActiveReqId('');
+                    setMsg91AccessToken('');
+                  }}
+                  className="text-xs font-bold text-brand-green-800 hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-50"
                 >
-                  <span>{authLoading ? "Verifying Mobile & Sending..." : "Send SMS Verification OTP"}</span>
-                  <ArrowRight className="w-4 h-4 text-brand-gold-400" />
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>
+                    Edit
+                  </span>
                 </button>
-              </form>
-            )
-          ) : (
-            /* PASSWORD LOGIN */
-            <form onSubmit={handlePasswordLoginSubmit} className="space-y-3.5 animate-in slide-in-from-bottom duration-300">
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider font-bold text-brand-green-800/80 flex items-center gap-1.5 font-serif">
-                  <Mail className="w-3.5 h-3.5 text-brand-gold-600" />
-                  <span>Email Address or Mobile Number</span>
+              </div>
+
+              {/* OTP INPUT */}
+              <div>
+
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 text-center mb-3">
+                  Enter 4-Digit Passcode
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g., vkchoudhary050607@gmail.com or 9425011088"
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-green-900 transition-all placeholder-brand-green-300 shadow-sm"
-                />
+
+                <div className="flex items-center justify-center gap-3 sm:gap-4">
+
+                  {otpDigits.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      ref={otpInputRefs[idx]}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      disabled={isLoading}
+                      onChange={(e) =>
+                        handleDigitChange(
+                          idx,
+                          e.target.value
+                        )
+                      }
+                      onKeyDown={(e) =>
+                        handleKeyDown(
+                          idx,
+                          e
+                        )
+                      }
+                      className={`w-13 h-14 sm:w-14 sm:h-15 text-center text-2xl font-black rounded-2xl border-2 transition-all focus:outline-none ${
+                        digit
+                          ? 'border-brand-green-800 bg-emerald-50/50 text-brand-green-950 ring-2 ring-brand-green-800/20'
+                          : 'border-slate-200 bg-white text-slate-900 focus:border-brand-green-800 focus:bg-white'
+                      }`}
+                    />
+                  ))}
+
+                </div>
+
               </div>
 
-              <div className="space-y-1">
-                <div className="flex justify-between items-center font-serif">
-                  <label className="text-[10px] uppercase tracking-wider font-bold text-brand-green-800/80 flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-brand-gold-600" />
-                    <span>Password</span>
-                  </label>
+              {/* RESEND */}
+              <div className="text-center">
+
+                {canResend ? (
                   <button
                     type="button"
-                    onClick={() => setIsForgotPasswordOpen(true)}
-                    className="text-[10px] font-bold text-brand-gold-700 hover:text-brand-gold-800 underline cursor-pointer"
+                    onClick={handleResend}
+                    disabled={isLoading}
+                    className="text-xs font-bold text-brand-green-800 hover:text-brand-green-950 flex items-center justify-center gap-1.5 mx-auto cursor-pointer disabled:opacity-50"
                   >
-                    Forgot Password?
+
+                    <RotateCcw className="w-3.5 h-3.5" />
+
+                    <span>
+                      Resend OTP Code via SMS
+                    </span>
+
                   </button>
-                </div>
-                <div className="relative">
+                ) : (
+                  <p className="text-xs text-slate-500 font-medium">
+
+                    Resend passcode in{' '}
+
+                    <span className="font-bold text-slate-800">
+                      {resendTimer}s
+                    </span>
+
+                  </p>
+                )}
+
+              </div>
+
+              {/* VERIFY */}
+              <button
+                type="button"
+                id="btn-verify-otp"
+                onClick={() => verifyPasscode()}
+                disabled={
+                  isLoading ||
+                  otpDigits.join('').length !== 4
+                }
+                className="w-full py-4 rounded-2xl bg-brand-green-800 hover:bg-brand-green-900 disabled:opacity-50 text-brand-gold-300 font-bold text-sm tracking-wide shadow-lg shadow-emerald-950/15 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-brand-gold-300" />
+
+                    <span>
+                      Verifying Code...
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span>
+                      Verify & Continue
+                    </span>
+
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+
+              </button>
+
+            </div>
+          )}
+
+          {/* ====================================================
+              STEP 3
+          ==================================================== */}
+          {step === 'profile' && (
+            <form
+              onSubmit={handleCompleteProfile}
+              className="space-y-4 animate-in fade-in duration-300"
+            >
+
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-900 font-semibold flex items-center gap-2">
+
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+
+                <span>
+                  +91 {mobileNumber} verified. Create your profile:
+                </span>
+
+              </div>
+
+              {/* NAME */}
+              <div>
+
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Full Name
+                </label>
+
+                <div className="relative flex items-center rounded-2xl border-2 border-slate-200 bg-slate-50/70 focus-within:border-brand-green-800 focus-within:bg-white transition-all">
+
+                  <div className="pl-3.5 text-slate-400">
+
+                    <UserIcon className="w-4 h-4" />
+
+                  </div>
+
                   <input
-                    type={showPassword ? "text" : "password"}
+                    type="text"
+                    id="profile-name-input"
+                    autoFocus
+                    placeholder="e.g. Priya Sharma"
+                    value={fullName}
+                    disabled={isLoading}
+                    onChange={(e) =>
+                      setFullName(e.target.value)
+                    }
+                    className="w-full pl-2.5 pr-4 py-3 text-sm font-semibold text-slate-900 bg-transparent focus:outline-none"
                     required
-                    placeholder="Enter your password"
-                    value={authPassword}
-                    onChange={(e) => setAuthPassword(e.target.value)}
-                    className="w-full pl-4 pr-10 py-2.5 rounded-2xl bg-white border border-brand-green-200 focus:outline-none focus:ring-2 focus:ring-brand-gold-500/20 focus:border-brand-gold-500 text-xs font-semibold text-brand-green-900 transition-all placeholder-brand-green-300 shadow-sm"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-green-700/60 hover:text-brand-green-900 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
+
                 </div>
+
               </div>
 
+              {/* EMAIL */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Email Address
+                </label>
+                <div className="relative flex items-center rounded-2xl border-2 border-slate-200 bg-slate-50/70 focus-within:border-brand-green-800 focus-within:bg-white transition-all">
+                  <div className="pl-3.5 text-slate-400">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="email"
+                    id="profile-email-input"
+                    placeholder="e.g. priya@gmail.com"
+                    value={email}
+                    disabled={isLoading}
+                    onChange={(e) =>
+                      setEmail(e.target.value)
+                    }
+                    className="w-full pl-2.5 pr-4 py-3 text-sm font-semibold text-slate-900 bg-transparent focus:outline-none"
+                    required
+                  />
+
+                </div>
+
+              </div>
+
+              {/* COMPLETE */}
               <button
                 type="submit"
-                disabled={authLoading}
-                className="w-full py-3.5 bg-brand-green-800 hover:bg-brand-green-900 disabled:bg-brand-green-800/45 text-brand-cream-50 font-bold rounded-2xl text-xs uppercase tracking-wider transition-all duration-200 shadow-lg hover:shadow-brand-green-900/10 flex items-center justify-center gap-1.5 cursor-pointer mt-2 border border-brand-gold-500/25 font-serif"
+                id="btn-complete-profile"
+                disabled={
+                  isLoading ||
+                  !fullName.trim() ||
+                  !email.trim()
+                }
+                className="w-full py-4 mt-2 rounded-2xl bg-brand-green-800 hover:bg-brand-green-900 disabled:opacity-50 text-brand-gold-300 font-bold text-sm tracking-wide shadow-lg shadow-emerald-950/15 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>{authLoading ? "Signing In..." : "Sign In"}</span>
-                <ArrowRight className="w-4 h-4 text-brand-gold-400" />
+
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-brand-gold-300" />
+
+                    <span>
+                      Activating Account...
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span>
+                      Complete Registration & Enter
+                    </span>
+
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+
               </button>
+
             </form>
-          )
-        )}
+          )}
+
+        </div>
+
+        {/* TRUST */}
+        <div className="mt-8 flex items-center justify-center gap-4 text-slate-400 text-xs font-medium">
+
+          <span className="flex items-center gap-1.5">
+
+            <Shield className="w-3.5 h-3.5 text-emerald-600" />
+
+            <span>
+              AYUSH Certified
+            </span>
+
+          </span>
+
+          <span>
+            •
+          </span>
+
+          <span>
+            256-Bit Encrypted
+          </span>
+
+          <span>
+            •
+          </span>
+
+          <span>
+            Password-Free Login
+          </span>
+
+        </div>
 
       </div>
 
-      {/* Forgot Password Modal */}
-      <ForgotPasswordModal
-        isOpen={isForgotPasswordOpen}
-        onClose={() => setIsForgotPasswordOpen(false)}
-        onSuccessLogin={(token) => {
-          localStorage.setItem('grams_auth_token', token);
-          localStorage.setItem('token', token);
-          window.location.reload();
-        }}
-      />
     </div>
   );
 };
+

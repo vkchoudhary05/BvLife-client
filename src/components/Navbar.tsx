@@ -6,10 +6,10 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Search,TruckElectric, ShoppingCart, User, Sparkles, LogOut, LayoutDashboard, 
+  Search, ShoppingCart, User, Sparkles, LogOut, LayoutDashboard, 
   Menu, X, Home, Package, BookOpen, Info, Phone, ChevronDown, 
   ChevronRight, ArrowLeft, Stethoscope, Layers, ShieldCheck, Flame, 
-  Activity, Moon, Users, HeartPulse, Sparkle, Wind, Grid, Heart
+  Activity, Moon, Users, HeartPulse, Sparkle, Wind, Grid, Heart, Crown
 } from 'lucide-react';
 import { User as UserType, CartItem, WebsiteSettings, Product } from '../types';
 import { Language, t } from '../lib/translations';
@@ -229,7 +229,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     <>
     <header id="site-header" className="sticky top-0 z-40 w-full bg-white backdrop-blur-md border-b border-brand-green-600/10">
       {/* Top Banner Alert - Running Marquee Line */}
-      <div id="top-promo-banner" className="bg-gradient-to-br from-brand-green-800 via-brand-green-700 to-emerald-700 text-white text-[11px] sm:text-xs py-1.5 sm:py-2 px-0 overflow-hidden whitespace-nowrap border-b border-brand-gold-500/20 font-bold uppercase tracking-widest">
+      <div id="top-promo-banner" className="bg-brand-green-900 text-white text-[12px] sm:text-xs py-1.5 sm:py-2 px-0 overflow-hidden whitespace-nowrap border-b border-brand-gold-500/20 font-bold uppercase tracking-widest">
         <div className="flex animate-marquee select-none">
           <div className="flex shrink-0 items-center gap-10 sm:gap-16 px-4">
             <span className="text-white">|</span>
@@ -265,7 +265,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-[1440px] mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex items-center justify-between h-14 sm:h-18 gap-2 sm:gap-4">
           
-          {/* Left Corner: Mobile Menu Button + Bv Life Logo */}
+          {/* Left Corner: Mobile Menu Button + BV Life Logo */}
           <div className="flex items-center gap-1.5 sm:gap-2 mr-auto md:mr-0 shrink-0">
             {/* Mobile Menu Button - In LEFT Corner next to logo */}
             <button 
@@ -275,11 +275,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setIsMobileMenuOpen(prev => !prev);
                 setDrawerView('main');
               }}
-              className="lg:hidden p-1.5 text-black-950 hover:text-brand-gold-600 active:scale-90 transition-transform focus:outline-none cursor-pointer flex items-center justify-center rounded-lg hover:bg-brand-green-50/70 shrink-0 touch-manipulation"
+              className="lg:hidden p-1.5 text-brand-green-950 hover:text-brand-gold-600 active:scale-90 transition-transform focus:outline-none cursor-pointer flex items-center justify-center rounded-lg hover:bg-brand-green-50/70 shrink-0 touch-manipulation"
               aria-label={isMobileMenuOpen ? "Close Navigation Menu" : "Open Navigation Menu"}
               id="mobile-menu-trigger-left"
             >
-              <Menu className="w-5 h-5 sm:w-7 sm:h-7" strokeWidth={2.2} />
+              <Menu className="w-6.5 h-6.5 sm:w-7 sm:h-7" strokeWidth={2.2} />
             </button>
 
             {/* Brand Logo */}
@@ -293,7 +293,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Primary Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-3.5 xl:gap-5 text-[15px] font-medium text-black-950">
+          <nav className="hidden lg:flex items-center gap-3.5 xl:gap-5 text-[15px] font-medium text-brand-green-950">
             <button 
               onClick={() => onNavigate('home')} 
               className="hover:text-brand-gold-600 transition-colors cursor-pointer whitespace-nowrap"
@@ -314,7 +314,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 aria-expanded={showCategoryDropdown}
               >
                 <span>{language === 'hi' ? 'श्रेणियाँ' : 'Shop by Category'}</span>
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180 text-brand-gold-600' : 'text-black-700'}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showCategoryDropdown ? 'rotate-180 text-brand-gold-600' : 'text-brand-green-700'}`} />
               </button>
 
               {/* Desktop Categories-Only Dropdown (Clean grid of DB categories) */}
@@ -323,11 +323,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="absolute left-0 top-full mt-0 w-[420px] xl:w-[480px] bg-white rounded-2xl shadow-2xl border border-brand-green-600/15 p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-200"
                 >
                   <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-brand-green-600/10">
-                    <span className="text-xs uppercase font-bold tracking-wider text-black-800 flex items-center gap-1.5">
-                      <Grid className="w-3.5 h-3.5 text-black-700" />
+                    <span className="text-xs uppercase font-bold tracking-wider text-brand-green-800 flex items-center gap-1.5">
+                      <Grid className="w-3.5 h-3.5 text-brand-green-700" />
                       <span>{language === 'hi' ? 'आयुर्वेदिक श्रेणियाँ' : 'All Categories'}</span>
                     </span>
-                    <span className="text-[11px] font-semibold text-black-600 bg-brand-green-50 px-2 py-0.5 rounded-full border border-brand-green-200/60">
+                    <span className="text-[11px] font-semibold text-brand-green-600 bg-brand-green-50 px-2 py-0.5 rounded-full border border-brand-green-200/60">
                       {availableCategories.length} {language === 'hi' ? 'श्रेणियाँ उपलब्ध' : 'Categories in Store'}
                     </span>
                   </div>
@@ -337,15 +337,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <button
                         key={cat.key}
                         onClick={() => handleSelectCategory(cat.key)}
-                        className="group flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-left text-black-950 hover:bg-brand-green-50 hover:text-brand-gold-700 transition-all border border-transparent hover:border-brand-green-200/50"
+                        className="group flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-left text-brand-green-950 hover:bg-brand-green-50 hover:text-brand-gold-700 transition-all border border-transparent hover:border-brand-green-200/50"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="p-1.5 rounded-lg bg-brand-green-50 group-hover:bg-brand-green-700 group-hover:text-white text-black-800 transition-colors shrink-0">
+                          <span className="p-1.5 rounded-lg bg-brand-green-50 group-hover:bg-brand-green-700 group-hover:text-white text-brand-green-800 transition-colors shrink-0">
                             {renderCategoryIcon(cat.iconName, "w-3.5 h-3.5")}
                           </span>
                           <span className="truncate">{language === 'hi' ? cat.hindiName : cat.name}</span>
                         </div>
-                        <ChevronRight className="w-3 h-3 text-black-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
+                        <ChevronRight className="w-3 h-3 text-brand-green-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
                       </button>
                     ))}
                   </div>
@@ -356,7 +356,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         setShowCategoryDropdown(false);
                         onNavigate('shop');
                       }}
-                      className="text-xs font-bold text-black-800 hover:text-brand-gold-600 transition-colors flex items-center gap-1"
+                      className="text-xs font-bold text-brand-green-800 hover:text-brand-gold-600 transition-colors flex items-center gap-1"
                     >
                       <span>{language === 'hi' ? 'सभी उत्पाद देखें' : 'View All Formulations'}</span>
                       <ChevronRight className="w-3.5 h-3.5" />
@@ -404,14 +404,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             
             {/* Search Icon & Dropdown Popover (Icon-only on both Desktop & Mobile) */}
             <div ref={mobileSearchRef} className="relative flex">
-                <button 
-                  onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-                  className="p-1.5 sm:p-2 text-black-950 hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 rounded-lg sm:rounded-full hover:bg-brand-green-50"
-                  aria-label="Search Formulations"
-                  title="Search"
-                >
-                  <Search className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-black-900" strokeWidth={2} />
-                </button>
+              <button 
+                onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                className="p-1.5 sm:p-2 text-brand-green-950 hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 rounded-lg sm:rounded-full hover:bg-brand-green-50"
+                aria-label="Search Formulations"
+                title="Search"
+              >
+                <Search className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-brand-green-900" strokeWidth={2} />
+              </button>
 
               {/* Search Dropdown/Popover */}
               {isMobileSearchOpen && (
@@ -425,7 +425,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="w-full pl-4 pr-10 py-2.5 rounded-full bg-brand-green-50/90 border border-brand-green-200 focus:outline-none focus:border-brand-green-700 text-xs sm:text-sm text-slate-900 placeholder-brand-green-600/50 shadow-inner"
                       autoFocus
                     />
-                    <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-black-800 hover:text-brand-gold-600 transition-colors cursor-pointer p-1" aria-label="Submit Search">
+                    <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-green-800 hover:text-brand-gold-600 transition-colors cursor-pointer p-1" aria-label="Submit Search">
                       <Search className="w-4 h-4" />
                     </button>
                   </form>
@@ -441,7 +441,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             onSearch(term);
                             setIsMobileSearchOpen(false);
                           }}
-                          className="px-2 py-0.5 rounded-full bg-brand-green-50 text-black-800 hover:bg-brand-green-100 font-medium text-[10px] transition-colors cursor-pointer whitespace-nowrap"
+                          className="px-2 py-0.5 rounded-full bg-brand-green-50 text-brand-green-800 hover:bg-brand-green-100 font-medium text-[10px] transition-colors cursor-pointer whitespace-nowrap"
                         >
                           {term}
                         </button>
@@ -455,71 +455,94 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Track Order Icon - Present on both Desktop and Mobile */}
             <button 
               onClick={() => onNavigate('track-order')}
-              className="p-1.5 sm:p-2 text-black-950 hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 rounded-lg sm:rounded-full hover:bg-brand-green-50"
+              className="p-1.5 sm:p-2 text-brand-green-950 hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 rounded-lg sm:rounded-full hover:bg-brand-green-50"
               aria-label="Track Order"
               title="Track Order"
             >
-              <TruckElectric className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-black-900" strokeWidth={2} />
+              <Package className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-brand-green-900" strokeWidth={2} />
             </button>
 
             {/* My Account Profile Icon */}
-            <div ref={profileMenuRef} className="relative shrink-0">
+            <div
+              ref={profileMenuRef}
+              className="relative shrink-0"
+              onMouseEnter={currentUser ? () => setShowProfileMenu(true) : undefined}
+              onMouseLeave={currentUser ? () => setShowProfileMenu(false) : undefined}
+            >
               <button 
                 onClick={() => {
                   if (currentUser) {
-                    onNavigate('dashboard');
+                    setShowProfileMenu(false);
+                    onNavigate('dashboard', { tab: 'account' });
                   } else {
                     onNavigate('login');
                   }
                 }}
-                // onMouseEnter={() => setShowProfileMenu(true)}
-                // className="p-1.5 sm:p-2 text-black-950 hover:text-brand-gold-600 transition-colors cursor-pointer flex items-center justify-center rounded-lg sm:rounded-full hover:bg-brand-green-50"
-                // aria-label="My Account"
-                // title={currentUser ? `Account: ${currentUser.fullName}` : "Sign In / My Account"}
+                onFocus={currentUser ? () => setShowProfileMenu(true) : undefined}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') setShowProfileMenu(false);
+                }}
+                className="p-1.5 sm:p-2 text-brand-green-950 hover:text-brand-gold-600 transition-colors cursor-pointer flex items-center justify-center rounded-lg sm:rounded-full hover:bg-brand-green-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold-500/70 focus-visible:ring-offset-2"
+                aria-label="My Account"
+                title={currentUser ? `Account: ${currentUser.fullName}` : "Sign In / My Account"}
+                aria-expanded={currentUser ? showProfileMenu : undefined}
+                aria-haspopup={currentUser ? "menu" : undefined}
               >
-                <User className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-black-900" strokeWidth={2} />
+                <User className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-brand-green-900" strokeWidth={2} />
               </button>
 
-              {showProfileMenu && (
+              {currentUser && showProfileMenu && (
                 <div 
-                  className="absolute right-0 mt-2 w-64 bg-white border border-brand-green-600/10 rounded-xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
-                  onMouseLeave={() => setShowProfileMenu(false)}
+                  className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-1rem)] overflow-hidden bg-white border border-brand-green-600/10 rounded-2xl shadow-2xl shadow-brand-green-950/15 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                  role="menu"
                 >
                   {currentUser ? (
                     <>
                       <div className="px-4 py-2 border-b border-brand-green-600/10 flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs text-black-600 font-medium">My Account</p>
-                          <p className="text-sm font-bold truncate text-black-800">{currentUser.fullName}</p>
-                          <p className="text-[10px] text-black-600/70 truncate">{currentUser.email}</p>
+                          <p className="text-xs text-brand-green-600 font-medium">My Account</p>
+                          <p className="text-sm font-bold truncate text-brand-green-800">{currentUser.fullName}</p>
+                          <p className="text-[10px] text-brand-green-600/70 truncate">{currentUser.email}</p>
                         </div>
                         <button
                           onClick={() => setShowProfileMenu(false)}
-                          className="p-1 rounded-full text-black-600 hover:bg-brand-green-100/50 hover:text-black-800 transition-colors shrink-0"
+                          className="p-1 rounded-full text-brand-green-600 hover:bg-brand-green-100/50 hover:text-brand-green-800 transition-colors shrink-0"
                           aria-label="Close Profile Menu"
                         >
                           <X className="w-4.5 h-4.5" />
                         </button>
                       </div>
                       <button 
-                        onClick={() => { setShowProfileMenu(false); onNavigate('dashboard'); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-black-800 hover:bg-brand-green-50 flex items-center gap-2 font-medium"
+                        onClick={() => { setShowProfileMenu(false); onNavigate('dashboard', { tab: 'account' }); }}
+                        className="w-full text-left px-4 py-3 text-sm text-brand-green-800 hover:bg-brand-green-50 flex items-center gap-2.5 font-semibold transition-colors"
+                        role="menuitem"
                       >
-                        <LayoutDashboard className="w-4 h-4 text-black-600" />
-                        <span>Customer Dashboard</span>
+                        <LayoutDashboard className="w-4 h-4 text-brand-green-600" />
+                        <span>Profile & Account</span>
                       </button>
 
                       <button 
                         onClick={() => { setShowProfileMenu(false); onNavigate('dashboard', { tab: 'orders' }); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-black-800 hover:bg-brand-green-50 flex items-center gap-2 font-medium"
+                        className="w-full text-left px-4 py-3 text-sm text-brand-green-800 hover:bg-brand-green-50 flex items-center gap-2.5 font-medium transition-colors"
+                        role="menuitem"
                       >
-                        <Package className="w-4 h-4 text-black-600" />
+                        <Package className="w-4 h-4 text-brand-green-600" />
                         <span>My Orders</span>
                       </button>
 
                       <button 
+                        onClick={() => { setShowProfileMenu(false); onNavigate('dashboard', { tab: 'membership' }); }}
+                        className="w-full text-left px-4 py-3 text-sm text-brand-gold-800 hover:bg-brand-gold-50/70 flex items-center gap-2.5 font-medium transition-colors"
+                        role="menuitem"
+                      >
+                        <Crown className="w-4 h-4 text-brand-gold-600" />
+                        <span>Privilege Membership Card</span>
+                      </button>
+
+                      <button 
                         onClick={() => { setShowProfileMenu(false); onNavigate('consult-doctor'); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-emerald-800 hover:bg-emerald-50 flex items-center gap-2 font-medium"
+                        className="w-full text-left px-4 py-3 text-sm text-emerald-800 hover:bg-emerald-50 flex items-center gap-2.5 font-medium transition-colors"
+                        role="menuitem"
                       >
                         <Stethoscope className="w-4 h-4 text-emerald-600" />
                         <span>Doctor Consultations</span>
@@ -527,7 +550,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                       <button 
                         onClick={() => { setShowProfileMenu(false); onLogout(); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition-colors"
+                        role="menuitem"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>Sign Out</span>
@@ -537,12 +561,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <>
                       <div className="px-4 py-2 border-b border-brand-green-600/10 flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold text-black-900">My Account</p>
-                          <p className="text-xs text-black-600/80">Sign in to manage orders, addresses & health consultations.</p>
+                          <p className="text-sm font-bold text-brand-green-900">My Account</p>
+                          <p className="text-xs text-brand-green-600/80">Sign in to manage orders, addresses & health consultations.</p>
                         </div>
                         <button
                           onClick={() => setShowProfileMenu(false)}
-                          className="p-1 rounded-full text-black-600 hover:bg-brand-green-100/50 hover:text-black-800 transition-colors shrink-0 mt-0.5"
+                          className="p-1 rounded-full text-brand-green-600 hover:bg-brand-green-100/50 hover:text-brand-green-800 transition-colors shrink-0 mt-0.5"
                           aria-label="Close Profile Menu"
                         >
                           <X className="w-4.5 h-4.5" />
@@ -550,9 +574,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </div>
                       <button 
                         onClick={() => { setShowProfileMenu(false); onNavigate('login'); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-black-900 hover:bg-brand-green-50 font-bold flex items-center gap-2"
+                        className="w-full text-left px-4 py-2.5 text-sm text-brand-green-900 hover:bg-brand-green-50 font-bold flex items-center gap-2"
                       >
-                        <User className="w-4 h-4 text-black-700" />
+                        <User className="w-4 h-4 text-brand-green-700" />
                         <span>Sign In / My Account</span>
                       </button>
                     </>
@@ -564,11 +588,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Cart - Visible on all screens */}
             <button 
               onClick={() => onNavigate('cart')}
-              className="relative p-1.5 sm:p-2 text-black-950 hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 rounded-lg sm:rounded-full hover:bg-brand-green-50"
+              className="relative p-1.5 sm:p-2 text-brand-green-950 hover:text-brand-gold-600 transition-colors cursor-pointer shrink-0 rounded-lg sm:rounded-full hover:bg-brand-green-50"
               aria-label="Shopping Cart"
               title="Shopping Cart"
             >
-              <ShoppingCart className="w-5 h-5 sm:w-5 sm:h-5" strokeWidth={2} />
+              <ShoppingCart className="w-5 h-5 sm:w-5.5 sm:h-5.5" strokeWidth={2} />
               {cartCount > 0 && (
                 <span className="absolute top-0 right-0 w-4 h-4 rounded-full bg-brand-green-700 text-white flex items-center justify-center text-[9px] font-bold">
                   {cartCount}
@@ -671,10 +695,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {/* Home */}
                 <button 
                   onClick={() => { onNavigate('home'); setIsMobileMenuOpen(false); }} 
-                  className="group text-left px-3 py-2.5 text-sm font-semibold text-black-950 hover:bg-brand-green-50 rounded-xl transition-all cursor-pointer flex items-center gap-3"
+                  className="group text-left px-3 py-2.5 text-sm font-semibold text-brand-green-950 hover:bg-brand-green-50 rounded-xl transition-all cursor-pointer flex items-center gap-3"
                 >
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-green-50 group-hover:bg-brand-green-800 group-hover:text-white transition-all shrink-0">
-                    <Home className="w-4 h-4 text-black-700 group-hover:text-white transition-colors" strokeWidth={2} />
+                    <Home className="w-4 h-4 text-brand-green-700 group-hover:text-white transition-colors" strokeWidth={2} />
                   </span>
                   <span>{t('navHome', language)}</span>
                 </button>
@@ -682,7 +706,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {/* 🔥 Shop by Category Trigger: When clicked, HIDES all main menu and shows ONLY categories */}
                 <button
                   onClick={() => setDrawerView('categories')}
-                  className="group w-full text-left px-3 py-2.5 text-sm font-bold text-black-950 hover:bg-brand-green-50 bg-brand-green-50/50 rounded-xl transition-all cursor-pointer flex items-center justify-between border border-brand-green-600/15"
+                  className="group w-full text-left px-3 py-2.5 text-sm font-bold text-brand-green-950 hover:bg-brand-green-50 bg-brand-green-50/50 rounded-xl transition-all cursor-pointer flex items-center justify-between border border-brand-green-600/15"
                 >
                   <span className="flex items-center gap-3">
                     <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-green-700 text-white shrink-0">
@@ -690,7 +714,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </span>
                     <span>{language === 'hi' ? 'श्रेणी अनुसार खरीदें' : 'Shop by Category'}</span>
                   </span>
-                  <span className="flex items-center gap-1 text-xs font-semibold text-black-700">
+                  <span className="flex items-center gap-1 text-xs font-semibold text-brand-green-700">
                     <span className="bg-brand-green-100 px-1.5 py-0.5 rounded-full text-[10px]">{availableCategories.length}</span>
                     <ChevronRight className="w-4 h-4" />
                   </span>
@@ -715,10 +739,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {/* Track Order */}
                 <button 
                   onClick={() => { onNavigate('track-order'); setIsMobileMenuOpen(false); }} 
-                  className="group text-left px-3 py-2.5 text-sm font-semibold text-black-950 hover:bg-brand-green-50 rounded-xl transition-all cursor-pointer flex items-center gap-3"
+                  className="group text-left px-3 py-2.5 text-sm font-semibold text-brand-green-950 hover:bg-brand-green-50 rounded-xl transition-all cursor-pointer flex items-center gap-3"
                 >
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-green-50 group-hover:bg-brand-green-800 group-hover:text-white transition-all shrink-0">
-                    <Package className="w-4 h-4 text-black-700 group-hover:text-white transition-colors" strokeWidth={2} />
+                    <Package className="w-4 h-4 text-brand-green-700 group-hover:text-white transition-colors" strokeWidth={2} />
                   </span>
                   <span>Track Order</span>
                 </button>
@@ -726,10 +750,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {/* Blogs */}
                 <button 
                   onClick={() => { onNavigate('static', { page: 'blog' }); setIsMobileMenuOpen(false); }} 
-                  className="group text-left px-3 py-2.5 text-sm font-semibold text-black-950 hover:bg-brand-green-50 rounded-xl transition-all cursor-pointer flex items-center gap-3"
+                  className="group text-left px-3 py-2.5 text-sm font-semibold text-brand-green-950 hover:bg-brand-green-50 rounded-xl transition-all cursor-pointer flex items-center gap-3"
                 >
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-green-50 group-hover:bg-brand-green-800 group-hover:text-white transition-all shrink-0">
-                    <BookOpen className="w-4 h-4 text-black-700 group-hover:text-white transition-colors" strokeWidth={2} />
+                    <BookOpen className="w-4 h-4 text-brand-green-700 group-hover:text-white transition-colors" strokeWidth={2} />
                   </span>
                   <span>{t('navBlogs', language)}</span>
                 </button>
@@ -737,10 +761,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {/* About */}
                 <button 
                   onClick={() => { onNavigate('static', { page: 'about' }); setIsMobileMenuOpen(false); }} 
-                  className="group text-left px-3 py-2.5 text-sm font-semibold text-black-950 hover:bg-brand-green-50 rounded-xl transition-all cursor-pointer flex items-center gap-3"
+                  className="group text-left px-3 py-2.5 text-sm font-semibold text-brand-green-950 hover:bg-brand-green-50 rounded-xl transition-all cursor-pointer flex items-center gap-3"
                 >
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-green-50 group-hover:bg-brand-green-800 group-hover:text-white transition-all shrink-0">
-                    <Info className="w-4 h-4 text-black-700 group-hover:text-white transition-colors" strokeWidth={2} />
+                    <Info className="w-4 h-4 text-brand-green-700 group-hover:text-white transition-colors" strokeWidth={2} />
                   </span>
                   <span>{t('About', language)}</span>
                 </button>
@@ -748,10 +772,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {/* Contact */}
                 <button 
                   onClick={() => { onNavigate('static', { page: 'contact' }); setIsMobileMenuOpen(false); }} 
-                  className="group text-left px-3 py-2.5 text-sm font-semibold text-black-950 hover:bg-brand-green-50 rounded-xl transition-all cursor-pointer flex items-center gap-3"
+                  className="group text-left px-3 py-2.5 text-sm font-semibold text-brand-green-950 hover:bg-brand-green-50 rounded-xl transition-all cursor-pointer flex items-center gap-3"
                 >
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-green-50 group-hover:bg-brand-green-800 group-hover:text-white transition-all shrink-0">
-                    <Phone className="w-4 h-4 text-black-700 group-hover:text-white transition-colors" strokeWidth={2} />
+                    <Phone className="w-4 h-4 text-brand-green-700 group-hover:text-white transition-colors" strokeWidth={2} />
                   </span>
                   <span>{t('navContact', language)}</span>
                 </button>
@@ -768,18 +792,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {/* Back to Main Menu Button */}
                 <button
                   onClick={() => setDrawerView('main')}
-                  className="flex items-center gap-2 px-3 py-2 mb-3 rounded-xl bg-brand-green-100/70 hover:bg-brand-green-200/80 text-black-900 font-bold text-xs transition-colors cursor-pointer"
+                  className="flex items-center gap-2 px-3 py-2 mb-3 rounded-xl bg-brand-green-100/70 hover:bg-brand-green-200/80 text-brand-green-900 font-bold text-xs transition-colors cursor-pointer"
                 >
-                  <ArrowLeft className="w-4 h-4 text-black-800" />
+                  <ArrowLeft className="w-4 h-4 text-brand-green-800" />
                   <span>{language === 'hi' ? '← मुख्य मेनू पर वापस जाएँ' : '← Back to Main Menu'}</span>
                 </button>
 
                 {/* Header info */}
                 <div className="px-2 pb-2 mb-2 border-b border-brand-green-600/10 flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-black-800">
+                  <span className="text-xs font-bold uppercase tracking-wider text-brand-green-800">
                     {language === 'hi' ? 'सभी श्रेणियाँ' : 'Select Category'}
                   </span>
-                  <span className="text-[11px] text-black-600 font-semibold">
+                  <span className="text-[11px] text-brand-green-600 font-semibold">
                     {availableCategories.length} {language === 'hi' ? 'श्रेणियाँ' : 'Categories'}
                   </span>
                 </div>
@@ -793,19 +817,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className="group w-full flex items-center justify-between p-2.5 rounded-xl text-left bg-brand-cream-50/70 hover:bg-brand-green-50 border border-brand-green-600/10 hover:border-brand-green-300 transition-all cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="p-1.5 rounded-lg bg-brand-green-100 text-black-800 group-hover:bg-brand-green-700 group-hover:text-white transition-colors shrink-0">
+                        <span className="p-1.5 rounded-lg bg-brand-green-100 text-brand-green-800 group-hover:bg-brand-green-700 group-hover:text-white transition-colors shrink-0">
                           {renderCategoryIcon(cat.iconName, "w-4 h-4")}
                         </span>
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-black-950 truncate">
+                          <p className="text-xs font-bold text-brand-green-950 truncate">
                             {language === 'hi' ? cat.hindiName : cat.name}
                           </p>
                           {language !== 'hi' && (
-                            <p className="text-[10px] text-black-600 truncate">{cat.hindiName}</p>
+                            <p className="text-[10px] text-brand-green-600 truncate">{cat.hindiName}</p>
                           )}
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-black-400 group-hover:text-black-800 group-hover:translate-x-0.5 transition-all shrink-0" />
+                      <ChevronRight className="w-4 h-4 text-brand-green-400 group-hover:text-brand-green-800 group-hover:translate-x-0.5 transition-all shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -837,17 +861,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {currentUser.fullName.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] text-black-600 font-bold uppercase tracking-wider">My Account</p>
-                  <p className="text-xs font-bold text-black-900 truncate">{currentUser.fullName}</p>
+                  <p className="text-[10px] text-brand-green-600 font-bold uppercase tracking-wider">My Account</p>
+                  <p className="text-xs font-bold text-brand-green-900 truncate">{currentUser.fullName}</p>
                 </div>
               </div>
 
               <button 
-                onClick={() => { setIsMobileMenuOpen(false); onNavigate('dashboard'); }}
-                className="w-full text-left py-2 px-3 text-xs font-bold text-black-900 hover:text-brand-gold-700 flex items-center gap-2 rounded-lg bg-white border border-brand-green-600/10 shadow-sm"
+                onClick={() => { setIsMobileMenuOpen(false); onNavigate('dashboard', { tab: 'account' }); }}
+                className="w-full text-left py-2 px-3 text-xs font-bold text-brand-green-900 hover:text-brand-gold-700 flex items-center gap-2 rounded-lg bg-white border border-brand-green-600/10 shadow-sm"
               >
-                <LayoutDashboard className="w-3.5 h-3.5 text-black-700" />
-                <span>Customer Dashboard</span>
+                <LayoutDashboard className="w-3.5 h-3.5 text-brand-green-700" />
+                <span>Profile & Account</span>
+              </button>
+
+              <button 
+                onClick={() => { setIsMobileMenuOpen(false); onNavigate('dashboard', { tab: 'membership' }); }}
+                className="w-full text-left py-2 px-3 text-xs font-bold text-brand-gold-800 hover:text-brand-gold-900 flex items-center gap-2 rounded-lg bg-brand-gold-50/60 border border-brand-gold-400/30 shadow-xs"
+              >
+                <Crown className="w-3.5 h-3.5 text-brand-gold-600" />
+                <span>Privilege Membership Card</span>
               </button>
 
               <button 

@@ -31,40 +31,24 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
     <footer id="site-footer" className="bg-white text-black border-t border-gray-200">
 
       {/* Brand Value Props Bar — green */}
-      <div className="bg-brand-green-900 py-9">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
-          <div className="flex flex-col md:flex-row items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-brand-gold-500/15 border border-brand-gold-500/40 flex items-center justify-center text-brand-gold-400 flex-shrink-0">
-              <ShieldCheck className="w-7 h-7" />
-            </div>
-            <div>
-              <h4 className="font-bold text-white text-base">Quality Assured</h4>
-              <p className="text-sm text-brand-cream-200/80 mt-1">
-                Carefully selected Ayurvedic products made with quality-focused standards.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col md:flex-row items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-brand-gold-500/15 border border-brand-gold-500/40 flex items-center justify-center text-brand-gold-400 flex-shrink-0">
-              <Sparkles className="w-7 h-7" />
-            </div>
-            <div>
-              <h4 className="font-bold text-white text-base">Ayurvedic AI Consultant</h4>
-              <p className="text-sm text-brand-cream-200/80 mt-1">Get free expert biological dosha analysis and remedy plans instantly.</p>
-            </div>
-          </div>
-          <div className="flex flex-col md:flex-row items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-brand-gold-500/15 border border-brand-gold-500/40 flex items-center justify-center text-brand-gold-400 flex-shrink-0">
-              <HeartHandshake className="w-7 h-7" />
-            </div>
-            <div>
-              <h4 className="font-bold text-white text-base">Care You Can Trust</h4>
-              <p className="text-sm text-brand-cream-200/80 mt-1">
-                Thoughtfully selected Ayurvedic products with a focus on quality and customer care.
-              </p>
-            </div>
-
-          </div>
+      <div className="bg-brand-green-900 py-8 sm:py-10">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-3 px-4 sm:grid-cols-3 sm:gap-4 sm:px-6 lg:px-8">
+          {[0].map((copy) => (
+            <React.Fragment key={copy}>
+              <div className="flex min-w-0 items-start gap-3 rounded-2xl border border-brand-cream-100/10 bg-white/5 p-4 sm:p-5">
+                <ShieldCheck className="h-7 w-7 shrink-0 text-brand-gold-400" />
+                <p className="min-w-0 text-sm leading-snug text-brand-cream-100"><strong className="mb-1 block text-white">Quality Assured</strong> <span className="text-brand-cream-200/80">Carefully selected Ayurvedic products made with quality-focused standards.</span></p>
+              </div>
+              <button onClick={onOpenConsultant} className="group flex min-w-0 items-start gap-3 rounded-2xl border border-brand-gold-500/30 bg-brand-gold-500/10 p-4 text-left transition hover:-translate-y-0.5 hover:bg-brand-gold-500/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold-400 sm:p-5">
+                <Sparkles className="h-7 w-7 shrink-0 text-brand-gold-400" />
+                <p className="min-w-0 text-sm leading-snug text-brand-cream-100"><strong className="mb-1 block text-white">Ayurvedic AI Consultant</strong> <span className="text-brand-cream-200/80">Get a free dosha analysis and a personalised wellness plan instantly.</span><span className="mt-2 flex items-center text-xs font-bold text-brand-gold-300">Start a consultation <ArrowRight className="ml-1 h-3.5 w-3.5" /></span></p>
+              </button>
+              <div className="flex min-w-0 items-start gap-3 rounded-2xl border border-brand-cream-100/10 bg-white/5 p-4 sm:p-5">
+                <HeartHandshake className="h-7 w-7 shrink-0 text-brand-gold-400" />
+                <p className="min-w-0 text-sm leading-snug text-brand-cream-100"><strong className="mb-1 block text-white">Care You Can Trust</strong> <span className="text-brand-cream-200/80">Thoughtfully selected Ayurvedic products with a focus on quality and care.</span></p>
+              </div>
+            </React.Fragment>
+          ))}
         </div>
       </div>
 
@@ -85,11 +69,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
           <div className="space-y-3 text-sm text-black font-semibold">
             <div className="flex items-center gap-2.5">
               <Phone className="w-5 h-5 text-brand-green-800 flex-shrink-0" />
-              <span>+917015999375</span>
+              <span>+917451050607</span>
             </div>
             <div className="flex items-center gap-2.5">
               <Mail className="w-5 h-5 text-brand-green-800 flex-shrink-0" />
-              <span>care@bvlife.in</span>
+              <span>care@bvlife.com</span>
             </div>
             <div className="flex items-center gap-2.5">
               <MapPin className="w-5 h-5 text-brand-green-800 flex-shrink-0" />
@@ -164,7 +148,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
       {/* Sub Footer */}
       <div className="bg-brand-green-900 border-t border-gray-200 py-4 text-sm text-white font-semibold">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
-          <p>© 2026 BV Life Inc. All Ayurvedic herbs strictly sourced from sustainable high-altitude farms.</p>
+          <p>© 2026 BV Life. BV Life is a brand of Magadh Global Multiventures LLP. All rights reserved.</p>
 
         </div>
       </div>

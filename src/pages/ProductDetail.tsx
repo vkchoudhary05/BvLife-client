@@ -211,11 +211,10 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   // Combine and deduplicate all product images, tailored to the selected variant served from backend
   const allImages = useMemo(() => {
     if (!product) return [];
-    // If selectedVariant has server-resolved allImages/images array, include them
-    if (selectedVariant?.allImages && Array.isArray(selectedVariant.allImages) && selectedVariant.allImages.length > 0) {
-      return selectedVariant.allImages;
-    }
-    return getVariantGalleryImages(selectedVariant, product);
+    // Merge server variant images with the product's saved gallery. Older
+    // variant responses may not contain images added later in the admin panel.
+    const variantImages = Array.isArray(selectedVariant?.allImages) ? selectedVariant.allImages : [];
+    return Array.from(new Set([...variantImages, ...getVariantGalleryImages(selectedVariant, product)]));
   }, [product, selectedVariant]);
 
   // Check if current user has an order for this product (Delivered vs In Transit)

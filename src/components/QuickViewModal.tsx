@@ -46,10 +46,8 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
 
   // Combine and deduplicate all images tailored to the active variant
   const allImages = useMemo(() => {
-    if (selectedVariant?.allImages && Array.isArray(selectedVariant.allImages) && selectedVariant.allImages.length > 0) {
-      return selectedVariant.allImages;
-    }
-    return getVariantGalleryImages(selectedVariant, product);
+    const variantImages = Array.isArray(selectedVariant?.allImages) ? selectedVariant.allImages : [];
+    return Array.from(new Set([...variantImages, ...getVariantGalleryImages(selectedVariant, product)]));
   }, [product, selectedVariant]);
 
   const handleSelectVariant = async (variant: ProductVariant) => {

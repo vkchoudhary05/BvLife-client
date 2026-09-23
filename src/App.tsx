@@ -10,6 +10,7 @@ import { AIConsultantModal } from './components/AIConsultantModal';
 import { QuickViewModal } from './components/QuickViewModal';
 import { AdminGatewayLogin } from './components/AdminGatewayLogin';
 import { BuyNowModal } from './components/BuyNowModal';
+import { FirstVisitLogin } from './components/FirstVisitLogin';
 
 // Pages
 import { CustomerHome } from './pages/CustomerHome';
@@ -106,10 +107,19 @@ export default function App() {
 
   // Floating modals states
   const [isConsultantOpen, setIsConsultantOpen] = useState(false);
+  const [showFirstVisitLogin, setShowFirstVisitLogin] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [buyNowProduct, setBuyNowProduct] = useState<Product | null>(null);
   const [buyNowQty, setBuyNowQty] = useState<number>(1);
   const [buyNowVariant, setBuyNowVariant] = useState<ProductVariant | undefined>(undefined);
+
+  useEffect(() => {
+    if (!currentUser && !localStorage.getItem('bvlife_mobile_gate_seen')) {
+      // Let first-time visitors explore before inviting them to sign in.
+      const timer = window.setTimeout(() => setShowFirstVisitLogin(true), 60_000);
+      return () => window.clearTimeout(timer);
+    }
+  }, [currentUser]);
 
   // Fetch contextual data lazily based on active page route
   useEffect(() => {
@@ -362,6 +372,7 @@ export default function App() {
                 handleLoginSuccess(token, true);
               }
             }}
+            onLogout={onLogoutUser}
           />
         )}
 
@@ -386,16 +397,13 @@ export default function App() {
             onLoginSuccess={handleLoginSuccess}
             onPostReview={handlePostReview}
             initialTab={pageParams?.tab}
+            onUserUpdated={(u) => setCurrentUser(u)}
           />
         )}
 
         {/* Secret Admin Panel Route */}
         {currentPage === 'admin' && (
-          (currentUser && (
-            currentUser.role === 'admin' ||
-            ['iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com', 'admin@Bvlife.com', 'care@bvlife.in', 'doctor@Bvlife.com'].includes((currentUser.email || '').toLowerCase()) ||
-            ['7451050607', '9425011088'].includes((currentUser.phone || '').replace(/\D/g, '').slice(-10))
-          )) ? (
+          (currentUser?.role === 'admin') ? (
             <Dashboard
               user={{ ...currentUser, role: 'admin' }}
               orders={orders}
@@ -452,18 +460,15 @@ export default function App() {
 
         {/* Login & Register Portal */}
         {currentPage === 'login' && (
-<Login
-  onNavigate={handleNavigate}
-  handleLogin={handleLogin}
-  handleRegister={handleRegister}
-  onLoginSuccess={(token, user) => {
-    if (user) {
-      setCurrentUser(user);
-    }
-
-    handleLoginSuccess(token, false);
-  }}
-/>
+          <Login
+            onNavigate={handleNavigate}
+            handleLogin={handleLogin}
+            handleRegister={handleRegister}
+            onLoginSuccess={(token, user) => {
+              handleLoginSuccess(token, user?.role === 'admin');
+              setCurrentUser(user);
+            }}
+          />
         )}
 
       </main>
@@ -503,6 +508,16 @@ export default function App() {
           language={language}
           currentUser={currentUser}
           authToken={authToken}
+        />
+      )}
+
+      {currentPage !== 'admin' && showFirstVisitLogin && (
+        <FirstVisitLogin
+          onClose={() => setShowFirstVisitLogin(false)}
+          onLogin={(token, user) => {
+            handleLoginSuccess(token);
+            setCurrentUser(user);
+          }}
         />
       )}
 

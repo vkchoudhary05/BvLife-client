@@ -24,7 +24,6 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
       if (products.length > 0) setProducts(products);
       if (settings) setSettings(settings);
     });
-    fetchReviews();
   }, []);
 
   // Targeted fetchers
