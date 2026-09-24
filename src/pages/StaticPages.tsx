@@ -638,7 +638,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-brand-green-900 uppercase tracking-wider">Direct Hotline</h4>
-                    <p className="text-sm font-semibold text-brand-gold-700 mt-0.5">+91 7015999375</p>
+                    <p className="text-sm font-semibold text-brand-gold-700 mt-0.5">+91 7451050607</p>
                     <p className="text-[10px] text-brand-green-600/60 mt-0.5">Toll-free. Monday – Friday, 9:00 AM – 6:00 PM IST.</p>
                   </div>
                 </div>

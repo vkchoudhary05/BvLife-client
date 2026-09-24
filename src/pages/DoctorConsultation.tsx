@@ -1052,7 +1052,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                       <MessageSquare className="w-4 h-4 text-[#25D366]" />
                       <span>WhatsApp Confirmation & Alert Dispatch</span>
                     </span>
-                    <span className="text-[10px] text-slate-300 font-mono">Doctor Helpline: +91 7015999375</span>
+                    <span className="text-[10px] text-slate-300 font-mono">Doctor Helpline: +91 7451050607</span>
                   </div>
                   <p className="text-[11px] text-slate-300">
                     Your appointment has been registered in our system. You can also send a direct confirmation copy to our WhatsApp doctor desk or receive it on your own phone:
@@ -1060,7 +1060,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     {/* Notify Clinic Desk */}
                     <a
-                      href={`https://wa.me/917015999375?text=${encodeURIComponent(
+                      href={`https://wa.me/917451050607?text=${encodeURIComponent(
                         `🌿 *NEW DOCTOR APPOINTMENT BOOKED* 🌿\n\n` +
                         `Namaste Bv Life Doctor Helpline, I have scheduled a consultation:\n\n` +
                         `• *Appointment ID:* #${bookingConfirmed.id}\n` +
@@ -1079,7 +1079,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                       className="px-3.5 py-2 rounded-lg bg-[#25D366] hover:bg-[#1EBE5D] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Send Slip to Doctor Helpline (+91 7015999375)</span>
+                      <span>Send Slip to Doctor Helpline (+91 7451050607)</span>
                     </a>
 
                     {/* Send to Patient's Own WhatsApp */}
@@ -1095,7 +1095,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                           `• *Consultation Mode:* ${bookingConfirmed.consultationMode.toUpperCase()}\n` +
                           `• *Payment Status:* ${bookingConfirmed.paymentStatus === 'Paid' ? `Paid ₹${bookingConfirmed.fee} (Verified)` : `Paid ₹${bookingConfirmed.fee}`}\n` +
                           (bookingConfirmed.meetingLink ? `• *Video Consultation Link:* ${bookingConfirmed.meetingLink}\n` : '') +
-                          `\nNeed assistance? Reply here or call doctor helpline: +91 7015999375 | care@bvlife.in.`
+                          `\nNeed assistance? Reply here or call doctor helpline: +91 7451050607 | care@bvlife.in.`
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"

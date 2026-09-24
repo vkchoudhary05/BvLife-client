@@ -592,7 +592,7 @@ For any questions or rescheduling, reply directly to this WhatsApp message or ca
 
 Warm regards,
 *BV Life Care Desk*
-📞 +91 7015999375`
+📞 +91 7451050607`
       );
     } else if (whatsAppTemplate === 'link') {
       setWhatsAppCustomText(
@@ -610,7 +610,7 @@ ${meetUrl}
 
 Warm regards,
 *BV Life Medical Team*
-📞 +91 7015999375`
+📞 +91 7451050607`
       );
     } else if (whatsAppTemplate === 'reminder') {
       setWhatsAppCustomText(
@@ -635,7 +635,7 @@ Your In-Person OPD visit with *${docName}* is confirmed.
 📋 *OPD Token:* #OPD-${app.id.slice(-4)}
 • *Date & Time:* ${app.date} at ${app.timeSlot}
 • *Clinic Address:* BV Life Ayurvedic Wellness Center, Ayur Marg, Near Metro Pillar 42, New Delhi.
-• *Contact Desk:* +91 7015999375
+• *Contact Desk:* +91 7451050607
 
 Kindly arrive 10 minutes prior to your slot and carry previous health records or prescriptions.
 
@@ -665,7 +665,7 @@ ${rx?.dietRecommendations?.join('\n• ') || '• Eat freshly prepared warm Satt
 🧘 *Lifestyle & Dinacharya:*
 ${rx?.lifestyleAdvice?.join('\n• ') || '• 15 mins daily morning Pranayama and adequate hydration.'}
 
-To order your pure herbal formulations with direct home delivery, visit bvlife.in or WhatsApp our pharmacy desk at +91 7015999375.
+To order your pure herbal formulations with direct home delivery, visit bvlife.in or WhatsApp our pharmacy desk at +91 7451050607.
 
 Wishing you swift recovery and holistic health,
 *${docName}*`
@@ -717,7 +717,7 @@ Wishing you swift recovery and holistic health,
       `• *Concern:* ${app.healthConcern || 'General Checkup'}\n\n` +
       `Logged on BV Life Doctor Dashboard.`
     );
-    window.open(`https://wa.me/917015999375?text=${text}`, '_blank');
+    window.open(`https://wa.me/917451050607?text=${text}`, '_blank');
   };
 
   // Re-trigger MSG91 Automated WhatsApp API dispatch
@@ -725,7 +725,7 @@ Wishing you swift recovery and holistic health,
     try {
       const res = await api.resendAppointmentWhatsAppAlert(app.id);
       if (res.success) {
-        setWhatsAppToastMsg(`Automated MSG91 WhatsApp alert sent to Clinic (+91 7015999375) and Patient!`);
+        setWhatsAppToastMsg(`Automated MSG91 WhatsApp alert sent to Clinic (+91 7451050607) and Patient!`);
       } else {
         setWhatsAppToastMsg(`Automated alert queued. (Check MSG91 credentials in .env)`);
       }
