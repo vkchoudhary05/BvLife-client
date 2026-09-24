@@ -114,12 +114,13 @@ export default function App() {
   const [buyNowVariant, setBuyNowVariant] = useState<ProductVariant | undefined>(undefined);
 
   useEffect(() => {
-    if (!currentUser && !localStorage.getItem('bvlife_mobile_gate_seen')) {
-      // Let first-time visitors explore before inviting them to sign in.
-      const timer = window.setTimeout(() => setShowFirstVisitLogin(true), 60_000);
+    const offerAlreadySeen = localStorage.getItem('bvlife_welcome_offer_seen') || localStorage.getItem('bvlife_mobile_gate_seen');
+    const previewOffer = new URLSearchParams(window.location.search).get('welcomeOffer') === '1';
+    if (!currentUser && !authToken && (previewOffer || !offerAlreadySeen)) {
+      const timer = window.setTimeout(() => setShowFirstVisitLogin(true), previewOffer ? 0 : 30_000);
       return () => window.clearTimeout(timer);
     }
-  }, [currentUser]);
+  }, [currentUser, authToken]);
 
   // Fetch contextual data lazily based on active page route
   useEffect(() => {
@@ -522,10 +523,21 @@ export default function App() {
 
       {currentPage !== 'admin' && showFirstVisitLogin && (
         <FirstVisitLogin
-          onClose={() => setShowFirstVisitLogin(false)}
+          onClose={() => {
+            localStorage.setItem('bvlife_welcome_offer_seen', 'true');
+            setShowFirstVisitLogin(false);
+          }}
           onLogin={(token, user) => {
             handleLoginSuccess(token);
             setCurrentUser(user);
+            setAppliedCoupon({
+              code: 'WELCOME10',
+              discountType: 'percentage',
+              value: 10,
+              minOrderValue: 0,
+              expiryDate: '2027-12-31',
+              active: true
+            });
           }}
         />
       )}

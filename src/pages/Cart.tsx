@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Trash2, ArrowRight, ShoppingBag, Sparkles, Tag } from 'lucide-react';
 import { CartItem, Coupon, WebsiteSettings } from '../types';
 
@@ -32,6 +32,12 @@ export const Cart: React.FC<CartProps> = ({
   const [couponCode, setCouponCode] = useState(appliedCoupon ? appliedCoupon.code : '');
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState(appliedCoupon ? 'Coupon applied successfully!' : '');
+
+  useEffect(() => {
+    setCouponCode(appliedCoupon?.code || '');
+    setCouponSuccess(appliedCoupon ? `Coupon ${appliedCoupon.code} applied successfully!` : '');
+    setCouponError('');
+  }, [appliedCoupon]);
 
   // Calculations
   const subtotal = useMemo(() => {
@@ -292,7 +298,7 @@ export const Cart: React.FC<CartProps> = ({
             <form onSubmit={handleApplyCoupon} className="flex gap-2 text-xs">
               <input
                 type="text"
-                placeholder="E.g., AYUR15"
+                placeholder="E.g., WELCOME10"
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                 className="flex-1 bg-brand-green-50 border border-brand-green-200 rounded-xl px-3 py-2 uppercase placeholder-brand-green-600/20 focus:outline-none focus:border-brand-green-700"
@@ -309,7 +315,7 @@ export const Cart: React.FC<CartProps> = ({
             {couponSuccess && <p className="text-[10px] font-bold text-brand-green-700">{couponSuccess}</p>}
             
             <div className="text-[10px] text-brand-green-600/60 leading-tight">
-              💡 Use coupon code <span className="font-bold text-brand-gold-700">AYUR15</span> for 15% off (Min ₹1000 order).
+              💡 Use coupon code <span className="font-bold text-brand-gold-700">WELCOME10</span> for 10% off your order.
             </div>
           </div>
 

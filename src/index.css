@@ -172,3 +172,109 @@ body {
 .animate-pulse-glow {
   animation: pulseGlow 2s ease-in-out infinite;
 }
+
+/* Full-screen welcome offer celebration */
+.welcome-confetti {
+  position: absolute;
+  top: -14px;
+  width: 7px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: welcome-confetti-fall linear infinite;
+}
+
+.welcome-confetti.round {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+@keyframes welcome-confetti-fall {
+  0% { transform: translate3d(0, -4vh, 0) rotate(0deg); opacity: 0; }
+  9% { opacity: 0.95; }
+  100% { transform: translate3d(24px, 108vh, 0) rotate(760deg); opacity: 0.1; }
+}
+
+.welcome-balloon {
+  position: absolute;
+  bottom: -22vh;
+  display: flex;
+  width: 38px;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  animation: welcome-balloon-rise ease-in-out infinite;
+}
+
+.welcome-balloon i {
+  position: relative;
+  display: block;
+  width: 34px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 52% 48% 48% 52%;
+  box-shadow: inset -5px -5px 8px rgba(20, 45, 30, 0.16), inset 5px 4px 8px rgba(255, 255, 255, 0.3), 0 4px 15px rgba(0, 0, 0, 0.12);
+}
+
+.welcome-balloon i::after {
+  position: absolute;
+  bottom: -4px;
+  left: 14px;
+  width: 7px;
+  height: 7px;
+  background: inherit;
+  content: '';
+  transform: rotate(45deg);
+}
+
+.welcome-balloon b {
+  display: block;
+  width: 1px;
+  height: 82px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+@keyframes welcome-balloon-rise {
+  0% { transform: translate3d(0, 0, 0) rotate(-7deg); opacity: 0; }
+  10% { opacity: 0.95; }
+  52% { transform: translate3d(18px, -58vh, 0) rotate(8deg); }
+  100% { transform: translate3d(-12px, -130vh, 0) rotate(-7deg); opacity: 0; }
+}
+
+.welcome-firework {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #ffe27a;
+  opacity: 0;
+  box-shadow: 0 -29px #ffe27a, 0 29px #f4a58b, 29px 0 #a1dfb9, -29px 0 #f4a58b,
+    21px 21px #ffe27a, -21px -21px #a1dfb9, 21px -21px #f4a58b, -21px 21px #ffe27a,
+    0 -43px rgba(255, 226, 122, 0.8), 0 43px rgba(161, 223, 185, 0.8),
+    43px 0 rgba(244, 165, 139, 0.8), -43px 0 rgba(255, 226, 122, 0.8);
+  animation: welcome-firework-burst 2.8s ease-out infinite;
+}
+
+.firework-left { top: 30%; left: 13%; animation-delay: 0.15s; }
+.firework-right { top: 35%; right: 13%; animation-delay: 1.05s; }
+.firework-top { top: 12%; left: 51%; animation-delay: 1.75s; }
+
+@keyframes welcome-firework-burst {
+  0%, 100% { transform: scale(0.12); opacity: 0; }
+  15% { opacity: 0.95; }
+  58% { transform: scale(1.1); opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .welcome-confetti { width: 5px; height: 9px; }
+  .welcome-confetti.round { width: 6px; height: 6px; }
+  .welcome-balloon { transform: scale(0.82); }
+  .welcome-firework { transform-origin: center; }
+  .firework-left { left: 8%; }
+  .firework-right { right: 8%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-celebration { display: none; }
+}

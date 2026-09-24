@@ -242,7 +242,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
           </div>
           <div className="grid grid-cols-2 gap-3 sm:min-w-[390px]">
             <a
-              href="https://www.amazon.in/s?k=BV+Life+Ayurvedic"
+              href="https://www.amazon.in/s?k=Bv+life"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Find BV Life products on Amazon"
@@ -255,7 +255,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
               <ArrowRight className="h-4 w-4 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#ff9900]" />
             </a>
             <a
-              href="https://www.flipkart.com/search?q=BV+Life+Ayurvedic"
+              href="https://www.flipkart.com/search?q=Bv+life"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Find BV Life products on Flipkart"
