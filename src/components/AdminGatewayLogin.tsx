@@ -73,7 +73,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
     setLoading(true);
 
     try {
-      let adminTargetPhone = '7451050607';
+      let adminTargetPhone = '7015999375';
       let adminFullName = 'Vivek Baliyan (Director)';
       let isValidAdmin = false;
 
@@ -116,7 +116,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
 
           if (isAllowedAdmin) {
             isValidAdmin = true;
-            adminTargetPhone = loginData.user.phone || (lower === 'iamvivekbaliyan07@gmail.com' ? '7451050607' : '9425011088');
+            adminTargetPhone = loginData.user.phone || (lower === 'iamvivekbaliyan07@gmail.com' ? '7015999375' : '9425011088');
             adminFullName = loginData.user.fullName || (lower === 'iamvivekbaliyan07@gmail.com' ? 'Vivek Baliyan (Director)' : 'Vipin Choudhary');
           } else {
             setError('Access Denied: Your account does not have administrator clearance.');
@@ -192,7 +192,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
       if (otpRes.success) {
         if (otpRes.reqId) setActiveReqId(otpRes.reqId);
         setAdminPhone(cleanPhone);
-        setAdminName(cleanPhone === '7451050607' ? 'Vivek Baliyan (Director)' : 'Aacharya Dhanvantari');
+        setAdminName(cleanPhone === '7015999375' ? 'Vivek Baliyan (Director)' : 'Aacharya Dhanvantari');
         setStep('otp');
         setSuccessMsg(`Verification code sent to +91 ${cleanPhone}`);
       } else {
@@ -233,10 +233,10 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
         localStorage.setItem('token', res.token);
 
         const adminUser = {
-          email: res.user?.email || email.trim() || (adminPhone === '7451050607' ? 'iamvivekbaliyan07@gmail.com' : 'vkchoudhary050607@gmail.com'),
+          email: res.user?.email || email.trim() || (adminPhone === '7015999375' ? 'iamvivekbaliyan07@gmail.com' : 'vkchoudhary050607@gmail.com'),
           fullName: res.user?.fullName || adminName || 'Director Vivek Baliyan',
           role: res.user.role,
-          phone: res.user?.phone || adminPhone || '7451050607'
+          phone: res.user?.phone || adminPhone || '7015999375'
         };
 
         sessionStorage.setItem('Bv_admin_auth', JSON.stringify(adminUser));
@@ -437,7 +437,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
                 required
                 value={mobileNumber}
                 onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                placeholder="e.g., 7451050607"
+                placeholder="e.g., 7015999375"
                 className="w-full px-4 py-3 rounded-2xl bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600 text-sm font-medium text-slate-900 placeholder-slate-400 shadow-xs transition-all"
               />
               <p className="text-xs text-slate-500">

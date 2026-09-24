@@ -14,7 +14,7 @@ import {
 import { sendMSG91Otp, formatMSG91Identifier, verifyMSG91Otp } from '../services/msg91OtpService';
 
 export interface SecureOtpWidgetProps {
-  identifier: string; // phone number (e.g. "7451050607" or "+917451050607") or email
+  identifier: string; // phone number (e.g. "7015999375" or "+917015999375") or email
   purpose?: string; // "Login", "Registration", "Checkout", etc.
   widgetName?: string; // e.g. "AyurSecurity", "BvVerify"
   smsOnly?: boolean; // strictly SMS
