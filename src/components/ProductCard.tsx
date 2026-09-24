@@ -18,6 +18,7 @@ interface ProductCardProps {
   onToggleWishlist?: (product: Product) => void;
   language?: Language;
   onBuyNow?: (product: Product, qty: number, selectedVariant?: ProductVariant) => void;
+  elevated?: boolean;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -28,7 +29,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   isWishlisted,
   onToggleWishlist,
   language = 'en',
-  onBuyNow
+  onBuyNow,
+  elevated = true
 }) => {
   const defaultVariant = product.variants && product.variants.length > 0
     ? (product.variants.find(v => v.isDefault) || product.variants[0])
@@ -50,11 +52,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <div
       id={`product-card-${product.id}`}
-      className="group relative bg-white border border-brand-green-700/10 rounded-2xl overflow-hidden
-                 shadow-[0_1px_2px_rgba(20,60,40,0.06)]
-                 hover:shadow-[0_16px_32px_-12px_rgba(20,83,45,0.25)]
-                 hover:border-brand-green-600/30 hover:-translate-y-0.5
-                 transition-all duration-300 flex flex-col justify-between h-full"
+      className={`group relative bg-white border border-brand-green-700/10 rounded-2xl overflow-hidden
+                 ${elevated ? 'shadow-[0_1px_2px_rgba(20,60,40,0.06)] hover:shadow-[0_16px_32px_-12px_rgba(20,83,45,0.25)]' : 'shadow-none'}
+                 hover:border-brand-green-600/30 ${elevated ? 'hover:-translate-y-0.5' : ''}
+                 transition-all duration-300 flex flex-col justify-between h-full`}
     >
 
       {/* Image Layer */}

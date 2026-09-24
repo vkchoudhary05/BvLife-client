@@ -1,6 +1,24 @@
 import { Product, ProductVariant, Blog, FAQ, Coupon, Review, WebsiteSettings, User, Order, Address, Doctor, DoctorAppointment, DoctorPrescription } from '../types';
 
 export const api = {
+  async getProductsPage(params: {
+    page?: number;
+    limit?: number;
+    category?: string;
+    featured?: boolean;
+    bestSeller?: boolean;
+    search?: string;
+    sort?: string;
+  }): Promise<{ products: Product[]; total: number; page: number; limit: number; totalPages: number }> {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') query.set(key, String(value));
+    });
+    const res = await fetch(`/api/products?${query.toString()}`);
+    if (!res.ok) throw new Error('Unable to load products.');
+    return res.json();
+  },
+
   async getBaselineData(): Promise<{ products: Product[]; settings: WebsiteSettings | null }> {
     try {
       // Product loading must not depend on settings being available (or vice versa).
@@ -86,12 +104,18 @@ export const api = {
     return Array.isArray(data) ? data : [];
   },
 
-  async postReview(review: Review): Promise<void> {
-    await fetch('/api/reviews', {
+  async postReview(review: Review, token?: string | null): Promise<void> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch('/api/reviews', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(review)
     });
+    if (!res.ok) {
+      const error = await res.json().catch(() => null);
+      throw new Error(error?.error || 'Unable to submit review.');
+    }
   },
 
   async getUserMe(token: string): Promise<User | null> {

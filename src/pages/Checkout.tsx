@@ -356,7 +356,10 @@ export const Checkout: React.FC<CheckoutProps> = ({
   const handleAddAddress = (e: React.FormEvent) => {
     e.preventDefault();
     setAddressError('');
-    if (!fullName || !addressLine1 || !city || !stateName || !zipCode || !phone) return;
+    if (!fullName.trim() || !addressLine1.trim() || !city.trim() || !stateName.trim() || !zipCode.trim() || !phone.trim()) {
+      setAddressError('Please complete all required shipping address fields.');
+      return;
+    }
 
     // Validate and format receiver contact phone
     const formattedPhone = validateAndFormatIndianPhone(phone);
@@ -379,6 +382,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
 
     onAddAddress(newAddr);
     setSelectedAddressId(newAddr.id);
+    setConfirmedAddress(newAddr);
     setShowAddAddrForm(false);
     
     // reset form fields
@@ -402,41 +406,16 @@ export const Checkout: React.FC<CheckoutProps> = ({
   }, [userAddresses, selectedAddressId]);
 
   const handleStartPayment = async () => {
-    let targetAddress = userAddresses.find(a => a.id === selectedAddressId) || userAddresses[0];
-
-    // If no address selected from list, check if user filled out the address form fields
-    if (!targetAddress && (addressLine1.trim() || city.trim() || zipCode.trim())) {
-      const newAddr: Address = {
-        id: `addr-${Date.now()}`,
-        fullName: fullName.trim() || currentUser?.fullName || authName || 'Valued Customer',
-        addressLine1: addressLine1.trim() || 'Main Street',
-        addressLine2,
-        city: city.trim() || 'New Delhi',
-        state: stateName.trim() || 'Delhi',
-        zipCode: zipCode.trim() || '110001',
-        phone: phone.trim() ? `+91${phone.replace('+91', '')}` : (currentUser?.phone || '+919876543210'),
-        isDefault: true
-      };
-      onAddAddress(newAddr);
-      setSelectedAddressId(newAddr.id);
-      targetAddress = newAddr;
-    }
-
-    if (!targetAddress) {
-      // Fallback address if form was completely empty
-      targetAddress = {
-        id: `addr-${Date.now()}`,
-        fullName: currentUser?.fullName || authName || 'Valued Customer',
-        addressLine1: 'Main Street',
-        addressLine2: '',
-        city: 'New Delhi',
-        state: 'Delhi',
-        zipCode: '110001',
-        phone: currentUser?.phone || '+919876543210',
-        isDefault: true
-      };
-      onAddAddress(targetAddress);
-      setSelectedAddressId(targetAddress.id);
+    const targetAddress = userAddresses.find(a => a.id === selectedAddressId) || confirmedAddress || userAddresses[0];
+    const addressComplete = Boolean(
+      targetAddress?.fullName?.trim() && targetAddress?.addressLine1?.trim() &&
+      targetAddress?.city?.trim() && targetAddress?.state?.trim() &&
+      targetAddress?.zipCode?.trim() && targetAddress?.phone?.trim()
+    );
+    if (!addressComplete || !targetAddress) {
+      setShowAddAddrForm(true);
+      setAddressError('Please add or select a complete shipping address before continuing.');
+      return;
     }
 
     setConfirmedAddress(targetAddress);
@@ -534,35 +513,17 @@ export const Checkout: React.FC<CheckoutProps> = ({
     overridePayStatus?: 'Pending' | 'Paid'
   ): Promise<Order | null> => {
     setProcessingOrder(true);
-    let selectedAddress = overrideAddr || confirmedAddress || userAddresses.find(a => a.id === selectedAddressId) || userAddresses[0];
-
-    if (!selectedAddress && (addressLine1.trim() || city.trim() || zipCode.trim())) {
-      selectedAddress = {
-        id: `addr-${Date.now()}`,
-        fullName: fullName || currentUser?.fullName || 'Valued Customer',
-        addressLine1: addressLine1 || 'Main Street',
-        addressLine2,
-        city: city || 'New Delhi',
-        state: stateName || 'Delhi',
-        zipCode: zipCode || '110001',
-        phone: phone ? `+91${phone.replace('+91', '')}` : (currentUser?.phone || '+919876543210'),
-        isDefault: true
-      };
-      onAddAddress(selectedAddress);
-    }
-
-    if (!selectedAddress) {
-      selectedAddress = {
-        id: `addr-${Date.now()}`,
-        fullName: currentUser?.fullName || fullName || 'Valued Customer',
-        addressLine1: 'Main Street',
-        addressLine2: '',
-        city: 'New Delhi',
-        state: 'Delhi',
-        zipCode: '110001',
-        phone: currentUser?.phone || phone || '+919876543210',
-        isDefault: true
-      };
+    const selectedAddress = overrideAddr || confirmedAddress || userAddresses.find(a => a.id === selectedAddressId) || userAddresses[0];
+    const addressComplete = Boolean(
+      selectedAddress?.fullName?.trim() && selectedAddress?.addressLine1?.trim() &&
+      selectedAddress?.city?.trim() && selectedAddress?.state?.trim() &&
+      selectedAddress?.zipCode?.trim() && selectedAddress?.phone?.trim()
+    );
+    if (!addressComplete || !selectedAddress) {
+      setProcessingOrder(false);
+      setShowAddAddrForm(true);
+      setAddressError('Please add or select a complete shipping address before continuing.');
+      return null;
     }
 
     const itemsPayload = cart.length > 0 ? cart.map(item => {

@@ -4,9 +4,11 @@
  */
 
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, ArrowRight, ShieldCheck, HeartHandshake, Sparkles } from 'lucide-react';
+import { Mail, Phone, MapPin, ArrowRight, ShieldCheck, HeartHandshake, Sparkles, Building2 } from 'lucide-react';
 import { WebsiteSettings } from '../types';
 import { Logo } from './Logo';
+import amazonLogo from '@/assets/amazon-logo.svg';
+import flipkartLogo from '@/assets/flipkart-logo.svg';
 
 interface FooterProps {
   onNavigate: (page: string, params?: any) => void;
@@ -18,6 +20,7 @@ interface FooterProps {
 export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, settings }) => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [benefitsPaused, setBenefitsPaused] = useState(false);
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,28 +30,112 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
     }
   };
 
+  const valueProps = [
+    {
+      title: 'Quality Assured',
+      description: 'Carefully selected Ayurvedic products made with quality-focused standards.',
+      icon: ShieldCheck
+    },
+    {
+      title: 'Ayurvedic AI Consultant',
+      description: 'Get a free dosha analysis and a personalised wellness plan instantly.',
+      icon: Sparkles,
+      action: true
+    },
+    {
+      title: 'Care You Can Trust',
+      description: 'Thoughtfully selected Ayurvedic products with a focus on quality and care.',
+      icon: HeartHandshake
+    },
+    {
+      title: 'Magadh Global',
+      description: 'BV Life is a brand of Magadh Global Multiventures LLP.',
+      icon: Building2,
+      href: 'https://magadhglobal.com/',
+      linkText: 'Visit magadhglobal.com'
+    }
+  ];
+
+  const renderValueProp = (item: typeof valueProps[number], copyIndex: number) => {
+    const Icon = item.icon;
+    const duplicate = copyIndex >= valueProps.length;
+    const className = `group flex w-[min(86vw,360px)] shrink-0 items-start gap-4 rounded-2xl border p-4 text-left shadow-[0_12px_28px_-18px_rgba(20,51,38,0.7)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:w-[380px] sm:p-5 lg:w-[400px] ${
+      item.action
+        ? 'border-brand-gold-300/50 bg-gradient-to-br from-[#173b2b] via-[#405136] to-[#846a37]'
+        : item.title === 'Quality Assured'
+          ? 'border-brand-green-700/25 bg-gradient-to-br from-[#123b29] via-[#1e5036] to-[#34734e]'
+          : 'border-brand-green-700/25 bg-gradient-to-br from-[#15362d] via-[#235343] to-[#28604f]'
+    }`;
+    const content = (
+      <>
+        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border ${item.action ? 'border-brand-gold-300/30 bg-brand-gold-400/15' : 'border-brand-gold-300/20 bg-white/5'}`}>
+          <Icon className="h-5 w-5 text-brand-gold-300" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <strong className="block font-serif text-base leading-tight text-white sm:text-lg">{item.title}</strong>
+          <span className="mt-1.5 block text-xs leading-relaxed text-brand-cream-200/75 sm:text-sm">{item.description}</span>
+          {item.action && <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-gold-400 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-brand-green-950 sm:text-[11px]">Start a consultation <ArrowRight className="h-3.5 w-3.5" /></span>}
+          {item.linkText && <span className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-brand-gold-300">{item.linkText} <ArrowRight className="h-3.5 w-3.5" /></span>}
+        </span>
+      </>
+    );
+
+    if (item.action) {
+      return (
+        <button
+          key={`${item.title}-${copyIndex}`}
+          onClick={onOpenConsultant}
+          tabIndex={duplicate ? -1 : undefined}
+          aria-hidden={duplicate || undefined}
+          className={`${className} cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold-400`}
+        >
+          {content}
+        </button>
+      );
+    }
+
+    if (item.href) {
+      return (
+        <a
+          key={`${item.title}-${copyIndex}`}
+          href={item.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-hidden={duplicate || undefined}
+          tabIndex={duplicate ? -1 : undefined}
+          className={`${className} focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold-400`}
+        >
+          {content}
+        </a>
+      );
+    }
+
+    return <div key={`${item.title}-${copyIndex}`} aria-hidden={duplicate || undefined} className={className}>{content}</div>;
+  };
+
   return (
     <footer id="site-footer" className="bg-white text-black border-t border-gray-200">
 
       {/* Brand Value Props Bar — green */}
-      <div className="bg-brand-green-900 py-8 sm:py-10">
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-3 px-4 sm:grid-cols-3 sm:gap-4 sm:px-6 lg:px-8">
-          {[0].map((copy) => (
-            <React.Fragment key={copy}>
-              <div className="flex min-w-0 items-start gap-3 rounded-2xl border border-brand-cream-100/10 bg-white/5 p-4 sm:p-5">
-                <ShieldCheck className="h-7 w-7 shrink-0 text-brand-gold-400" />
-                <p className="min-w-0 text-sm leading-snug text-brand-cream-100"><strong className="mb-1 block text-white">Quality Assured</strong> <span className="text-brand-cream-200/80">Carefully selected Ayurvedic products made with quality-focused standards.</span></p>
-              </div>
-              <button onClick={onOpenConsultant} className="group flex min-w-0 items-start gap-3 rounded-2xl border border-brand-gold-500/30 bg-brand-gold-500/10 p-4 text-left transition hover:-translate-y-0.5 hover:bg-brand-gold-500/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold-400 sm:p-5">
-                <Sparkles className="h-7 w-7 shrink-0 text-brand-gold-400" />
-                <p className="min-w-0 text-sm leading-snug text-brand-cream-100"><strong className="mb-1 block text-white">Ayurvedic AI Consultant</strong> <span className="text-brand-cream-200/80">Get a free dosha analysis and a personalised wellness plan instantly.</span><span className="mt-2 flex items-center text-xs font-bold text-brand-gold-300">Start a consultation <ArrowRight className="ml-1 h-3.5 w-3.5" /></span></p>
-              </button>
-              <div className="flex min-w-0 items-start gap-3 rounded-2xl border border-brand-cream-100/10 bg-white/5 p-4 sm:p-5">
-                <HeartHandshake className="h-7 w-7 shrink-0 text-brand-gold-400" />
-                <p className="min-w-0 text-sm leading-snug text-brand-cream-100"><strong className="mb-1 block text-white">Care You Can Trust</strong> <span className="text-brand-cream-200/80">Thoughtfully selected Ayurvedic products with a focus on quality and care.</span></p>
-              </div>
-            </React.Fragment>
-          ))}
+      <div className="py-7 sm:py-9">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-4 text-left sm:mb-5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand-gold-700">The BV Life promise</p>
+            <h3 className="mt-1 font-serif text-xl font-semibold text-brand-green-900 sm:text-2xl">Thoughtful care, every day</h3>
+          </div>
+          <div
+            className="-mx-4 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 touch-pan-x scrollbar-none sm:mx-0 sm:px-0"
+            role="region"
+            aria-label="BV Life quality and care benefits"
+            onMouseEnter={() => setBenefitsPaused(true)}
+            onMouseLeave={() => setBenefitsPaused(false)}
+            onTouchStart={() => setBenefitsPaused(true)}
+            onTouchEnd={() => setBenefitsPaused(false)}
+          >
+            <div className={`animate-marquee w-max gap-3 [animation-duration:26s] [&:focus-within]:[animation-play-state:paused] ${benefitsPaused ? '[animation-play-state:paused]' : ''}`}>
+              {[...valueProps, ...valueProps].map((item, index) => renderValueProp(item, index))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -66,6 +153,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
           <p className="text-sm text-black font-medium leading-relaxed">
             BV Life brings deep wild herbs, hand crafted oils, and clinically researched Ayurvedic formulas from tradition to your doorstep pure herbs for better health.
           </p>
+          <p className="-mt-2 text-xs font-semibold leading-relaxed text-brand-green-800">BV Life is a brand of Magadh Global Multiventures LLP.</p>
           <div className="space-y-3 text-sm text-black font-semibold">
             <div className="flex items-center gap-2.5">
               <Phone className="w-5 h-5 text-brand-green-800 flex-shrink-0" />
@@ -143,6 +231,44 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
           )}
         </div>
 
+      </div>
+
+      {/* Marketplace links */}
+      <div className="border-y border-brand-green-900/10 bg-[#f8f7f2]">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-7 lg:px-8">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-gold-700">Also available on</p>
+            <h3 className="mt-1 font-serif text-lg font-bold text-brand-green-900 sm:text-xl">Shop BV Life on your favourite marketplace</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:min-w-[390px]">
+            <a
+              href="https://www.amazon.in/s?k=BV+Life+Ayurvedic"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Find BV Life products on Amazon"
+              className="group flex min-w-0 items-center gap-2.5 rounded-2xl border border-gray-200 bg-white px-3 py-3 transition-all hover:-translate-y-0.5 hover:border-[#ff9900]/50 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff9900] sm:px-4"
+            >
+              <img src={amazonLogo} alt="Amazon" className="h-8 w-[70px] shrink-0 object-contain" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[10px] font-semibold text-gray-500 sm:text-xs">Shop BV Life</span>
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#ff9900]" />
+            </a>
+            <a
+              href="https://www.flipkart.com/search?q=BV+Life+Ayurvedic"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Find BV Life products on Flipkart"
+              className="group flex min-w-0 items-center gap-2.5 rounded-2xl border border-gray-200 bg-white px-3 py-3 transition-all hover:-translate-y-0.5 hover:border-[#2874f0]/40 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2874f0] sm:px-4"
+            >
+              <img src={flipkartLogo} alt="Flipkart" className="h-8 w-[72px] shrink-0 object-contain" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[10px] font-semibold text-gray-500 sm:text-xs">Shop BV Life</span>
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#2874f0]" />
+            </a>
+          </div>
+        </div>
       </div>
 
       {/* Sub Footer */}

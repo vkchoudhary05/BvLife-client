@@ -61,7 +61,9 @@ export const WriteReviewModal: React.FC<WriteReviewModalProps> = ({
         onClose();
       }, 1600);
     } catch (err) {
-      setErrorMsg(language === 'hi' ? 'समीक्षा सबमिट करने में विफल रहा। पुनः प्रयास करें।' : 'Failed to submit review. Please try again.');
+      setErrorMsg(language === 'hi'
+        ? 'समीक्षा सबमिट करने में विफल रहा। पुनः प्रयास करें।'
+        : (err instanceof Error ? err.message : 'Failed to submit review. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }

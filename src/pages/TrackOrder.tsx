@@ -28,11 +28,15 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
   authToken,
   onPostReview
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [initialTrackingReference] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tracking') || params.get('trackingNumber') || params.get('ref') || '';
+  });
+  const [searchQuery, setSearchQuery] = useState(initialTrackingReference);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [reviewModalProduct, setReviewModalProduct] = useState<{ id: string; name: string; image?: string; defaultRating?: number } | null>(null);
+  const [reviewModalProduct, setReviewModalProduct] = useState<{ id: string; name: string; image?: string; defaultRating?: number; userEmail?: string; userName?: string } | null>(null);
   const [reviewedProductIds, setReviewedProductIds] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem('Bv_reviewed_products');
@@ -167,6 +171,12 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (initialTrackingReference) {
+      void handleTrack(initialTrackingReference);
+    }
+  }, [initialTrackingReference]);
 
   // Manual refresh handler on demand
   const handleRefreshStatus = async () => {
@@ -611,7 +621,9 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
                                   id: item.productId,
                                   name: item.productName,
                                   image: item.mainImage,
-                                  defaultRating: 5
+                                  defaultRating: 5,
+                                  userEmail: order.userEmail,
+                                  userName: order.userName || order.shippingAddress?.fullName
                                 });
                               }}
                               className="inline-flex items-center gap-1.5 bg-brand-gold-500 hover:bg-brand-gold-600 text-brand-green-950 font-bold px-3 py-1.5 rounded-lg text-xs transition-all shadow-2xs cursor-pointer active:scale-95"
@@ -910,7 +922,7 @@ export const TrackOrder: React.FC<TrackOrderProps> = ({
             setReviewModalProduct(null);
           }}
           language={language}
-          currentUser={currentUser}
+          currentUser={currentUser || { email: reviewModalProduct.userEmail, fullName: reviewModalProduct.userName }}
         />
       )}
 

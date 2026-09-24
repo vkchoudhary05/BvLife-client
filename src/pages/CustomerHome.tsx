@@ -52,6 +52,19 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
   const [showAcharyaBadge, setShowAcharyaBadge] = useState(false);
   const SLIDE_DURATION = 6000;
   useEffect(() => {
+    heroSlides.forEach(({ desktopImage, mobileImage }) => {
+      const desktop = new Image();
+      desktop.src = desktopImage;
+      const mobile = new Image();
+      mobile.src = mobileImage;
+    });
+  }, []);
+
+  const selectSlide = (index: number) => {
+    if (index === currentSlide) return;
+    setCurrentSlide(index);
+  };
+  useEffect(() => {
     if (isPaused) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
@@ -84,8 +97,6 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
     { name: "Sexual Wellness", count: 4, img: "https://i.pinimg.com/1200x/8e/a6/fa/8ea6fa554150c605a6a2339c65abe97b.jpg" }
   ];
 
-  const slide = heroSlides[currentSlide];
-
   return (
     <div id="customar-home-page" className=" space-y-9">
 
@@ -96,36 +107,47 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
         onMouseLeave={() => setIsPaused(false)}
         className="relative w-full overflow-hidden bg-[#f8f6ea]"
       >
-        <picture className="block w-full">
-          <source media="(max-width: 767px)" srcSet={slide.mobileImage} />
-          <img
-            key={slide.id}
-            src={slide.desktopImage}
-            alt="BV Life Ayurvedic wellness banner"
-            className="block h-auto w-full object-contain object-center"
-          />
-        </picture>
-        <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-4" aria-label="Banner slides">
+        <div className="relative w-full overflow-hidden bg-[#f8f6ea] max-sm:w-[109vw] max-sm:max-w-none max-sm:left-1/2 max-sm:-translate-x-1/2">
+          {heroSlides.map((item, index) => (
+            <picture key={item.id} className={index === 0 ? 'relative block w-full' : 'absolute inset-0 block w-full'}>
+              <source media="(max-width: 767px)" srcSet={item.mobileImage} />
+              <img
+                src={item.desktopImage}
+                alt="BV Life Ayurvedic wellness banner"
+                fetchPriority={index === 0 ? 'high' : 'auto'}
+                className={`block h-auto w-full object-contain object-center transition-opacity duration-700 ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
+                aria-hidden={index !== currentSlide}
+              />
+            </picture>
+          ))}
+        </div>
+        <div className="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 sm:bottom-4" role="group" aria-label="Banner slides">
           {heroSlides.map((item, index) => (
             <button
               key={item.id}
               type="button"
               aria-label={`Show banner ${index + 1}`}
               aria-current={currentSlide === index ? 'true' : undefined}
-              onClick={() => setCurrentSlide(index)}
-              className={`h-2.5 rounded-full border border-white/80 shadow transition-all ${currentSlide === index ? 'w-7 bg-brand-green-800' : 'w-2.5 bg-white/75 hover:bg-white'}`}
-            />
+              onClick={() => selectSlide(index)}
+              className="grid h-7 w-7 cursor-pointer place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <span className={`rounded-full bg-white shadow-sm transition-all duration-200 ${currentSlide === index ? 'h-2.5 w-2.5 opacity-100' : 'h-2 w-2 opacity-70'}`} />
+            </button>
           ))}
         </div>
       </section>
 
       {/* 2. CATEGORY BROWSE SECTION */}
-      <section id="category-browse" className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-8">
-        {/* <div className="w-full text-left mb-5">
-          <h3 className="text-xl sm:text-xl font-semibold text-black">
-            Shop by Concern
-          </h3>
-        </div> */}
+      <section id="category-browse" className="!-mt-2 max-w-7xl mx-auto px-2 sm:!mt-3 lg:px-8">
+        <div className="mb-3 px-1 text-left sm:mb-4">
+          <div className="mb-1.5 flex items-center gap-2">
+            <span className="h-px w-6 bg-brand-gold-500" />
+            <span className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-brand-gold-700 sm:text-[10px]">Rooted in Ayurveda</span>
+            <span className="h-px w-6 bg-brand-gold-500" />
+          </div>
+          <h3 className="font-serif text-xl font-bold leading-tight text-brand-green-900 sm:text-2xl">Wellness, your way.</h3>
+          <p className="mt-1 text-xs leading-relaxed text-gray-600 sm:text-sm">Explore natural care for what matters to you.</p>
+        </div>
 
         <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-5">
           {categories.map((cat, i) => (
@@ -379,23 +401,24 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
 
       {/* 3. FEATURED PRODUCTS GRID */}
       <section id="featured-products" className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 mt-12">
-        <div className="rounded-3xl border border-brand-green-700/10 bg-gradient-to-br from-white via-white to-brand-green-50/70 p-4 shadow-sm sm:p-6 lg:p-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6 border-b border-brand-green-600/10 pb-4">
+        <div>
+        <div className="mb-4 flex items-center justify-between gap-2 border-b border-brand-green-600/10 pb-3 sm:mb-6 sm:items-end sm:gap-4 sm:pb-4">
           <div>
-            <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">{t('section_feat_subtitle', language)}</span>
-            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-brand-green-900">{t('section_feat_title', language)}</h3>
-            <p className="mt-1 text-xs sm:text-sm text-brand-green-800/60">A handpicked selection from our full range.</p>
+            <span className="text-[10px] uppercase tracking-[0.16em] text-brand-gold-600 font-bold sm:text-xs sm:tracking-widest">{t('section_feat_subtitle', language)}</span>
+            <h3 className="font-serif text-xl leading-tight sm:text-3xl font-bold text-brand-green-900">{t('section_feat_title', language)}</h3>
+            <p className="mt-1 max-w-[28rem] text-[11px] leading-relaxed sm:text-sm text-brand-green-800/60">A handpicked selection from our full range.</p>
           </div>
           <button 
             onClick={() => onNavigate('shop', { featured: true })} 
-            className="text-sm text-brand-green-800 hover:text-brand-gold-600 font-bold flex items-center gap-1 cursor-pointer"
+            aria-label={t('section_feat_browse', language)}
+            className="shrink-0 rounded-full border border-brand-green-700/15 bg-white px-2.5 py-2 text-[10px] text-brand-green-800 hover:text-brand-gold-600 font-bold flex items-center gap-1 cursor-pointer sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-sm"
           >
-            <span>{t('section_feat_browse', language)}</span>
-            <ArrowRight className="w-4 h-4" />
+            <span className="hidden sm:inline">{t('section_feat_browse', language)}</span>
+            <ArrowRight className="h-4 w-4" />
           </button>
         </div>
 
-        {featuredProds.length > 0 ? <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+        {featuredProds.length > 0 ? <div aria-label="Recommended products" className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {featuredProds.map(p => {
             const isWishlisted = wishlist.includes(p.id);
             return (
@@ -418,37 +441,40 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
 
       {/* 3.5. TOP SELLING PRODUCTS SECTION */}
       <section id="top-selling-products" className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="rounded-3xl border border-brand-green-700/10 bg-gradient-to-br from-[#f7f6ed] via-white to-brand-gold-500/10 p-4 shadow-sm sm:p-6 lg:p-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6 border-b border-brand-green-600/10 pb-4">
+        <div className="rounded-2xl bg-[#f5f3e9] p-3 sm:rounded-3xl sm:p-6 lg:p-8">
+        <div className="mb-4 flex items-center justify-between gap-2 border-b border-brand-green-600/10 pb-3 sm:mb-6 sm:items-end sm:gap-4 sm:pb-4">
           <div>
-            <span className="text-xs uppercase tracking-widest text-brand-gold-600 font-bold">{t('section_top_subtitle', language)}</span>
-            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-brand-green-900">{t('section_top_title', language)}</h3>
-            <p className="mt-1 text-xs sm:text-sm text-brand-green-800/60">Popular choices from our complete collection.</p>
+            <span className="text-[10px] uppercase tracking-[0.16em] text-brand-gold-600 font-bold sm:text-xs sm:tracking-widest">{t('section_top_subtitle', language)}</span>
+            <h3 className="font-serif text-xl leading-tight sm:text-3xl font-bold text-brand-green-900">{t('section_top_title', language)}</h3>
+            <p className="mt-1 max-w-[28rem] text-[11px] leading-relaxed sm:text-sm text-brand-green-800/60">Popular choices from our complete collection.</p>
           </div>
           <button 
             onClick={() => onNavigate('shop', { bestSeller: true })} 
-            className="text-sm text-brand-green-800 hover:text-brand-gold-600 font-bold flex items-center gap-1 cursor-pointer"
+            aria-label={t('section_top_browse', language)}
+            className="shrink-0 rounded-full border border-brand-green-700/15 bg-white px-2.5 py-2 text-[10px] text-brand-green-800 hover:text-brand-gold-600 font-bold flex items-center gap-1 cursor-pointer sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-sm"
           >
-            <span>{t('section_top_browse', language)}</span>
-            <ArrowRight className="w-4 h-4" />
+            <span className="hidden sm:inline">{t('section_top_browse', language)}</span>
+            <ArrowRight className="h-4 w-4" />
           </button>
         </div>
 
-        {bestSellers.length > 0 ? <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+        {bestSellers.length > 0 ? <div aria-label="Best selling products" className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-3 scrollbar-none sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 xl:grid-cols-5">
           {bestSellers.map(p => {
             const isWishlisted = wishlist.includes(p.id);
             return (
-              <ProductCard
-                key={p.id}
-                product={p}
-                onNavigate={onNavigate}
-                onAddToCart={onAddToCart}
-                onQuickView={onQuickView}
-                isWishlisted={isWishlisted}
-                onToggleWishlist={onToggleWishlist}
-                language={language}
-                onBuyNow={onBuyNow}
-              />
+              <div key={p.id} className="w-[62%] max-w-[220px] shrink-0 snap-start sm:w-auto sm:max-w-none">
+                <ProductCard
+                  product={p}
+                  onNavigate={onNavigate}
+                  onAddToCart={onAddToCart}
+                  onQuickView={onQuickView}
+                  isWishlisted={isWishlisted}
+                  onToggleWishlist={onToggleWishlist}
+                  language={language}
+                  onBuyNow={onBuyNow}
+                  elevated={false}
+                />
+              </div>
             );
           })}
         </div> : <p className="rounded-2xl bg-white/80 px-4 py-8 text-center text-sm text-brand-green-800/70">No best sellers are available right now.</p>}

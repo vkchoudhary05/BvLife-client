@@ -128,9 +128,10 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
       isApproved: true
     };
 
+    await api.postReview(newReview, authToken || localStorage.getItem('Bv_auth_token'));
     setReviews(prev => [newReview, ...prev.filter(r => r.id !== newReview.id)]);
-    
-    // Save to local storage for persistence across reloads
+
+    // Save the successful server response locally for the delivered-order review UI.
     try {
       const stored = localStorage.getItem('Bv_local_reviews');
       const list: Review[] = stored ? JSON.parse(stored) : [];
@@ -144,11 +145,6 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
       }
     } catch {}
 
-    try {
-      await api.postReview(newReview);
-    } catch (err) {
-      console.warn('Review synced locally (backend fallback):', err);
-    }
   };
 
   // Address Handler
@@ -171,46 +167,6 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
   ): Promise<Order | null> => {
     const activeEmail = orderData.userEmail || currentUser?.email || 'guest@Bvlife.com';
     const activeName = orderData.userName || currentUser?.fullName || 'Guest Customer';
-
-    const fallbackOrder: Order = {
-      id: `GL-${Date.now().toString().slice(-6)}-${Math.floor(10 + Math.random() * 90)}`,
-      userEmail: activeEmail.toLowerCase(),
-      userName: activeName,
-      shippingAddress: orderData.shippingAddress || {
-        id: `addr-${Date.now()}`,
-        fullName: activeName,
-        addressLine1: 'Main Street',
-        city: 'New Delhi',
-        state: 'Delhi',
-        zipCode: '110001',
-        phone: currentUser?.phone || '+919876543210',
-        isDefault: true
-      },
-      items: orderData.items && orderData.items.length > 0 ? orderData.items : cartItems.map(i => ({
-        productId: i.product.id,
-        productName: i.product.name,
-        price: i.product.price,
-        quantity: i.quantity,
-        mainImage: i.product.mainImage
-      })),
-      subtotal: orderData.subtotal || 0,
-      tax: orderData.tax || 0,
-      shippingCharge: orderData.shippingCharge || 0,
-      discount: orderData.discount || 0,
-      finalTotal: orderData.finalTotal || 0,
-      status: 'Pending',
-      paymentMethod: orderData.paymentMethod || 'UPI',
-      paymentStatus: orderData.paymentMethod === 'Cash on Delivery' ? 'Pending' : 'Paid',
-      orderDate: new Date().toISOString(),
-      trackingNumber: `GLTRK${Math.floor(100000 + Math.random() * 900000)}`,
-      trackingUpdates: [
-        {
-          status: 'Pending',
-          date: new Date().toISOString(),
-          comment: 'Your order has been received and is waiting for dispatch.'
-        }
-      ]
-    };
 
     try {
       const orderPayload = {
@@ -239,23 +195,10 @@ export function useAppData(authToken: string | null, currentUser: User | null, s
         return savedOrder;
       }
     } catch (err) {
-      console.error('Order API error, using fallback:', err);
+      console.error('Order API error:', err);
     }
 
-    // Fallback save
-    try {
-      const stored = localStorage.getItem('Bv_recent_orders');
-      const existingIds: string[] = stored ? JSON.parse(stored) : [];
-      if (!existingIds.includes(fallbackOrder.id)) {
-        localStorage.setItem('Bv_recent_orders', JSON.stringify([fallbackOrder.id, ...existingIds]));
-      }
-      localStorage.setItem('Bv_last_completed_order', JSON.stringify(fallbackOrder));
-      localStorage.setItem('Bv_last_placed_order', JSON.stringify(fallbackOrder));
-    } catch (e) {}
-
-    setOrders(prev => [fallbackOrder, ...prev.filter(o => o.id !== fallbackOrder.id)]);
-    onSuccessClearCart();
-    return fallbackOrder;
+    return null;
   };
 
   // Admin CRUDs

@@ -111,13 +111,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
         const loginData = await loginRes.json();
 
         if (loginRes.ok && loginData.user) {
-          const lower = email.trim().toLowerCase();
-          const isAllowedAdmin = loginData.user.role === 'admin' || [
-            'iamvivekbaliyan07@gmail.com',
-            'vkchoudhary050607@gmail.com',
-            'admin@Bvlife.com',
-            'care@bvlife.in'
-          ].includes(lower);
+          const isAllowedAdmin = loginData.user.role === 'admin';
 
           if (isAllowedAdmin) {
             isValidAdmin = true;
@@ -228,6 +222,10 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
       });
 
       if (res.success && res.token) {
+        if (res.user?.role !== 'admin') {
+          setError('Access denied: this account does not have administrator clearance.');
+          return;
+        }
         // Save auth tokens
         sessionStorage.setItem('Bv_auth_token', res.token);
         localStorage.setItem('Bv_auth_token', res.token);
@@ -236,7 +234,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
         const adminUser = {
           email: res.user?.email || email.trim() || (adminPhone === '7451050607' ? 'iamvivekbaliyan07@gmail.com' : 'vkchoudhary050607@gmail.com'),
           fullName: res.user?.fullName || adminName || 'Director Vivek Baliyan',
-          role: 'admin',
+          role: res.user.role,
           phone: res.user?.phone || adminPhone || '7451050607'
         };
 
