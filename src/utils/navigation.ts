@@ -37,7 +37,7 @@ export const getPageFromUrl = () => {
   }
 
   // Check if it is a static page or blogs / faqs
-  const staticPages = ['blog', 'blogs', 'blog-post', 'faqs', 'about', 'contact', 'terms', 'privacy', 'expert-panel', 'impact', 'shipping-policy'];
+  const staticPages = ['blog', 'blogs', 'blog-post', 'faqs', 'about', 'contact', 'terms', 'privacy', 'expert-panel', 'impact', 'shipping-policy', 'shipping', 'refund'];
   if (staticPages.includes(cleanPath)) {
     return { page: 'static', params: { page: cleanPath, id: searchParams.get('id') || '' } };
   }

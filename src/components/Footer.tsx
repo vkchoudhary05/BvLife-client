@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, ArrowRight, ShieldCheck, HeartHandshake, Sparkles, Building2 } from 'lucide-react';
+import { Mail, Phone, MapPin, ArrowRight, ShieldCheck, HeartHandshake, Sparkles, Building2, Facebook, Instagram, Twitter, MessageCircle } from 'lucide-react';
 import { WebsiteSettings } from '../types';
 import { Logo } from './Logo';
 import amazonLogo from '@/assets/amazon-logo.svg';
@@ -21,6 +21,26 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [benefitsPaused, setBenefitsPaused] = useState(false);
+
+  const socialLinks = [
+    { name: 'Facebook', href: 'https://www.facebook.com/profile.php?id=61590349837422', icon: Facebook },
+    { name: 'Instagram', href: 'https://www.instagram.com/bvlife.in/', icon: Instagram },
+    { name: 'X / Twitter', href: settings?.twitter, icon: Twitter },
+    {
+      name: 'WhatsApp',
+      href: settings?.contactPhone
+        ? `https://wa.me/${settings.contactPhone.replace(/\D/g, '').replace(/^0+/, '').replace(/^(?!91)(\d{10})$/, '91$1')}`
+        : undefined,
+      icon: MessageCircle
+    }
+  ].flatMap((link) => {
+    const rawHref = link.href?.trim();
+    if (!rawHref) return [];
+    const href = link.name === 'WhatsApp' || /^https?:\/\//i.test(rawHref)
+      ? rawHref
+      : `https://${rawHref}`;
+    return [{ ...link, href }];
+  });
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,6 +188,26 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
               <span className="leading-tight">Bv Life,Jhundpur Industrial Area, Sonipat, Haryana - 131021</span>
             </div>
           </div>
+          {socialLinks.length > 0 && (
+            <div className="space-y-2.5">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-green-900">Follow BV Life</p>
+              <div className="flex flex-wrap items-center gap-2">
+                {socialLinks.map(({ name, href, icon: Icon }) => (
+                  <a
+                    key={name}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Follow BV Life on ${name}`}
+                    title={name}
+                    className="grid h-10 w-10 place-items-center rounded-full border border-brand-green-900/15 bg-brand-green-50 text-brand-green-900 transition-colors hover:border-brand-green-800 hover:bg-brand-green-900 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-green-700 focus-visible:ring-offset-2"
+                  >
+                    <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Customer Care */}

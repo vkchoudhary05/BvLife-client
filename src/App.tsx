@@ -33,6 +33,107 @@ import { getPageFromUrl } from './utils/navigation';
 import { useAuth } from './hooks/useAuth';
 import { useCartAndWishlist } from './hooks/useCartAndWishlist';
 import { useAppData } from './hooks/useAppData';
+import { updateSeoMetadata } from './utils/seo';
+
+const SITE_URL = 'https://bvlife.in';
+const stripMarkup = (value = '') => value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+function buildSeo(currentPage: string, params: any, products: Product[], blogs: any[]) {
+  const path = window.location.pathname + window.location.search;
+  const privatePages = ['admin', 'cart', 'checkout', 'dashboard', 'login', 'track-order', 'wishlist', 'order-confirmation', 'order-success', 'doctor-dashboard', 'doctor'];
+
+  if (currentPage === 'product') {
+    const product = products.find(item => item.id === params?.id);
+    if (!product) return {
+      title: 'Ayurvedic Product | BV Life',
+      description: 'Explore natural Ayurvedic products and herbal wellness essentials from BV Life.',
+      path,
+      noIndex: true
+    };
+    const description = stripMarkup(product.description) || `Shop ${product.name}, a ${product.category} Ayurvedic product from BV Life.`;
+    const productUrl = `${SITE_URL}/product?id=${encodeURIComponent(product.id)}`;
+    const structuredData = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      description,
+      sku: product.sku,
+      image: product.mainImage,
+      brand: { '@type': 'Brand', name: product.brand || 'BV Life' },
+      category: product.category,
+      offers: {
+        '@type': 'Offer',
+        url: productUrl,
+        priceCurrency: 'INR',
+        price: product.currentPrice || product.price,
+        availability: (product.currentStock ?? product.stock) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
+      }
+    };
+    return { title: `${product.name} | Ayurvedic ${product.category} | BV Life`, description, path, image: product.currentImage || product.mainImage, structuredData };
+  }
+
+  if (currentPage === 'shop') {
+    const category = params?.category?.trim();
+    const title = category ? `${category} Ayurvedic Products Online | BV Life` : 'Shop Ayurvedic Products Online in India | BV Life';
+    const listed = products.filter(item => !category || item.category.toLowerCase() === category.toLowerCase()).slice(0, 20);
+    return {
+      title,
+      description: category ? `Shop natural Ayurvedic ${category.toLowerCase()} products from BV Life. Explore herbal wellness essentials with convenient delivery across India.` : 'Shop authentic Ayurvedic herbs, supplements, hair care and skin care products online from BV Life. Discover natural wellness essentials delivered across India.',
+      path,
+      noIndex: Boolean(params?.search),
+      structuredData: listed.length ? {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        itemListElement: listed.map((product, index) => ({ '@type': 'ListItem', position: index + 1, name: product.name, url: `${SITE_URL}/product?id=${encodeURIComponent(product.id)}` }))
+      } : undefined
+    };
+  }
+
+  if (currentPage === 'static') {
+    const page = params?.page || 'faq';
+    const blog = page === 'blog-post' ? blogs.find(item => item.id === params?.id) : undefined;
+    if (blog) return {
+      title: `${blog.title} | BV Life Ayurvedic Wellness Blog`,
+      description: stripMarkup(blog.summary || blog.content).slice(0, 160),
+      path,
+      image: blog.image,
+      structuredData: { '@context': 'https://schema.org', '@type': 'Article', headline: blog.title, description: stripMarkup(blog.summary || blog.content).slice(0, 300), image: blog.image, datePublished: blog.date, author: { '@type': 'Organization', name: blog.author || 'BV Life' }, publisher: { '@type': 'Organization', name: 'BV Life', logo: { '@type': 'ImageObject', url: `${SITE_URL}/Bvlogo.png` } }, mainEntityOfPage: `${SITE_URL}${path}` }
+    };
+    const pages: Record<string, [string, string]> = {
+      about: ['About BV Life | Ayurvedic Wellness', 'Learn about BV Life and our approach to Ayurvedic wellness and natural herbal products.'],
+      contact: ['Contact BV Life | Customer Support', 'Contact BV Life for help with Ayurvedic products, orders, delivery, and wellness services.'],
+      faq: ['Ayurvedic Product FAQs | BV Life', 'Find answers to common questions about BV Life products, orders, shipping, and Ayurvedic wellness.'],
+      faqs: ['Ayurvedic Product FAQs | BV Life', 'Find answers to common questions about BV Life products, orders, shipping, and Ayurvedic wellness.'],
+      blog: ['Ayurvedic Wellness Blog | BV Life', 'Read practical articles about Ayurveda, herbs, natural self-care, and everyday wellness.'],
+      blogs: ['Ayurvedic Wellness Blog | BV Life', 'Read practical articles about Ayurveda, herbs, natural self-care, and everyday wellness.'],
+      terms: ['Terms and Conditions | BV Life', 'Review the terms and conditions for using the BV Life website and services.'],
+      privacy: ['Privacy Policy | BV Life', 'Learn how BV Life handles personal information when you use our website and services.'],
+      shipping: ['Shipping Policy | BV Life', 'Review BV Life order processing, delivery areas, and shipping timelines.'],
+      refund: ['Returns and Refunds | BV Life', 'Review BV Life cancellation, return, and refund information.']
+    };
+    const [title, description] = pages[page] || ['BV Life | Ayurvedic Wellness', 'Explore Ayurvedic products and natural wellness from BV Life.'];
+    return { title, description, path };
+  }
+
+  if (currentPage === 'home') {
+    return {
+      title: 'Ayurvedic Products Online India | Natural Wellness | BV Life',
+      description: 'Discover Ayurvedic herbal supplements, natural skin care, hair care, and wellness products at BV Life. Shop online with delivery across India.',
+      path: '/',
+      structuredData: [
+        { '@context': 'https://schema.org', '@type': 'Organization', name: 'BV Life', url: SITE_URL, logo: `${SITE_URL}/Bvlogo.png`, email: 'care@bvlife.in' },
+        { '@context': 'https://schema.org', '@type': 'WebSite', name: 'BV Life', url: SITE_URL, potentialAction: { '@type': 'SearchAction', target: `${SITE_URL}/shop?search={search_term_string}`, 'query-input': 'required name=search_term_string' } }
+      ]
+    };
+  }
+
+  const generic: Record<string, [string, string]> = {
+    'consult-doctor': ['Ayurvedic Doctor Consultation Online | BV Life', 'Book an online Ayurvedic consultation with BV Life and explore personalized wellness guidance.'],
+    consultation: ['Ayurvedic Doctor Consultation Online | BV Life', 'Book an online Ayurvedic consultation with BV Life and explore personalized wellness guidance.']
+  };
+  const [title, description] = generic[currentPage] || ['BV Life | Ayurvedic Products and Natural Wellness', 'Explore Ayurvedic products and natural wellness from BV Life.'];
+  return { title, description, path, noIndex: privatePages.includes(currentPage) };
+}
 
 export default function App() {
   // Navigation states
@@ -192,6 +293,10 @@ export default function App() {
       window.removeEventListener('popstate', handlePopState);
     };
   }, []);
+
+  useEffect(() => {
+    updateSeoMetadata(buildSeo(currentPage, pageParams, products, blogs));
+  }, [currentPage, pageParams, products, blogs]);
 
   // Wrap logout to also trigger navigate home
   const onLogoutUser = () => {
@@ -459,7 +564,7 @@ export default function App() {
         {/* Static Policies, FAQS, Blogs Chronicles */}
         {currentPage === 'static' && (
           <StaticPages
-            pageType={pageParams?.page || 'faq'}
+            pageType={pageParams?.page === 'shipping-policy' ? 'shipping' : pageParams?.page || 'faq'}
             params={pageParams}
             blogs={blogs}
             faqs={faqs}

@@ -1,5 +1,15 @@
 import { Product, ProductVariant, Blog, FAQ, Coupon, Review, WebsiteSettings, User, Order, Address, Doctor, DoctorAppointment, DoctorPrescription } from '../types';
 
+const authHeaders = (token?: string, json = false): Record<string, string> => {
+  const resolvedToken = token || (typeof window !== 'undefined'
+    ? localStorage.getItem('Bv_auth_token') || sessionStorage.getItem('Bv_auth_token') || ''
+    : '');
+  return {
+    ...(json ? { 'Content-Type': 'application/json' } : {}),
+    ...(resolvedToken ? { Authorization: `Bearer ${resolvedToken}` } : {})
+  };
+};
+
 export const api = {
   async getProductsPage(params: {
     page?: number;
@@ -140,7 +150,7 @@ export const api = {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: (credentials.email || '').trim(), password: (credentials.password || '').trim() || 'password123' })
+      body: JSON.stringify({ email: (credentials.email || '').trim(), password: (credentials.password || '').trim() })
     });
     if (!res.ok) {
       const errData = await res.json().catch(() => null);
@@ -318,8 +328,7 @@ export const api = {
 
   async getDoctorAppointmentsByUser(email: string, token?: string): Promise<DoctorAppointment[]> {
     try {
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const headers = authHeaders(token);
       const res = await fetch(`/api/doctor-appointments/user/${encodeURIComponent(email)}`, { headers });
       if (!res.ok) return [];
       const data = await res.json();
@@ -332,8 +341,7 @@ export const api = {
 
   async bookDoctorAppointment(appointment: Partial<DoctorAppointment>, token?: string): Promise<{ success: boolean; appointment?: DoctorAppointment; error?: string }> {
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const headers = authHeaders(token, true);
       const res = await fetch('/api/doctor-appointments', {
         method: 'POST',
         headers,
@@ -352,8 +360,7 @@ export const api = {
 
   async cancelDoctorAppointment(id: string, token?: string): Promise<boolean> {
     try {
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const headers = authHeaders(token);
       const res = await fetch(`/api/doctor-appointments/${id}`, {
         method: 'DELETE',
         headers
@@ -367,8 +374,7 @@ export const api = {
 
   async getAllDoctorAppointments(token?: string): Promise<DoctorAppointment[]> {
     try {
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const headers = authHeaders(token);
       const res = await fetch('/api/doctor-appointments', { headers });
       if (!res.ok) return [];
       const data = await res.json();
@@ -381,8 +387,7 @@ export const api = {
 
   async updateDoctorAppointmentStatus(id: string, status: string, token?: string): Promise<{ success: boolean; appointment?: DoctorAppointment }> {
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const headers = authHeaders(token, true);
       const res = await fetch(`/api/doctor-appointments/${id}/status`, {
         method: 'PUT',
         headers,
@@ -398,8 +403,7 @@ export const api = {
 
   async saveDoctorPrescription(id: string, prescription: Partial<DoctorPrescription>, token?: string): Promise<{ success: boolean; appointment?: DoctorAppointment }> {
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const headers = authHeaders(token, true);
       const res = await fetch(`/api/doctor-appointments/${id}/prescription`, {
         method: 'PUT',
         headers,
@@ -415,8 +419,7 @@ export const api = {
 
   async updateAppointmentMeetingLink(id: string, meetingLink: string, meetingPlatform?: 'jitsi' | 'google-meet', token?: string): Promise<{ success: boolean; appointment?: DoctorAppointment }> {
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const headers = authHeaders(token, true);
       const res = await fetch(`/api/doctor-appointments/${id}/meeting-link`, {
         method: 'PUT',
         headers,
@@ -432,8 +435,7 @@ export const api = {
 
   async updateAppointmentRoomStatus(id: string, roomStatus: 'waiting' | 'in-progress' | 'completed', token?: string): Promise<{ success: boolean; appointment?: DoctorAppointment }> {
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const headers = authHeaders(token, true);
       const res = await fetch(`/api/doctor-appointments/${id}/room-status`, {
         method: 'PUT',
         headers,
@@ -449,8 +451,7 @@ export const api = {
 
   async updateAppointmentWhatsAppStatus(id: string, sent: boolean = true, token?: string): Promise<{ success: boolean; appointment?: DoctorAppointment }> {
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const headers = authHeaders(token, true);
       const res = await fetch(`/api/doctor-appointments/${id}/whatsapp-confirmation`, {
         method: 'PUT',
         headers,
@@ -466,8 +467,7 @@ export const api = {
 
   async resendAppointmentWhatsAppAlert(id: string, token?: string): Promise<{ success: boolean; message?: string }> {
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const headers = authHeaders(token, true);
       const res = await fetch(`/api/doctor-appointments/${id}/resend-whatsapp`, {
         method: 'POST',
         headers

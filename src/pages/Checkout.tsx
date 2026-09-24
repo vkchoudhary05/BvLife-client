@@ -189,7 +189,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: authEmail, password: authPassword || 'password123' })
+          body: JSON.stringify({ email: authEmail, password: authPassword })
         });
 
         if (res.ok) {
@@ -304,7 +304,11 @@ export const Checkout: React.FC<CheckoutProps> = ({
 
   // Calculations
   const isPrivilegeMember = useMemo(() => {
-    return currentUser?.membership?.status === 'active';
+    const membership = currentUser?.membership;
+    if (membership?.status !== 'active') return false;
+    if (membership.expiryDate?.toLowerCase() === 'lifetime') return true;
+    const expiryTime = Date.parse(membership.expiryDate || '');
+    return Number.isFinite(expiryTime) && expiryTime > Date.now();
   }, [currentUser]);
 
   const subtotal = useMemo(() => {
@@ -671,7 +675,8 @@ export const Checkout: React.FC<CheckoutProps> = ({
 
           </div>
 
-          {/* Post-Purchase Verified Reviews Section */}
+          {/* Reviews unlock only after delivery is confirmed. */}
+          {orderCompleted.status === 'Delivered' ? (
           <div className="border border-emerald-200 bg-emerald-50/40 rounded-2xl p-5 text-left space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -741,6 +746,11 @@ export const Checkout: React.FC<CheckoutProps> = ({
               })}
             </div>
           </div>
+          ) : (
+            <div className="rounded-2xl border border-brand-green-200 bg-brand-green-50/70 p-4 text-center text-xs leading-relaxed text-brand-green-800">
+              You can review your products after your order has been delivered. Track your order for delivery updates.
+            </div>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-3">
             <button 
@@ -894,7 +904,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
                         email: authEmail, 
                         phone: formattedPhone || authPhone, 
                         role: 'customer',
-                        password: authPassword || 'password123',
+                        password: authPassword,
                         accessToken,
                         code: params.code,
                         reqId: params.reqId || activeReqId

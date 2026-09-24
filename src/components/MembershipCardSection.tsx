@@ -126,8 +126,11 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const activeMembership = user.membership && user.membership.status === 'active' 
-    ? user.membership 
+  const membershipExpiry = user.membership?.expiryDate;
+  const membershipIsValid = membershipExpiry?.toLowerCase() === 'lifetime' ||
+    Boolean(membershipExpiry && Number.isFinite(Date.parse(membershipExpiry)) && Date.parse(membershipExpiry) > Date.now());
+  const activeMembership = user.membership?.status === 'active' && membershipIsValid
+    ? user.membership
     : null;
 
   const handleCopyCardNumber = () => {
@@ -232,10 +235,11 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
   };
 
   return (
-    <div id="membership-privilege-section" className="space-y-6">
+    <div id="membership-privilege-section" className="space-y-6 rounded-[2rem] border border-brand-green-800/10 bg-[radial-gradient(ellipse_at_top_left,rgba(217,163,80,0.16),transparent_42%),linear-gradient(135deg,#f3f8f1_0%,#fffdf6_48%,#eef5ef_100%)] p-3 sm:p-5">
       
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-brand-green-950 via-brand-green-900 to-brand-green-950 p-6 rounded-3xl text-brand-cream-50 border border-brand-gold-500/30 shadow-md">
+      <div className="relative isolate flex flex-col sm:flex-row sm:items-center justify-between gap-4 overflow-hidden bg-gradient-to-br from-[#102f22] via-[#1d5639] to-[#34714e] p-5 sm:p-6 rounded-3xl text-brand-cream-50 border border-brand-gold-500/50 shadow-lg">
+        <div className="pointer-events-none absolute -right-12 -top-20 -z-10 h-56 w-56 rounded-full bg-brand-gold-400/20 blur-3xl" />
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-brand-gold-400" />
@@ -246,7 +250,7 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
           <h3 className="font-serif text-xl sm:text-2xl font-bold text-white">
             Ayurvedic Wellness Membership Pass
           </h3>
-          <p className="text-xs text-brand-cream-200/80 max-w-xl leading-relaxed">
+          <p className="text-xs text-brand-cream-100/90 max-w-xl leading-relaxed">
             Get an exclusive 30% privilege discount on all authentic formulations, priority consultations, and free door delivery.
           </p>
         </div>
@@ -257,7 +261,7 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
             setSuccessMessage(null);
             setShowUpgradeModal(true);
           }}
-          className="px-5 py-3 bg-gradient-to-r from-brand-gold-500 to-brand-gold-400 hover:from-brand-gold-400 hover:to-brand-gold-300 text-brand-green-950 font-bold text-xs rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 font-sans tracking-wide"
+          className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-[#f4d77d] to-brand-gold-400 hover:from-[#ffe7a3] hover:to-brand-gold-300 text-brand-green-950 font-bold text-xs rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 font-sans tracking-wide"
         >
           <Sparkles className="w-4 h-4" />
           <span>{activeMembership ? 'Upgrade / Extend Tier' : 'Activate Membership'}</span>
@@ -269,7 +273,7 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
         
         {/* PHYSICAL CARD MOCKUP (Left 7 Cols) */}
         <div className="lg:col-span-7 flex justify-center">
-          <div className="relative w-full max-w-[490px] aspect-[1.586/1] rounded-3xl p-6 sm:p-7 shadow-2xl overflow-hidden border border-brand-gold-400/40 bg-gradient-to-br from-[#0c2417] via-[#123622] to-[#081810] text-white flex flex-col justify-between select-none">
+          <div className="relative -mx-2 w-[calc(100%+1rem)] max-w-[506px] min-h-[224px] sm:mx-0 sm:w-full sm:max-w-[490px] sm:min-h-0 sm:aspect-[1.586/1] rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-2xl overflow-hidden border border-brand-gold-400/50 bg-gradient-to-br from-[#0c2417] via-[#16432d] to-[#081810] text-white flex flex-col justify-between select-none">
             
             {/* Hologram & Sheen overlays */}
             <div className="absolute -top-24 -left-24 w-60 h-60 bg-brand-gold-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -311,7 +315,7 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
             </div>
 
             {/* Smart EMV Chip & Contactless Visual */}
-            <div className="relative z-10 flex items-center gap-4 my-2">
+            <div className="relative z-10 flex items-center gap-4 my-1.5 sm:my-2">
               <div className="w-11 h-8 rounded-md bg-gradient-to-tr from-amber-400 via-yellow-200 to-amber-500 border border-yellow-600/50 shadow-inner flex items-center justify-center">
                 <div className="w-7 h-5 border border-amber-800/40 rounded-xs grid grid-cols-2 gap-0.5 opacity-60">
                   <div className="border-r border-b border-amber-800/40" />
@@ -326,7 +330,7 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
             {/* Card Number Grouping */}
             <div className="relative z-10 my-1">
               <div className="flex items-center justify-between">
-                <p className="font-mono text-base sm:text-xl font-bold tracking-[0.2em] text-brand-cream-50 drop-shadow-md">
+                <p className="min-w-0 break-words font-mono text-[13px] sm:text-xl font-bold tracking-[0.06em] sm:tracking-[0.2em] text-brand-cream-50 drop-shadow-md">
                   {activeMembership?.cardNumber || 'BVL-MEM-••••-••••'}
                 </p>
                 {activeMembership && (
@@ -342,8 +346,8 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
             </div>
 
             {/* Card Footer: Holder Name, Email, Validity */}
-            <div className="relative z-10 pt-2 border-t border-brand-gold-500/20 flex items-end justify-between gap-4">
-              <div className="space-y-0.5 max-w-[65%]">
+            <div className="relative z-10 pt-2 border-t border-brand-gold-500/20 flex items-end justify-between gap-2 sm:gap-4">
+              <div className="min-w-0 space-y-0.5 max-w-[65%]">
                 <p className="text-[8px] sm:text-[9px] uppercase tracking-wider text-brand-cream-200/60 font-semibold">
                   Card Holder
                 </p>
@@ -359,7 +363,7 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
                 <p className="text-[8px] sm:text-[9px] uppercase tracking-wider text-brand-cream-200/60 font-semibold">
                   Valid Thru
                 </p>
-                <p className="font-mono font-bold text-xs sm:text-sm text-brand-gold-300">
+                <p className="max-w-[126px] font-mono font-bold text-[11px] sm:text-sm text-brand-gold-300 sm:max-w-none">
                   {activeMembership ? formatExpiry(activeMembership.expiryDate) : 'Activate Now'}
                 </p>
               </div>
@@ -369,7 +373,7 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
         </div>
 
         {/* BENEFITS BREAKDOWN (Right 5 Cols) */}
-        <div className="lg:col-span-5 space-y-4 bg-brand-cream-50/60 border border-brand-green-600/10 p-5 sm:p-6 rounded-3xl">
+        <div className="lg:col-span-5 space-y-4 bg-gradient-to-br from-white/90 via-[#fbfaf4] to-[#edf5ed] border border-brand-green-600/15 p-5 sm:p-6 rounded-3xl shadow-sm">
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-brand-gold-600" />
             <h4 className="font-serif text-base font-bold text-brand-green-950">

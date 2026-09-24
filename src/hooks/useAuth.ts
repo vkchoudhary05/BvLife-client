@@ -54,7 +54,7 @@ export function useAuth() {
         email: data.email,
         phone: data.phone,
         role: data.role,
-        password: data.password || 'password123',
+        password: data.password,
         accessToken: data.accessToken,
         code: data.code,
         reqId: data.reqId

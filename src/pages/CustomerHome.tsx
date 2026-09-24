@@ -9,8 +9,8 @@ import { Product, Blog, ProductVariant } from '../types';
 import { ProductCard } from '../components/ProductCard';
 import { Language, t } from '../lib/translations';
 
-import productImage from "@/assets/NewBv1.jpeg";
-import productImage2 from "@/assets/NewBv2.jpeg";
+import productImage from "@/assets/NewBv2.jpeg";
+import productImage2 from "@/assets/NewBv3.jpeg";
 import productImage3 from "@/assets/NewBv4.jpeg";
 import productImageMobile from "@/assets/bannarMobile1.png";
 import drImage from "../../assets/Dr6.png"
@@ -107,7 +107,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
         onMouseLeave={() => setIsPaused(false)}
         className="relative w-full overflow-hidden bg-[#f8f6ea]"
       >
-        <div className="relative w-full overflow-hidden bg-[#f8f6ea] max-sm:w-[109vw] max-sm:max-w-none max-sm:left-1/2 max-sm:-translate-x-1/2">
+        <div className="relative w-full overflow-hidden bg-[#f8f6ea] max-sm:w-[111vw] max-sm:max-w-none max-sm:left-1/2 max-sm:-translate-x-1/2">
           {heroSlides.map((item, index) => (
             <picture key={item.id} className={index === 0 ? 'relative block w-full' : 'absolute inset-0 block w-full'}>
               <source media="(max-width: 767px)" srcSet={item.mobileImage} />
@@ -121,6 +121,12 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
             </picture>
           ))}
         </div>
+        <button
+          type="button"
+          aria-label="Browse all products"
+          onClick={() => onNavigate('shop')}
+          className="absolute inset-0 z-10 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-gold-400"
+        />
         <div className="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 sm:bottom-4" role="group" aria-label="Banner slides">
           {heroSlides.map((item, index) => (
             <button

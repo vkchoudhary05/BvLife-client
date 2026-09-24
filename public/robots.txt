@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /doctor-dashboard
+Disallow: /cart
+Disallow: /checkout
+Disallow: /login
+Disallow: /track-order
+Disallow: /wishlist
+Disallow: /order-confirmation
+
+Sitemap: https://bvlife.in/sitemap.xml

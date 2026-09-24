@@ -5,15 +5,17 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Video, Calendar, Clock, User, Phone, PhoneCall, PhoneForwarded, Mail, FileText, CheckCircle2, CheckCircle,
+  Video, Calendar, Clock, User, Phone, PhoneCall, PhoneForwarded, FileText, CheckCircle2, CheckCircle,
   X, ExternalLink, Copy, Check, Search, Filter, Stethoscope, 
-  Plus, Trash2, Printer, Download, Sparkles, Shield, AlertCircle,
+  Plus, Trash2, Printer, Download, Shield, AlertCircle,
   MessageSquare, RefreshCw, ChevronLeft, ChevronRight, Activity, ArrowLeft,
-  Settings, Link as LinkIcon, Eye, EyeOff, Lock, LogOut, Building2, MapPin, Users,
+  Settings, Link as LinkIcon, Eye, LogOut, Building2, MapPin, Users,
   Bell, BellRing, Volume2, VolumeX, Send, Camera, Image
 } from 'lucide-react';
 import { DoctorAppointment, DoctorPrescription, PrescribedMedicine, User as UserType } from '../types';
 import { api } from '../services/api';
+import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin } from '../services/msg91OtpService';
+import { SecureOtpWidget } from '../components/secureOtpWidget';
 import drImage from "@/assets/DrSanjeev.png";
 
 interface DoctorDashboardProps {
@@ -87,21 +89,10 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
 }) => {
   // Doctor Auth state for direct link access
   const [isExplicitlySignedOut, setIsExplicitlySignedOut] = useState<boolean>(false);
-  const [localDoctorUser, setLocalDoctorUser] = useState<UserType | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('Bv_doctor_session');
-        if (stored) return JSON.parse(stored);
-      } catch {
-        // ignore
-      }
-    }
-    return null;
-  });
-
-  const [loginEmail, setLoginEmail] = useState<string>('doctor@bvlife.in');
-  const [loginPassword, setLoginPassword] = useState<string>('123123123');
-  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [localDoctorUser, setLocalDoctorUser] = useState<UserType | null>(null);
+  const [loginPhone, setLoginPhone] = useState<string>('');
+  const [otpSent, setOtpSent] = useState<boolean>(false);
+  const [otpReqId, setOtpReqId] = useState<string>('');
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
   const [loginError, setLoginError] = useState<string>('');
 
@@ -109,82 +100,71 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     if (isExplicitlySignedOut) return false;
     const active = localDoctorUser || currentUser;
     if (!active) return false;
-    const email = (active.email || '').toLowerCase().trim();
-    return active.role === 'admin' || 
-      ['doctor@bvlife.in', 'doctor@Bvlife.com', 'admin@bvlife.in', 'admin@Bvlife.com', 'iamvivekbaliyan07@gmail.com', 'vkchoudhary050607@gmail.com'].includes(email);
+    return active.role === 'admin';
   }, [isExplicitlySignedOut, localDoctorUser, currentUser]);
 
-  const handleDoctorLogin = async (e?: React.FormEvent, customEmail?: string, customPassword?: string) => {
-    if (e) e.preventDefault();
+  const handleDoctorLogin = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setIsLoggingIn(true);
     setLoginError('');
-
-    let emailToUse = (customEmail !== undefined ? customEmail : loginEmail).trim();
-    let passToUse = (customPassword !== undefined ? customPassword : loginPassword).trim();
-
-    // Sanitize in case user copied "Doctor ID: doctor@bvlife.in" or label prefixes
-    emailToUse = emailToUse.replace(/^(doctor\s*id\s*[:\-]?\s*|email\s*[:\-]?\s*|id\s*[:\-]?\s*|username\s*[:\-]?\s*)/i, '').trim();
-    passToUse = passToUse.replace(/^(password\s*[:\-]?\s*|pass\s*[:\-]?\s*)/i, '').trim();
-
-    if (emailToUse.toLowerCase().includes('doctor@bvlife.in') || emailToUse.toLowerCase().includes('doctor@Bvlife.com') || emailToUse.toLowerCase() === 'doctor') {
-      emailToUse = emailToUse.toLowerCase().includes('Bvlife.com') ? 'doctor@Bvlife.com' : 'doctor@bvlife.in';
-    }
-
-    // Default fallback to standard clinical practitioner
-    if (!emailToUse) emailToUse = 'doctor@bvlife.in';
-    if (!passToUse) passToUse = '123123123';
-
-    const defaultDoctorUser: UserType = {
-      email: 'doctor@bvlife.in',
-      fullName: 'Dr. Sanjeev Rastogi',
-      role: 'admin',
-      phone: '7451050607',
-      addresses: []
-    };
-
-    const isVerifiedDoctorCreds = (emailToUse.toLowerCase() === 'doctor@bvlife.in' || emailToUse.toLowerCase() === 'doctor@Bvlife.com') && 
-      (passToUse === '123123123' || passToUse === 'password123' || passToUse === '');
-
     try {
-      const res = await api.login({ email: emailToUse, password: passToUse });
-      if (res && res.user && res.token) {
-        setIsExplicitlySignedOut(false);
-        setLocalDoctorUser(res.user);
-        try {
-          localStorage.setItem('Bv_doctor_session', JSON.stringify(res.user));
-          localStorage.setItem('Bv_auth_token', res.token);
-          sessionStorage.setItem('Bv_auth_token', res.token);
-        } catch {
-          // ignore
-        }
-        if (onLoginSuccess) {
-          onLoginSuccess(res.user, res.token);
-        }
+      const cleanPhone = loginPhone.replace(/\D/g, '').slice(-10);
+      if (cleanPhone.length !== 10) {
+        setLoginError('Enter the 10-digit mobile number registered to your admin account.');
         return;
       }
-    } catch (err: any) {
-      console.warn('Doctor backend login notice:', err);
-    }
+      const accountResponse = await fetch('/api/auth/check-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: cleanPhone })
+      });
+      const account = await accountResponse.json();
+      if (!accountResponse.ok || !account.exists || !account.isAdmin) {
+        setLoginError('This number is not registered to an administrator account.');
+        return;
+      }
 
-    // If verified AYUSH practitioner credentials matched, grant session immediately
-    if (isVerifiedDoctorCreds) {
-      const fallbackToken = 'doc_auth_token_' + Date.now();
-      setIsExplicitlySignedOut(false);
-      setLocalDoctorUser(defaultDoctorUser);
-      try {
-        localStorage.setItem('Bv_doctor_session', JSON.stringify(defaultDoctorUser));
-        localStorage.setItem('Bv_auth_token', fallbackToken);
-        sessionStorage.setItem('Bv_auth_token', fallbackToken);
-      } catch {
-        // ignore
+      const otpResult = await sendMSG91Otp(formatMSG91Identifier(cleanPhone));
+      if (!otpResult.success) {
+        setLoginError(otpResult.error || 'Could not send the OTP. Please try again.');
+        return;
       }
-      if (onLoginSuccess) {
-        onLoginSuccess(defaultDoctorUser, fallbackToken);
-      }
-    } else {
-      setLoginError('Invalid Doctor credentials. Please check Doctor ID (doctor@bvlife.in) and Password (123123123).');
+      setOtpReqId(otpResult.reqId || '');
+      setOtpSent(true);
+    } catch (err: any) {
+      setLoginError(err?.message || 'Unable to start OTP login. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
     }
-    setIsLoggingIn(false);
+  };
+
+  const handleDoctorOtpVerified = async (params: { code: string; accessToken?: string; reqId?: string }) => {
+    setIsLoggingIn(true);
+    setLoginError('');
+    try {
+      const cleanPhone = loginPhone.replace(/\D/g, '').slice(-10);
+      const result = await performOtpLogin({
+        identifier: cleanPhone,
+        code: params.code,
+        reqId: params.reqId || otpReqId,
+        accessToken: params.accessToken
+      });
+      if (!result.success || !result.user || !result.token || result.user.role !== 'admin') {
+        setLoginError(result.error || 'This account does not have administrator access.');
+        return;
+      }
+      setIsExplicitlySignedOut(false);
+      setLocalDoctorUser(result.user);
+      localStorage.setItem('Bv_auth_token', result.token);
+      localStorage.setItem('token', result.token);
+      sessionStorage.setItem('Bv_auth_token', result.token);
+      localStorage.setItem('Bv_doctor_session', JSON.stringify(result.user));
+      onLoginSuccess?.(result.user, result.token);
+    } catch (err: any) {
+      setLoginError(err?.message || 'OTP verification failed. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   const handleDoctorSignOut = () => {
@@ -1044,160 +1024,110 @@ Wishing you swift recovery and holistic health,
   // If not signed in as Doctor/Admin, render clean dedicated Doctor Login Portal
   if (!isDoctorAuthenticated) {
     return (
-      <div id="doctor-auth-portal" className="min-h-screen bg-[#FBF9F5] text-slate-800 py-16 px-4 sm:px-6 lg:px-8 flex flex-col justify-center">
-        <div className="max-w-md w-full mx-auto">
-          {/* Logo & Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-brand-green-950 text-brand-gold-300 border-2 border-brand-gold-400/40 shadow-xl mb-4">
-              <Stethoscope className="w-8 h-8" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-serif text-brand-green-950 tracking-tight">
-              Doctor & Vaidya Portal
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-600 mt-1.5 max-w-sm mx-auto">
-              Clinical consultations & digital Ayurvedic prescriptions for Dr. Sanjeev Rastogi & AYUSH practitioners
-            </p>
-          </div>
-
-          {/* Login Card */}
-          <div className="bg-white border border-brand-gold-400/30 rounded-3xl p-6 sm:p-8 shadow-xl">
-            {/* Quick Credentials Info Box */}
-            <div className="mb-5 p-3.5 rounded-2xl bg-brand-cream-50 border border-brand-gold-400/30 text-xs">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5 font-bold text-brand-green-950">
-                  <Shield className="w-3.5 h-3.5 text-brand-gold-600" />
-                  <span>Verified AYUSH Practitioner Credentials</span>
+      <div id="doctor-auth-portal" className="relative isolate min-h-screen overflow-hidden bg-[#f4f6f1] px-4 py-6 text-slate-800 sm:px-6 sm:py-10 lg:flex lg:items-center lg:justify-center lg:px-8">
+        <div className="pointer-events-none absolute -left-32 top-12 h-80 w-80 rounded-full bg-emerald-200/40 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -right-20 h-96 w-96 rounded-full bg-amber-100/70 blur-3xl" />
+        <div className="relative mx-auto grid w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-[0_30px_100px_-42px_rgba(16,47,34,0.38)] lg:grid-cols-[1.02fr_0.98fr]">
+          <section className="relative min-h-[250px] overflow-hidden bg-[#102f22] text-white sm:min-h-[310px] lg:min-h-[690px]">
+            <img src={drImage} alt="Ayurvedic doctor" className="absolute inset-0 h-full w-full object-cover object-top opacity-35" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#102f22]/95 via-[#153d2b]/80 to-[#102f22]/45" />
+            <div className="absolute -right-16 -top-20 h-72 w-72 rounded-full border border-amber-200/15" />
+            <div className="absolute -right-4 -top-8 h-48 w-48 rounded-full border border-amber-200/15" />
+            <div className="relative flex h-full min-h-[250px] flex-col justify-between p-6 sm:min-h-[310px] sm:p-9 lg:min-h-[690px] lg:p-12">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-300/30 bg-white/10 text-amber-200 backdrop-blur"><Stethoscope className="h-5 w-5" /></span>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-200">BV Life</p>
+                  <p className="text-xs text-white/65">Ayurvedic care, thoughtfully delivered</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginEmail('doctor@bvlife.in');
-                    setLoginPassword('123123123');
-                    setLoginError('');
-                  }}
-                  className="text-[11px] font-bold text-brand-gold-600 hover:text-brand-green-900 underline cursor-pointer"
-                >
-                  Auto-Fill
+              </div>
+              <div className="max-w-lg py-8 lg:py-0">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.24em] text-amber-200 sm:text-xs">Practitioner workspace</p>
+                <h1 className="max-w-md font-serif text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">Care for every patient, in one place.</h1>
+                <p className="mt-4 max-w-md text-sm leading-6 text-white/75 sm:text-base sm:leading-7">Manage consultations, appointments and Ayurvedic prescriptions through your secure doctor portal.</p>
+                <div className="mt-6 hidden items-center gap-3 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm sm:flex lg:mt-10">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-300/15 text-emerald-200"><CheckCircle2 className="h-5 w-5" /></span>
+                  <div><p className="text-sm font-semibold">Private, verified access</p><p className="mt-0.5 text-xs text-white/65">One-time passcode sent to your registered mobile</p></div>
+                </div>
+              </div>
+              <p className="hidden text-xs text-white/50 lg:block">BV Life - Doctor &amp; Vaidya Portal</p>
+            </div>
+          </section>
+
+          <section className="flex items-center justify-center px-5 py-8 sm:px-10 sm:py-11 lg:px-12 lg:py-14">
+            <div className="w-full max-w-md">
+              <div className="mb-7">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-800">Welcome back</p>
+                <h2 className="mt-2 font-serif text-2xl font-semibold text-[#173b2b] sm:text-3xl">Sign in to your portal</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">Use the administrator mobile number registered to your account.</p>
+              </div>
+
+              {loginError && (
+                <div role="alert" className="mb-5 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm text-rose-800">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+                  <span>{loginError}</span>
+                </div>
+              )}
+
+              {!otpSent ? <form onSubmit={handleDoctorLogin} className="space-y-5">
+                <div>
+                  <label htmlFor="input-doctor-phone" className="mb-2 block text-sm font-semibold text-slate-700">Mobile number</label>
+                  <div className="flex overflow-hidden rounded-2xl border border-slate-200 bg-white transition focus-within:border-emerald-700 focus-within:ring-4 focus-within:ring-emerald-700/10">
+                    <span className="flex items-center gap-2 border-r border-slate-100 bg-slate-50 px-3.5 text-sm font-semibold text-slate-600"><span aria-hidden="true">IN</span> +91</span>
+                    <input
+                      type="tel"
+                      id="input-doctor-phone"
+                      value={loginPhone}
+                      onChange={(e) => setLoginPhone(e.target.value.replace(/[^\d+\s()-]/g, '').slice(0, 16))}
+                      required
+                      autoComplete="off"
+                      inputMode="numeric"
+                      placeholder="Enter registered number"
+                      className="min-w-0 flex-1 px-4 py-3.5 text-sm font-medium outline-none placeholder:font-normal placeholder:text-slate-400"
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">We will send a secure one-time code by SMS.</p>
+                </div>
+                <button type="submit" id="btn-send-doctor-otp" disabled={isLoggingIn} className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-[#173b2b] px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/10 transition hover:bg-[#205238] focus:outline-none focus:ring-4 focus:ring-emerald-800/20 disabled:cursor-wait disabled:opacity-70">
+                  <span>{isLoggingIn ? 'Sending code...' : 'Continue with OTP'}</span>
+                  {!isLoggingIn && <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />}
                 </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-slate-600">
-                <div>
-                  <span className="font-semibold text-slate-500">Doctor ID:</span>{' '}
-                  <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-800 font-mono">doctor@bvlife.in</code>
+              </form> : <div>
+                <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-sm text-slate-600">
+                  <span>Code sent to <strong className="text-slate-800">+91 {loginPhone.replace(/\D/g, '').slice(-10)}</strong></span>
+                  <button type="button" onClick={() => { setOtpSent(false); setLoginError(''); }} className="shrink-0 font-semibold text-emerald-800 underline underline-offset-2">Change</button>
                 </div>
-                <div>
-                  <span className="font-semibold text-slate-500">Password:</span>{' '}
-                  <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-800 font-mono">123123123</code>
-                </div>
+                <SecureOtpWidget
+                  identifier={loginPhone.replace(/\D/g, '').slice(-10)}
+                  purpose="Login"
+                  widgetName="Doctor Administrator Verification"
+                  smsOnly
+                  initialReqId={otpReqId}
+                  theme="light"
+                  onVerified={handleDoctorOtpVerified}
+                  onCancel={() => { setOtpSent(false); setLoginError(''); }}
+                  submitButtonText="Verify code & open portal"
+                  isSubmitting={isLoggingIn}
+                />
+              </div>}
+
+              <div className="mt-7 border-t border-slate-100 pt-5">
+                <div className="mb-4 flex items-center justify-center gap-2 text-xs text-slate-500"><Shield className="h-3.5 w-3.5 text-emerald-700" /><span>Administrator access is verified before sign-in.</span></div>
+                <button type="button" onClick={() => onNavigate('home')} className="mx-auto flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-[#173b2b]"><ArrowLeft className="h-4 w-4" /><span>Back to BV Life</span></button>
               </div>
             </div>
-
-            {loginError && (
-              <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                <span>{loginError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleDoctorLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Doctor ID / Clinic Email
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Mail className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="text"
-                    id="input-doctor-email"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                    placeholder="doctor@bvlife.in"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-brand-green-700 focus:ring-1 focus:ring-brand-green-700 text-sm font-medium outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Practitioner Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Lock className="w-4 h-4" />
-                  </div>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    id="input-doctor-password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                    placeholder="••••••••••••"
-                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 focus:border-brand-green-700 focus:ring-1 focus:ring-brand-green-700 text-sm font-medium outline-none transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
-                    title={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                id="btn-submit-doctor-login"
-                disabled={isLoggingIn}
-                className="w-full py-3.5 px-4 bg-brand-green-950 hover:bg-brand-green-900 active:scale-[0.99] text-brand-gold-300 font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer border border-brand-gold-400/30"
-              >
-                <Stethoscope className="w-4 h-4 text-brand-gold-300" />
-                <span>{isLoggingIn ? 'Authenticating Doctor...' : 'Sign In to Clinical Console'}</span>
-              </button>
-            </form>
-
-            <div className="mt-5 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                id="btn-quick-doctor-login-card"
-                onClick={() => {
-                  setLoginEmail('doctor@bvlife.in');
-                  setLoginPassword('123123123');
-                  handleDoctorLogin(undefined, 'doctor@bvlife.in', '123123123');
-                }}
-                disabled={isLoggingIn}
-                className="w-full py-2.5 px-3 bg-brand-gold-400/20 hover:bg-brand-gold-400/30 text-brand-green-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-brand-gold-400/40"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-brand-gold-600" />
-                <span>1-Click Sign In (Dr. Sanjeev Rastogi)</span>
-              </button>
-            </div>
-
-            <div className="mt-5 text-center">
-              <button
-                type="button"
-                onClick={() => onNavigate('home')}
-                className="text-xs text-slate-500 hover:text-slate-800 font-medium inline-flex items-center gap-1.5 cursor-pointer"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Return to Main Website</span>
-              </button>
-            </div>
-          </div>
+          </section>
         </div>
       </div>
     );
   }
-
   return (
-    <div id="doctor-dashboard-container" className="min-h-screen bg-[#FBF9F5] text-slate-800 pb-24">
+    <div id="doctor-dashboard-container" className="min-h-screen bg-[radial-gradient(ellipse_at_top_left,rgba(217,163,80,0.12),transparent_34%),linear-gradient(180deg,#f3f7f2_0%,#f8f7f2_55%,#f3f6f3_100%)] text-slate-800 pb-24">
       
       {/* Top Header & Doctor Bio Bar */}
-      <header className="bg-brand-green-950 text-brand-cream-50 border-b border-brand-gold-500/20 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+      <header className="relative overflow-hidden bg-gradient-to-br from-[#102f22] via-[#1b4c35] to-[#0c281d] text-brand-cream-50 border-b border-brand-gold-500/30 shadow-[0_18px_48px_-28px_rgba(9,38,25,0.9)]">
+        <div className="pointer-events-none absolute -right-16 -top-28 h-80 w-80 rounded-full bg-brand-gold-400/10 blur-3xl" />
+        <div className="relative mx-auto max-w-[1680px] px-3 sm:px-5 lg:px-7 py-4 sm:py-5">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             
             {/* Doctor Identity */}
@@ -1206,7 +1136,7 @@ Wishing you swift recovery and holistic health,
                 <img 
                   src={activeDoctorProfile?.image || drImage || "/images/DrSanjeev.png"} 
                   alt={activeDoctorProfile?.name || "Dr. Sanjeev Rastogi"}
-                  className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl object-cover object-top border-2 border-brand-gold-400 shadow-md"
+                  className="w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-2xl object-cover object-top border-2 border-brand-gold-400 shadow-md"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/images/DrSanjeev.png';
                   }}
@@ -1216,7 +1146,7 @@ Wishing you swift recovery and holistic health,
 
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-bold font-serif text-brand-gold-300">
+                  <h1 className="text-lg sm:text-2xl font-bold font-serif text-brand-gold-300">
                     {activeDoctorProfile?.name || localDoctorUser?.fullName || "Dr. Sanjeev Rastogi"}
                   </h1>
                   <span className="px-2.5 py-0.5 rounded-full bg-brand-gold-400/20 text-brand-gold-300 text-[11px] font-semibold tracking-wide border border-brand-gold-400/30">
@@ -1314,8 +1244,33 @@ Wishing you swift recovery and holistic health,
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Main Container */}
+        <main className="mx-auto max-w-[1680px] px-3 sm:px-5 lg:px-7 py-5 sm:py-7 space-y-6 sm:space-y-8">
+
+        <section className="relative overflow-hidden rounded-3xl border border-brand-green-900/10 bg-white/90 p-5 sm:p-7 shadow-[0_16px_42px_-30px_rgba(18,59,41,0.45)]">
+          <div className="pointer-events-none absolute -right-14 -top-20 h-56 w-56 rounded-full bg-brand-gold-400/15 blur-3xl" />
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-green-800/10 bg-brand-green-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand-green-800">
+                <Activity className="h-3.5 w-3.5 text-brand-gold-700" /> Clinical workspace
+              </span>
+              <h2 className="mt-3 font-serif text-2xl font-bold text-brand-green-950 sm:text-3xl">Today at a glance</h2>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-600 sm:text-sm">
+                Manage consultations, patient follow-ups, and digital prescriptions from one place.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                <Calendar className="h-4 w-4 text-brand-green-700" />
+                {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
+              <span className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ${isDoctorAvailable ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+                <span className={`h-2 w-2 rounded-full ${isDoctorAvailable ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                {isDoctorAvailable ? 'Available for consultations' : 'Currently unavailable'}
+              </span>
+            </div>
+          </div>
+        </section>
         
         {/* Toast confirmation notice */}
         {whatsAppToastMsg && (
@@ -1415,7 +1370,7 @@ Wishing you swift recovery and holistic health,
         )}
         
         {/* Metric Cards Banner - Interactive quick switch to the 3 shows */}
-        <section aria-label="Daily Statistics" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        <section aria-label="Daily Statistics" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <button
             type="button"
             onClick={() => { setActiveTab('schedule'); setFilterStatus('today'); }}
@@ -1520,8 +1475,8 @@ Wishing you swift recovery and holistic health,
         </section>
 
         {/* Navigation Tabs - Highlighting the Three Different Shows */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-2">
-          <div className="flex items-center gap-2 overflow-x-auto">
+        <div className="sticky top-16 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-sm backdrop-blur sm:top-20">
+          <div className="flex w-full items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none sm:w-auto">
             <button
               type="button"
               onClick={() => setActiveTab('schedule')}

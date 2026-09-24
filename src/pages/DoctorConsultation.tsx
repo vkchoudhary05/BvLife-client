@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Calendar, Clock, Video, Phone, MessageSquare, CheckCircle, Star, 
   ShieldCheck, Award, User, Check, X, ArrowRight, ArrowLeft, Loader2,
-  FileText, Upload, Trash2, Eye, Shield, Sparkles, ChevronLeft, ChevronRight,
+  FileText, Upload, Trash2, Eye, Shield, Sparkles,
   HeartHandshake, Stethoscope, CreditCard, Lock, CheckCircle2, QrCode,
   Building2, Smartphone, AlertCircle, Coins, PhoneCall, MessageCircle,
   Image as ImageIcon, Camera, FileCheck
@@ -18,11 +18,11 @@ import { api } from '../services/api';
 import { ConsultationFeatures } from '../components/ConsultationFeatures';
 import { loadRazorpayScript } from '../utils/razorpay';
 import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin, verifyMSG91Otp } from '../services/msg91OtpService';
-import drImage from "@/assets/DrSanjeev.png";
+import doctorBannerOne from "@/assets/NewDr2.png";
+import doctorBannerTwo from "@/assets/DrSanjeev3.png";
+import doctorProfileImage from "@/assets/Dr4.jpeg";
 
-const legendaryDoctorImg = drImage;
-const doctorBannerDesktop = drImage;
-const doctorBannerMobile = drImage;
+const legendaryDoctorImg = doctorProfileImage;
 
 interface DoctorConsultationProps {
   currentUser: UserType | null;
@@ -59,13 +59,13 @@ const LEGEND_DOCTOR: Doctor = {
 const doctorHeroSlides = [
   {
     id: "doc-slide-1",
-    desktopImage: doctorBannerDesktop,
-    mobileImage: doctorBannerMobile,
+    desktopImage: doctorBannerOne,
+    mobileImage: doctorBannerOne,
   },
   {
     id: "doc-slide-2",
-    desktopImage: doctorBannerDesktop,
-    mobileImage: doctorBannerMobile,
+    desktopImage: doctorBannerTwo,
+    mobileImage: doctorBannerTwo,
   }
 ];
 
@@ -187,7 +187,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
         const found = data[0];
         setDoctor({
           ...found,
-          image: drImage
+          image: legendaryDoctorImg
         });
       }
     }).catch(err => {
@@ -551,7 +551,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
       doctorId: doctor.id || 'doc-legend-1',
       doctorName: doctor.name || 'Dr. Sanjeev Rastogi',
       doctorSpecialty: (doctor.specialties && doctor.specialties[0]) || 'Chief Ayurvedic Physician & Master Nadi Vaidya',
-      doctorImage: doctor.image || drImage || '/images/DrSanjeev.png',
+      doctorImage: doctor.image || legendaryDoctorImg || '/images/DrSanjeev.png',
       doctorQualification: doctor.qualification || 'Ph.D, MD (Ayurveda), Banaras Hindu University (BHU)',
       patientName: patientName.trim(),
       patientAge: Number(patientAge) || 28,
@@ -740,104 +740,54 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
   };
 
   return (
-    <div id="doctor-consultation-page" className="min-h-screen bg-[#FBF9F5] pb-24 text-slate-800">
+    <div id="doctor-consultation-page" className="min-h-screen bg-[radial-gradient(ellipse_at_top,_rgba(212,175,55,0.09),_transparent_42%),#f8f6ea] pb-16 text-slate-800 sm:pb-24">
       
       {/* 1. TOP HERO BANNER — IDENTICAL REUSABLE BANNER SYSTEM */}
-      <section className="max-w-[1440px] mx-auto px-2 sm:px-4 pt-3 sm:pt-4">
-        <div
-          id="doctor-hero-banner"
-          onClick={() => {
-            const el = document.getElementById('quick-book-container');
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-          }}
-          onMouseEnter={() => setIsSlidePaused(true)}
-          onMouseLeave={() => setIsSlidePaused(false)}
-          className="
-            relative
-            w-full
-            h-[195px]
-            xs:h-[280px]
-            sm:h-[335px]
-            md:h-[350px]
-            lg:h-[368px]
-            xl:h-[400px]
-            2xl:h-[550px]
-            rounded-xl
-            overflow-hidden
-            flex
-            items-center
-            justify-center
-            cursor-pointer
-            group
-            shadow-sm
-          "
-        >
-          {/* Banner Picture with Responsive Mobile & Desktop Assets */}
-          <div className="absolute inset-0">
-            <picture>
-              <source
-                media="(max-width:768px)"
-                srcSet={doctor.image || doctorHeroSlides[currentSlide].mobileImage}
-              />
+      <section
+        id="doctor-hero-banner"
+        onMouseEnter={() => setIsSlidePaused(true)}
+        onMouseLeave={() => setIsSlidePaused(false)}
+        className="relative w-full overflow-hidden bg-[#f8f6ea]"
+      >
+        <div className="relative aspect-[1.87/1] w-full overflow-hidden bg-[#f8f6ea] md:aspect-[2.25/1]">
+          {doctorHeroSlides.map((slide, index) => (
+            <picture key={slide.id} className={index === 0 ? 'relative block h-full w-full' : 'absolute inset-0 block h-full w-full'}>
+              <source media="(max-width: 767px)" srcSet={slide.mobileImage} />
               <img
-                src={doctor.image || doctorHeroSlides[currentSlide].desktopImage}
-                alt={`Consult with ${doctor.name}`}
-                className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-700"
+                src={slide.desktopImage}
+                alt={`Ayurvedic consultation with ${doctor.name}`}
+                fetchPriority={index === 0 ? 'high' : 'auto'}
+                className={`block h-full w-full object-cover object-center transition-opacity duration-700 ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
+                aria-hidden={index !== currentSlide}
               />
             </picture>
-
-            {/* Subtle Gradient Overlay matching CustomerHome */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent sm:from-black/20 sm:via-transparent sm:to-transparent" />
-          </div>
-
-          {/* Navigation Chevron Left */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentSlide((prev) => (prev - 1 + doctorHeroSlides.length) % doctorHeroSlides.length);
-            }}
-            aria-label="Previous slide"
-            className="flex absolute left-2 xs:left-3 md:left-4 lg:left-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
-          >
-            <ChevronLeft className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
-          </button>
-
-          {/* Navigation Chevron Right */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentSlide((prev) => (prev + 1) % doctorHeroSlides.length);
-            }}
-            aria-label="Next slide"
-            className="flex absolute right-2 xs:right-3 md:right-4 lg:right-5 top-1/2 -translate-y-1/2 z-30 items-center justify-center p-1.5 xs:p-2 md:p-2.5 lg:p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white/40 text-white transition-all duration-300 hover:scale-110"
-          >
-            <ChevronRight className="w-3.5 h-3.5 xs:w-4 xs:h-4 md:w-5 md:h-5 lg:w-4 lg:h-4" />
-          </button>
-
-          {/* Banner Slide Indicator Dots */}
-          <div className="absolute bottom-2 xs:bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 xs:gap-2">
-            {doctorHeroSlides.map((_, i) => (
-              <button
-                key={i}
-                aria-label={`Go to slide ${i + 1}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setCurrentSlide(i);
-                }}
-                className={`transition-all duration-300 rounded-full cursor-pointer ${
-                  currentSlide === i
-                    ? 'bg-white w-4 xs:w-5 sm:w-6 md:w-8 h-1.5 xs:h-2'
-                    : 'bg-white/40 hover:bg-white/60 w-1.5 xs:w-2 h-1.5 xs:h-2'
-                }`}
-              />
-            ))}
-          </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          aria-label="Book an Ayurvedic doctor consultation"
+          onClick={() => document.getElementById('quick-book-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          className="absolute inset-0 z-10 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-gold-400"
+        />
+        <div className="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 sm:bottom-4" role="group" aria-label="Consultation banner slides">
+          {doctorHeroSlides.map((slide, index) => (
+            <button
+              key={slide.id}
+              type="button"
+              aria-label={`Show consultation banner ${index + 1}`}
+              aria-current={currentSlide === index ? 'true' : undefined}
+              onClick={() => setCurrentSlide(index)}
+              className="grid h-7 w-7 cursor-pointer place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <span className={`rounded-full bg-white shadow-sm transition-all duration-200 ${currentSlide === index ? 'h-2.5 w-2.5 opacity-100' : 'h-2 w-2 opacity-70'}`} />
+            </button>
+          ))}
         </div>
       </section>
 
       {/* 2. NAVIGATION BAR WITH ALL 4 UPPER TABS */}
-      <section className="max-w-[1240px] mx-auto px-4 mt-5 sm:mt-6">
-        <div className="bg-white rounded-2xl p-2.5 border border-slate-200/90 shadow-xs flex flex-wrap items-center justify-between gap-3">
+      <section className="max-w-[1440px] mx-auto px-3 sm:px-6 mt-4 sm:mt-6">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-2 sm:p-2.5 border border-brand-green-800/10 shadow-[0_12px_36px_rgba(27,61,47,0.09)] flex flex-wrap items-center justify-between gap-3">
           
           {/* 4 PRIMARY NAVIGATION TABS */}
           <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
@@ -847,7 +797,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
               onClick={() => setActiveTab('book')}
               className={`px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
                 activeTab === 'book'
-                  ? 'bg-brand-green-800 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-brand-green-900 to-brand-green-700 text-white shadow-md'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -861,7 +811,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
               onClick={() => setActiveTab('my-appointments')}
               className={`px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 relative ${
                 activeTab === 'my-appointments'
-                  ? 'bg-brand-green-800 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-brand-green-900 to-brand-green-700 text-white shadow-md'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -880,7 +830,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
               onClick={() => setActiveTab('about-doctor')}
               className={`px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
                 activeTab === 'about-doctor'
-                  ? 'bg-brand-green-800 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-brand-green-900 to-brand-green-700 text-white shadow-md'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -894,7 +844,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
               onClick={() => setActiveTab('fees-chart')}
               className={`px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
                 activeTab === 'fees-chart'
-                  ? 'bg-brand-green-800 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-brand-green-900 to-brand-green-700 text-white shadow-md'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -920,34 +870,34 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
       </section>
 
       {/* 3. MAIN WORKSPACE */}
-      <main id="quick-book-container" className="max-w-[1240px] mx-auto px-4 mt-6">
+      <main id="quick-book-container" className="max-w-[1440px] mx-auto px-3 sm:px-6 mt-5 sm:mt-7">
         
         {/* VIEW 1: INSTANT BOOKING WORKSPACE */}
         {activeTab === 'book' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
 
             {/* QUICK DOCTOR STRIP WITH SHORTCUTS TO ABOUT DOCTOR & FEES CHART */}
-            <div className="max-w-4xl mx-auto bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
+            <div className="mx-auto flex max-w-5xl flex-col items-stretch justify-between gap-4 overflow-hidden rounded-3xl border border-brand-green-800/15 bg-[radial-gradient(ellipse_at_top_right,rgba(217,163,80,0.14),transparent_42%),linear-gradient(135deg,#ffffff_0%,#f5f8f2_100%)] p-4 shadow-[0_12px_32px_rgba(27,61,47,0.08)] sm:flex-row sm:items-center sm:p-5">
+              <div className="flex min-w-0 items-center gap-3">
                 <img
                   src={doctor.image}
                   alt={doctor.name}
-                  className="w-11 h-11 rounded-full object-cover object-top border-2 border-brand-gold-400"
+                  className="h-12 w-12 shrink-0 rounded-2xl object-cover object-top border-2 border-brand-gold-400 shadow-sm"
                 />
-                <div>
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     <span className="font-bold text-sm text-slate-900">{doctor.name}</span>
                     <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                       Available Today
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-600 sm:text-xs">
                     {doctor.qualification} • Subsidized Fee: <strong className="text-brand-green-900 font-extrabold">₹{doctor.fee}</strong>
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-xs">
+              <div className="grid grid-cols-2 gap-2 text-xs sm:flex sm:shrink-0">
                 <button
                   type="button"
                   onClick={() => setActiveTab('about-doctor')}
@@ -971,7 +921,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
             {bookingConfirmed && (
               <div 
                 id="booking-confirmed-card"
-                className="bg-brand-green-900 text-white p-5 sm:p-7 rounded-2xl border-2 border-brand-gold-400 shadow-xl space-y-4 animate-in fade-in duration-300"
+                className="bg-gradient-to-br from-brand-green-900 via-brand-green-800 to-[#102d21] text-white p-5 sm:p-7 rounded-3xl border border-brand-gold-400/70 shadow-[0_18px_50px_rgba(20,51,38,0.2)] space-y-4 animate-in fade-in duration-300"
               >
                 <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-4">
                   <div className="flex items-center gap-3.5">
@@ -1210,7 +1160,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
 
             {/* MULTI-STEP INSTANT BOOKING WORKSPACE - Only visible when not already confirmed */}
             {!bookingConfirmed && (
-            <div id="booking-step-container" className="max-w-4xl mx-auto bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-8 shadow-xs">
+            <div id="booking-step-container" className="max-w-5xl mx-auto bg-white rounded-3xl border border-brand-green-800/10 p-4 sm:p-8 shadow-[0_14px_38px_rgba(27,61,47,0.08)]">
               
               {/* 4-STEP WIZARD PROGRESS BAR */}
               <div className="mb-8">
@@ -1351,7 +1301,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                   </div>
 
                   {/* 3 PREMIUM CONSULTATION FORMAT CARDS */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 pt-2">
                     
                     {/* OPTION 1: 1-on-1 HD Video Call */}
                     <div 
@@ -2814,7 +2764,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
 
         {/* VIEW 2: MY CONSULTATIONS APPOINTMENTS LIST */}
         {activeTab === 'my-appointments' && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="flex items-center justify-between pb-2">
               <h2 className="text-base font-bold text-slate-900">Your Consultations</h2>
               <button
@@ -2827,7 +2777,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
             </div>
 
             {myAppointments.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3 shadow-xs">
+              <div className="bg-white rounded-3xl border border-brand-green-800/10 p-8 sm:p-12 text-center space-y-3 shadow-[0_12px_34px_rgba(27,61,47,0.07)]">
                 <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <Calendar className="w-6 h-6" />
                 </div>
@@ -2848,7 +2798,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
                 {myAppointments.map((app) => (
                   <div
                     key={app.id}
-                    className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    className="bg-white rounded-3xl border border-brand-green-800/10 p-4 sm:p-5 shadow-[0_8px_26px_rgba(27,61,47,0.06)] hover:shadow-[0_14px_34px_rgba(27,61,47,0.1)] transition-shadow flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                   >
                     <div className="flex items-start gap-3.5">
                       <img
@@ -2943,10 +2893,10 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
 
         {/* VIEW 3: ABOUT DOCTOR PROFILE & SPECIALTIES */}
         {activeTab === 'about-doctor' && (
-          <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-300">
+          <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-300">
             
             {/* HERO PROFILE CARD */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-8 shadow-xs">
+            <div className="bg-white rounded-3xl border border-brand-green-800/10 p-5 sm:p-8 shadow-[0_14px_38px_rgba(27,61,47,0.08)]">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 
                 {/* AVATAR & QUICK STATS */}
@@ -3041,7 +2991,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
             </div>
 
             {/* CLINICAL SPECIALTIES & PRACTICE DOMAINS */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-4">
+            <div className="bg-white rounded-3xl border border-brand-green-800/10 p-5 sm:p-7 shadow-[0_10px_30px_rgba(27,61,47,0.06)] space-y-4">
               <div>
                 <span className="text-[11px] uppercase tracking-wider font-bold text-brand-green-800">
                   Areas of Clinical Expertise
@@ -3105,7 +3055,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
             </div>
 
             {/* HOW CONSULTATION WORKS */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-4">
+            <div className="bg-white rounded-3xl border border-brand-green-800/10 p-5 sm:p-7 shadow-[0_10px_30px_rgba(27,61,47,0.06)] space-y-4">
               <div>
                 <span className="text-[11px] uppercase tracking-wider font-bold text-brand-green-800">
                   Patient Consultation Process
@@ -3165,7 +3115,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
 
         {/* VIEW 4: FEES CHART & DELIVERABLES BREAKDOWN */}
         {activeTab === 'fees-chart' && (
-          <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-300">
+          <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-300">
             
             {/* PRICING HERO CARD */}
             <div className="bg-gradient-to-br from-brand-green-900 to-brand-green-950 text-white rounded-2xl border-2 border-brand-gold-400 p-6 sm:p-8 shadow-xl">
@@ -3224,7 +3174,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
             </div>
 
             {/* COMPREHENSIVE INCLUSIONS TABLE */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs">
+            <div className="bg-white rounded-3xl border border-brand-green-800/10 overflow-hidden shadow-[0_12px_34px_rgba(27,61,47,0.07)]">
               <div className="p-5 border-b border-slate-100 bg-slate-50/70">
                 <h3 className="font-serif text-lg font-bold text-slate-900">
                   What is Included in Your ₹{doctor.fee} Consultation
@@ -3308,7 +3258,7 @@ export const DoctorConsultation: React.FC<DoctorConsultationProps> = ({
             </div>
 
             {/* FREQUENTLY ASKED QUESTIONS ABOUT FEES */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-4">
+            <div className="bg-white rounded-3xl border border-brand-green-800/10 p-5 sm:p-7 shadow-[0_10px_30px_rgba(27,61,47,0.06)] space-y-4">
               <h3 className="font-serif text-lg font-bold text-slate-900">
                 Frequently Asked Questions
               </h3>

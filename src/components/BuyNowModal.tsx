@@ -132,9 +132,16 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
   // Pricing calculations
   const activePrice = selectedVariant ? selectedVariant.price : product.price;
   const itemTotal = activePrice * quantity;
-  const taxAmount = Math.round(itemTotal * 0.12); // 12% tax
-  const shippingCharge = itemTotal >= 999 ? 0 : 50; // free above 999
-  const finalTotal = itemTotal + taxAmount + shippingCharge;
+  const membershipExpiry = currentUser?.membership?.expiryDate;
+  const isPrivilegeMember = currentUser?.membership?.status === 'active' && (
+    membershipExpiry?.toLowerCase() === 'lifetime' ||
+    Boolean(membershipExpiry && Number.isFinite(Date.parse(membershipExpiry)) && Date.parse(membershipExpiry) > Date.now())
+  );
+  const privilegeDiscount = isPrivilegeMember ? Math.round(itemTotal * 0.30) : 0;
+  const discountedSubtotal = Math.max(0, itemTotal - privilegeDiscount);
+  const taxAmount = Math.round(discountedSubtotal * 0.12); // 12% tax after member discount
+  const shippingCharge = isPrivilegeMember || itemTotal >= 999 ? 0 : 50;
+  const finalTotal = discountedSubtotal + taxAmount + shippingCharge;
 
   // Handles requesting OTP (Step 1: Phone input)
   const handleRequestOtp = async (e: React.FormEvent) => {
@@ -367,25 +374,6 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
     
     const targetEmail = currentUser?.email || email.trim().toLowerCase() || 'guest@Bvlife.com';
 
-    if (!currentUser && email.trim()) {
-      try {
-        // Auto-create/register guest account
-        await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: targetEmail,
-            fullName,
-            phone: `+91${mobilePhone}`,
-            password: 'password123',
-            role: 'customer'
-          })
-        });
-      } catch (err) {
-        console.warn("Auto-registration bypassed (user may already exist or error):", err);
-      }
-    }
-
     const shippingAddressObj: Address = {
       id: selectedAddressId || `addr-${Date.now()}`,
       fullName: fullName.trim() || currentUser?.fullName || 'Valued Customer',
@@ -418,7 +406,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
       subtotal: itemTotal,
       tax: taxAmount,
       shippingCharge: shippingCharge,
-      discount: 0,
+      discount: privilegeDiscount,
       finalTotal: finalTotal,
       status: 'Pending',
       paymentMethod: overridePayMethod || paymentMethod,
@@ -1042,6 +1030,12 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                     <span className="text-brand-green-700">Subtotal ({quantity} {language === 'hi' ? 'आइटम' : 'item'})</span>
                     <span className="font-semibold text-brand-green-950">₹{itemTotal}</span>
                   </div>
+                  {privilegeDiscount > 0 && (
+                      <div className="flex justify-between font-semibold text-emerald-800">
+                        <span>Privilege Club discount (30%)</span>
+                        <span>-₹{privilegeDiscount}</span>
+                      </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-brand-green-700">CGST + SGST (12%)</span>
                     <span className="font-semibold text-brand-green-950">₹{taxAmount}</span>
@@ -1473,7 +1467,7 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                     <span>Sacred Access Created</span>
                   </p>
                   <p className="text-xs text-brand-green-950 leading-relaxed">
-                    An account has been auto-created for you under <strong className="font-mono">{email}</strong>. Track your order chronicles in the wellness panel using password: <strong className="font-mono">password123</strong>.
+                    You can track this order with its order ID from the order confirmation page.
                   </p>
                 </div>
               )}
@@ -1523,7 +1517,8 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
 
               </div>
 
-              {/* Post-Purchase Verified Review Form */}
+              {/* Reviews unlock only after delivery is confirmed. */}
+              {placedOrder.status === 'Delivered' ? (
               <div className="border border-emerald-200 bg-emerald-50/40 rounded-2xl p-4 text-left space-y-3 max-w-sm mx-auto shadow-xs">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
@@ -1602,6 +1597,11 @@ export const BuyNowModal: React.FC<BuyNowModalProps> = ({
                   </form>
                 )}
               </div>
+              ) : (
+                <div className="max-w-sm mx-auto rounded-2xl border border-brand-green-200 bg-brand-green-50/70 p-4 text-center text-xs leading-relaxed text-brand-green-800">
+                  You can review this product after your order has been delivered. Track your order for delivery updates.
+                </div>
+              )}
 
               {/* Action buttons */}
               <div className="flex flex-col sm:flex-row gap-2 justify-center max-w-sm mx-auto pt-2">

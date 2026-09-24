@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Send, Eye, ShieldCheck, HeartPulse, MessageSquare, FileText, Trash2, ShoppingCart, User, ArrowRight, LoaderCircle } from 'lucide-react';
 import { Product } from '../types';
 import { Language } from '../lib/translations';
-import acharyaPortrait from '../../assets/Dr6.png';
+import acharyaPortrait from '../../assets/Chatting.jpg';
 
 interface AIConsultantModalProps {
   onClose: () => void;

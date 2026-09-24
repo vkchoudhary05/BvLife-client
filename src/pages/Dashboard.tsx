@@ -138,7 +138,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: authEmail.trim(), password: authPassword || 'password123' })
+          body: JSON.stringify({ email: authEmail.trim(), password: authPassword })
         });
         const data = await res.json();
         if (res.ok && data.token) {
@@ -172,7 +172,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             email: authEmail.trim(), 
             phone: authPhone, 
             role: 'user', 
-            password: authPassword || 'password123' 
+            password: authPassword 
           })
         });
         const data = await res.json();
@@ -1367,7 +1367,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div id="dashboard-page" className={`w-full ${isAdmin ? 'bg-gradient-to-br from-green-50/60 via-slate-50 to-blue-50/50 min-h-[90vh] font-sans text-slate-900' : ''}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+      <div className="mx-auto w-full max-w-[1680px] px-2 sm:px-4 lg:px-5 py-8 sm:py-10">
       
       {/* Admin Title & Security Control Banner */}
       {isAdmin && (
@@ -1422,7 +1422,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-[minmax(210px,240px)_minmax(0,1fr)] lg:gap-6">
         
         {/* Navigation Sidebar Drawer */}
         <div className={`lg:col-span-1 bg-white border ${isAdmin ? 'border-green-100 shadow-xl shadow-green-100/40' : 'border-brand-green-600/5 shadow-2xs'} p-4 rounded-3xl h-fit lg:sticky lg:top-24 flex flex-col gap-3 min-w-0 z-10`}>
@@ -1645,20 +1645,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Content Panel Area */}
-        <div className={`lg:col-span-3 bg-white border ${isAdmin ? 'border-green-100 shadow-xl shadow-green-100/40' : 'border-brand-green-600/5'} p-6 sm:p-8 rounded-3xl min-h-[450px]`}>
+        <div className={`min-w-0 lg:col-span-1 bg-white border ${isAdmin ? 'border-green-100 shadow-xl shadow-green-100/40' : 'border-brand-green-600/5'} p-4 sm:p-6 lg:p-8 rounded-3xl min-h-[450px]`}>
           
           {/* TAB: MY PROFILE & ACCOUNT (CUSTOMER) */}
           {activeTab === 'account' && user && (
             <div className="space-y-6 animate-in fade-in duration-300">
               
               {/* Profile Card Banner Header */}
-              <div className="relative overflow-hidden bg-gradient-to-r from-brand-green-900 via-brand-green-800 to-brand-green-950 text-brand-cream-50 p-6 sm:p-8 rounded-2xl border border-brand-gold-500/20 shadow-lg">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-gold-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative overflow-hidden bg-[radial-gradient(ellipse_at_top_right,rgba(217,163,80,0.22),transparent_42%),linear-gradient(135deg,#f0f7ef_0%,#fffdf5_52%,#e7f0e8_100%)] text-brand-green-950 p-5 sm:p-7 rounded-3xl border border-brand-green-800/15 shadow-[0_18px_45px_-28px_rgba(18,59,41,0.45)]">
+                <div className="absolute -right-12 -top-16 h-52 w-52 rounded-full bg-brand-green-700/10 blur-3xl pointer-events-none" />
                 
-                <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
+                <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 text-center sm:text-left">
                   {/* Large Avatar */}
                   <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-brand-gold-400 to-brand-gold-600 p-1 shrink-0 shadow-md">
-                    <div className="w-full h-full rounded-full bg-brand-green-900 flex items-center justify-center font-serif text-2xl sm:text-3xl font-bold text-brand-gold-300">
+                    <div className="w-full h-full rounded-full bg-gradient-to-br from-brand-green-900 to-brand-green-700 flex items-center justify-center font-serif text-2xl sm:text-3xl font-bold text-brand-gold-300">
                       {user.fullName ? user.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'US'}
                     </div>
                   </div>
@@ -1666,28 +1666,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   {/* Identity Details */}
                   <div className="space-y-1.5 flex-1 min-w-0">
                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                      <h3 className="font-serif text-2xl font-bold text-brand-cream-50">{user.fullName}</h3>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-brand-gold-500/20 text-brand-gold-300 border border-brand-gold-500/30 px-2.5 py-0.5 rounded-full">
-                        <CheckCircle2 className="w-3 h-3 text-brand-gold-400" />
+                      <h3 className="font-serif text-2xl sm:text-3xl font-bold text-brand-green-950 break-words">{user.fullName}</h3>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-white/80 text-brand-green-800 border border-brand-green-700/15 px-2.5 py-1 rounded-full shadow-sm">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-700" />
                         <span>Verified Account</span>
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs text-brand-cream-200/80 font-medium pt-0.5">
+                    <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-4 text-xs text-brand-green-800 font-medium pt-1">
                       <div className="flex items-center gap-1.5">
                         <Mail className="w-3.5 h-3.5 text-brand-gold-400" />
-                        <span>{user.email}</span>
+                        <span className="break-all">{user.email}</span>
                       </div>
                       {user.addresses && user.addresses[0]?.phone && (
                         <div className="flex items-center gap-1.5">
                           <Phone className="w-3.5 h-3.5 text-brand-gold-400" />
-                          <span className="font-mono">{user.addresses[0].phone}</span>
+                        <span className="font-mono">{user.addresses[0].phone}</span>
                         </div>
                       )}
                     </div>
 
-                    <p className="text-[11px] text-brand-cream-300/70 pt-1">
-                      Role: <span className="font-bold text-brand-gold-300 capitalize">{user.role === 'admin' ? 'Apothecary Director / Admin' : 'Vedic Wellness Member'}</span>
+                    <p className="text-[11px] text-brand-green-700 pt-1">
+                      Role: <span className="font-bold text-brand-green-950 capitalize">{user.role === 'admin' ? 'Apothecary Director / Admin' : 'Vedic Wellness Member'}</span>
                     </p>
                   </div>
 
@@ -1695,7 +1695,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   {onLogout && (
                     <button
                       onClick={onLogout}
-                      className="px-4 py-2 bg-brand-gold-500 hover:bg-brand-gold-400 text-brand-green-950 font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer shrink-0"
+                      className="w-full sm:w-auto px-4 py-2.5 bg-white hover:bg-rose-50 text-brand-green-900 hover:text-rose-800 font-bold text-xs rounded-xl border border-brand-green-800/15 hover:border-rose-200 shadow-sm transition-all cursor-pointer shrink-0"
                     >
                       Sign Out
                     </button>

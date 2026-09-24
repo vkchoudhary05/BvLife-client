@@ -69,6 +69,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
       return;
     }
 
+    const lower = email.trim().toLowerCase();
     setLoading(true);
 
     try {
@@ -342,67 +343,6 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
           <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-2xl flex items-start gap-2.5 font-medium">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
             <p className="leading-relaxed">{successMsg}</p>
-          </div>
-        )}
-
-        {/* Quick Demo Profiles (1-Click Fill) */}
-        {step === 'input' && (
-          <div className="p-3.5 bg-green-50/40 rounded-2xl border border-green-100/80 space-y-2">
-            <div className="flex items-center gap-1.5 justify-between">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Quick Admin Profiles</span>
-              </div>
-              <span className="text-[10px] text-green-700 font-bold bg-green-100/80 px-2 py-0.5 rounded-full border border-green-200">1-Click Fill</span>
-            </div>
-            
-            {/* Vivek Baliyan Admin Card */}
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('iamvivekbaliyan07@gmail.com');
-                setPassword('123123123');
-                setMobileNumber('7451050607');
-                setError('');
-                setSuccessMsg('');
-              }}
-              className="w-full text-left p-2.5 border border-green-100 hover:border-green-300 hover:bg-white rounded-xl bg-white transition-all cursor-pointer group shadow-xs flex items-center gap-2.5"
-            >
-              <div className="p-2 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="block text-xs font-bold text-slate-900">Vivek Baliyan (Director)</span>
-                  <span className="text-[10px] bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded font-mono font-bold">2FA Enabled</span>
-                </div>
-                <span className="block text-[11px] text-slate-500 font-mono truncate">iamvivekbaliyan07@gmail.com (+91 7451050607)</span>
-              </div>
-            </button>
-
-            {/* Vipin Choudhary Admin Card */}
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('vkchoudhary050607@gmail.com');
-                setPassword('password123');
-                setMobileNumber('9425011088');
-                setError('');
-                setSuccessMsg('');
-              }}
-              className="w-full text-left p-2.5 border border-green-100 hover:border-green-300 hover:bg-white rounded-xl bg-white transition-all cursor-pointer group shadow-xs flex items-center gap-2.5"
-            >
-              <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="block text-xs font-bold text-slate-900">Aacharya Dhanvantari (Vipin)</span>
-                  <span className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded font-mono font-bold">2FA Enabled</span>
-                </div>
-                <span className="block text-[11px] text-slate-500 font-mono truncate">vkchoudhary050607@gmail.com (+91 9425011088)</span>
-              </div>
-            </button>
           </div>
         )}
 

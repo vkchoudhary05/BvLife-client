@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ArrowRight, Check, Gift, Phone, Sparkles, X } from 'lucide-react';
 import bvlifeLogo from '../../assets/Bvlogo.png';
+import { SecureOtpWidget } from './secureOtpWidget';
+import { formatMSG91Identifier, performOtpLogin, sendMSG91Otp } from '../services/msg91OtpService';
 
 const celebrationColors = ['#ef694a', '#f4c542', '#58b985', '#f6efe0', '#e889b2', '#7bc9cf'];
 const confettiPieces = Array.from({ length: 42 }, (_, index) => ({
@@ -26,6 +28,8 @@ export const FirstVisitLogin: React.FC<FirstVisitLoginProps> = ({ onClose, onLog
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpReqId, setOtpReqId] = useState('');
 
   const handleContinue = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -38,19 +42,38 @@ export const FirstVisitLogin: React.FC<FirstVisitLoginProps> = ({ onClose, onLog
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/auth/quick-mobile-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: mobile })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Unable to continue right now.');
-      localStorage.setItem('bvlife_mobile_gate_seen', 'true');
-      localStorage.setItem('bvlife_welcome_offer_seen', 'true');
-      onLogin(data.token, data.user);
-      onClose();
+      const result = await sendMSG91Otp(formatMSG91Identifier(mobile));
+      if (!result.success) throw new Error(result.error || 'Unable to send your verification code.');
+      setOtpReqId(result.reqId || '');
+      setOtpSent(true);
     } catch (err: any) {
       setError(err.message || 'Unable to continue right now.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpVerified = async (params: { code: string; accessToken?: string; reqId?: string }) => {
+    setLoading(true);
+    setError('');
+    try {
+      const mobile = phone.replace(/\D/g, '').slice(-10);
+      const result = await performOtpLogin({
+        identifier: mobile,
+        accessToken: params.accessToken,
+        code: params.code,
+        reqId: params.reqId || otpReqId,
+        fullName: 'BV Life Member',
+        email: `mobile-${mobile}@bvlife.local`,
+        autoCreate: true
+      });
+      if (!result.success || !result.user || !result.token) throw new Error(result.error || 'Unable to sign in. Please try again.');
+      localStorage.setItem('bvlife_mobile_gate_seen', 'true');
+      localStorage.setItem('bvlife_welcome_offer_seen', 'true');
+      onLogin(result.token, result.user);
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || 'OTP verification failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -101,20 +124,26 @@ export const FirstVisitLogin: React.FC<FirstVisitLoginProps> = ({ onClose, onLog
           </div>
         </div>
 
-        <form onSubmit={handleContinue} className="space-y-3 px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
-          <label htmlFor="welcome-offer-phone" className="block text-xs font-bold text-brand-green-950">Continue with your mobile</label>
-          <div className="flex items-center gap-2 rounded-2xl border border-brand-green-700/15 bg-white px-3 focus-within:border-brand-green-700 focus-within:ring-2 focus-within:ring-brand-green-700/10">
-            <Phone className="h-4 w-4 shrink-0 text-brand-gold-600" />
-            <span className="border-r border-brand-green-700/10 pr-2 text-sm font-semibold text-brand-green-800">+91</span>
-            <input id="welcome-offer-phone" autoFocus inputMode="numeric" maxLength={10} value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile number" className="w-full bg-transparent py-3 text-sm text-brand-green-950 outline-none placeholder:text-brand-green-800/35" />
-          </div>
-          {error && <p role="alert" className="text-xs font-semibold text-red-600">{error}</p>}
-          <button disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-green-800 py-3 text-sm font-bold text-white shadow-lg shadow-brand-green-900/15 transition hover:-translate-y-0.5 hover:bg-brand-green-900 disabled:cursor-wait disabled:opacity-60">
-            {loading ? 'Opening your BV Life account…' : 'Sign in & claim 10% off'} <ArrowRight className="h-4 w-4" />
-          </button>
+        <div className="space-y-3 px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
+          {!otpSent ? <form onSubmit={handleContinue} className="space-y-3">
+            <label htmlFor="welcome-offer-phone" className="block text-xs font-bold text-brand-green-950">Continue with your mobile</label>
+            <div className="flex items-center gap-2 rounded-2xl border border-brand-green-700/15 bg-white px-3 focus-within:border-brand-green-700 focus-within:ring-2 focus-within:ring-brand-green-700/10">
+              <Phone className="h-4 w-4 shrink-0 text-brand-gold-600" />
+              <span className="border-r border-brand-green-700/10 pr-2 text-sm font-semibold text-brand-green-800">+91</span>
+              <input id="welcome-offer-phone" autoFocus inputMode="numeric" autoComplete="off" maxLength={10} value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile number" className="w-full bg-transparent py-3 text-sm text-brand-green-950 outline-none placeholder:text-brand-green-800/35" />
+            </div>
+            {error && <p role="alert" className="text-xs font-semibold text-red-600">{error}</p>}
+            <button disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-green-800 py-3 text-sm font-bold text-white shadow-lg shadow-brand-green-900/15 transition hover:-translate-y-0.5 hover:bg-brand-green-900 disabled:cursor-wait disabled:opacity-60">
+              {loading ? 'Sending code...' : 'Send sign-in code'} <ArrowRight className="h-4 w-4" />
+            </button>
+          </form> : <div>
+            <p className="mb-3 text-center text-xs text-brand-green-800">Enter the code sent to +91 {phone}</p>
+            {error && <p role="alert" className="mb-3 text-xs font-semibold text-red-600">{error}</p>}
+            <SecureOtpWidget identifier={phone} purpose="Login" widgetName="BV Life Welcome Login" smsOnly initialReqId={otpReqId} theme="light" onVerified={handleOtpVerified} onCancel={() => { setOtpSent(false); setError(''); }} submitButtonText="Verify & claim offer" isSubmitting={loading} />
+          </div>}
           <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-brand-green-800/60"><Check className="h-3.5 w-3.5 text-brand-green-700" /> WELCOME10 will be applied to your cart when you continue.</p>
           <button type="button" onClick={onClose} className="block w-full py-1 text-center text-xs font-semibold text-brand-green-800/55 transition hover:text-brand-green-900">Maybe later, keep browsing</button>
-        </form>
+        </div>
       </section>
     </div>
   );
