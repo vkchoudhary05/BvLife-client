@@ -19,7 +19,7 @@ import { ConsultationFeatures } from '../components/ConsultationFeatures';
 import { loadRazorpayScript } from '../utils/razorpay';
 import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin, verifyMSG91Otp } from '../services/msg91OtpService';
 import doctorBannerOne from "@/assets/NewDr2.png";
-import doctorBannerTwo from "@/assets/DrSanjeev3.png";
+// import doctorBannerTwo from "@/assets/DrSanjeev3.png";
 import doctorProfileImage from "@/assets/Dr4.jpeg";
 
 const legendaryDoctorImg = doctorProfileImage;
@@ -62,11 +62,11 @@ const doctorHeroSlides = [
     desktopImage: doctorBannerOne,
     mobileImage: doctorBannerOne,
   },
-  {
-    id: "doc-slide-2",
-    desktopImage: doctorBannerTwo,
-    mobileImage: doctorBannerTwo,
-  }
+  // {
+  //   id: "doc-slide-2",
+  //   desktopImage: doctorBannerTwo,
+  //   mobileImage: doctorBannerTwo,
+  // }
 ];
 
 const HEALTH_CONCERNS = [
