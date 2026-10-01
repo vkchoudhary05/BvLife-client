@@ -242,6 +242,79 @@ body {
   100% { transform: translate3d(-12px, -130vh, 0) rotate(-7deg); opacity: 0; }
 }
 
+/* Subtle botanical movement for the BV Life membership offer. */
+.membership-floating-leaf {
+  position: absolute;
+  color: rgba(217, 163, 80, 0.38);
+  width: 30px;
+  height: 30px;
+  animation: membership-leaf-drift 8s ease-in-out infinite;
+}
+
+.membership-card-leaf {
+  position: absolute;
+  color: #65f0a4;
+  filter: drop-shadow(0 0 9px rgba(74, 255, 160, 0.72));
+  animation: membership-leaf-drift 7s ease-in-out infinite;
+}
+
+.membership-card-leaf-a { width: 36px; height: 36px; right: 9%; top: 22%; opacity: 0.88; }
+.membership-card-leaf-b { width: 25px; height: 25px; left: 7%; bottom: 16%; color: #a1ffd0; animation-delay: 1.5s; opacity: 0.8; }
+.membership-card-leaf-c { width: 18px; height: 18px; right: 18%; bottom: 13%; color: #38d987; animation-delay: 3s; opacity: 0.72; }
+
+.membership-green-glow {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  border-radius: 9999px;
+  background: rgba(43, 255, 137, 0.12);
+  filter: blur(28px);
+  animation: membership-glow-pulse 5s ease-in-out infinite;
+}
+
+.membership-green-glow-a { top: 15%; right: 4%; }
+.membership-green-glow-b { bottom: -42px; left: 20%; width: 80px; height: 80px; animation-delay: 2.5s; }
+
+@keyframes membership-glow-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50% { opacity: 0.9; transform: scale(1.16); }
+}
+
+.membership-leaf-one { left: 8%; bottom: 14%; animation-delay: 0s; }
+.membership-leaf-two { right: 10%; bottom: 28%; width: 22px; height: 22px; animation-delay: 2.2s; }
+.membership-leaf-three { left: 18%; top: 20%; width: 18px; height: 18px; animation-delay: 4.1s; }
+
+@keyframes membership-leaf-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-12deg); opacity: 0.25; }
+  50% { transform: translate3d(18px, -36px, 0) rotate(20deg); opacity: 0.8; }
+}
+
+.membership-card-shine {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.membership-card-shine::after {
+  content: '';
+  position: absolute;
+  top: -45%;
+  left: -60%;
+  width: 36%;
+  height: 190%;
+  transform: rotate(24deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  animation: membership-card-shimmer 5.5s ease-in-out infinite;
+}
+
+@keyframes membership-card-shimmer {
+  0%, 40% { left: -60%; opacity: 0; }
+  48% { opacity: 1; }
+  72%, 100% { left: 145%; opacity: 0; }
+}
+
 .welcome-firework {
   position: absolute;
   width: 3px;

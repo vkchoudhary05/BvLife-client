@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AIConsultantModal } from './components/AIConsultantModal';
 import { QuickViewModal } from './components/QuickViewModal';
 import { AdminGatewayLogin } from './components/AdminGatewayLogin';
 import { BuyNowModal } from './components/BuyNowModal';
-import { FirstVisitLogin } from './components/FirstVisitLogin';
+import { MembershipOfferPopup } from './components/MembershipOfferPopup';
 
 // Pages
 import { CustomerHome } from './pages/CustomerHome';
@@ -75,7 +75,7 @@ function buildSeo(currentPage: string, params: any, products: Product[], blogs: 
   if (currentPage === 'shop') {
     const category = params?.category?.trim();
     const title = category ? `${category} Ayurvedic Products Online | BV Life` : 'Shop Ayurvedic Products Online in India | BV Life';
-    const listed = products.filter(item => !category || item.category.toLowerCase() === category.toLowerCase()).slice(0, 20);
+    const listed = products.filter(item => !category || (item.categories?.length ? item.categories : [item.category]).some(itemCategory => itemCategory.toLowerCase() === category.toLowerCase())).slice(0, 20);
     return {
       title,
       description: category ? `Shop natural Ayurvedic ${category.toLowerCase()} products from BV Life. Explore herbal wellness essentials with convenient delivery across India.` : 'Shop authentic Ayurvedic herbs, supplements, hair care and skin care products online from BV Life. Discover natural wellness essentials delivered across India.',
@@ -208,20 +208,19 @@ export default function App() {
 
   // Floating modals states
   const [isConsultantOpen, setIsConsultantOpen] = useState(false);
-  const [showFirstVisitLogin, setShowFirstVisitLogin] = useState(false);
+  const [showMembershipOffer, setShowMembershipOffer] = useState(false);
+  const membershipOfferTimerStarted = useRef(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [buyNowProduct, setBuyNowProduct] = useState<Product | null>(null);
   const [buyNowQty, setBuyNowQty] = useState<number>(1);
   const [buyNowVariant, setBuyNowVariant] = useState<ProductVariant | undefined>(undefined);
 
   useEffect(() => {
-    const offerAlreadySeen = localStorage.getItem('bvlife_welcome_offer_seen') || localStorage.getItem('bvlife_mobile_gate_seen');
-    const previewOffer = new URLSearchParams(window.location.search).get('welcomeOffer') === '1';
-    if (!currentUser && !authToken && (previewOffer || !offerAlreadySeen)) {
-      const timer = window.setTimeout(() => setShowFirstVisitLogin(true), previewOffer ? 0 : 30_000);
-      return () => window.clearTimeout(timer);
-    }
-  }, [currentUser, authToken]);
+    if (membershipOfferTimerStarted.current) return;
+    membershipOfferTimerStarted.current = true;
+    const timer = window.setTimeout(() => setShowMembershipOffer(true), 7000);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   // Fetch contextual data lazily based on active page route
   useEffect(() => {
@@ -626,23 +625,13 @@ export default function App() {
         />
       )}
 
-      {currentPage !== 'admin' && showFirstVisitLogin && (
-        <FirstVisitLogin
-          onClose={() => {
-            localStorage.setItem('bvlife_welcome_offer_seen', 'true');
-            setShowFirstVisitLogin(false);
-          }}
-          onLogin={(token, user) => {
-            handleLoginSuccess(token);
-            setCurrentUser(user);
-            setAppliedCoupon({
-              code: 'WELCOME10',
-              discountType: 'percentage',
-              value: 10,
-              minOrderValue: 0,
-              expiryDate: '2027-12-31',
-              active: true
-            });
+      {currentPage !== 'admin' && showMembershipOffer && (
+        <MembershipOfferPopup
+          isSignedIn={Boolean(currentUser || authToken)}
+          onClose={() => setShowMembershipOffer(false)}
+          onJoin={() => {
+            setShowMembershipOffer(false);
+            handleNavigate(currentUser || authToken ? 'dashboard' : 'login', currentUser || authToken ? { tab: 'membership' } : undefined);
           }}
         />
       )}

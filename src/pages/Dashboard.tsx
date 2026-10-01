@@ -12,7 +12,7 @@ import {
   ExternalLink, SlidersHorizontal, BarChart3, TrendingUp, DollarSign, PackageCheck, AlertTriangle, CreditCard,
   Building2, Star, MessageSquare, ChevronDown, ChevronUp, Boxes, PackagePlus, Camera, Stethoscope, Video, Send, PhoneCall, Crown
 } from 'lucide-react';
-import { User as UserType, Order, Address, Product, ProductVariant, Coupon, WebsiteSettings } from '../types';
+import { User as UserType, Order, Address, Product, ProductVariant, Coupon, WebsiteSettings, MembershipPlanPrice } from '../types';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 import { SecureOtpWidget } from '../components/secureOtpWidget';
 import { WriteReviewModal } from '../components/WriteReviewModel';
@@ -21,6 +21,11 @@ import { MembershipCardSection } from '../components/MembershipCardSection';
 import { sendMSG91Otp, formatMSG91Identifier } from '../services/msg91OtpService';
 import { Pagination } from '../components/Pagination';
 import { FORMULATION_PRESET_IMAGES, FORMULATION_IMAGES_MAP, getVariantImage, getFormulationPresetImage } from '../utils/variantImages';
+
+const PRODUCT_CATEGORIES = [
+  'Immunity', 'Skin Care', 'Hair Care', 'Digestion', 'Diabetes', 'Joint Care', "Women's Health", "Men's Health",
+  'Brain & Memory', 'Sleep & Stress', 'Sexual Wellness', 'Liver & Detox', 'Heart Health', 'Respiratory Care'
+];
 
 interface DashboardProps {
   user: UserType | null;
@@ -106,6 +111,46 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   });
   const [settingsSaved, setSettingsSaved] = useState(false);
+  const [membershipPlanPrices, setMembershipPlanPrices] = useState<MembershipPlanPrice[]>([]);
+  const [membershipPlansSaved, setMembershipPlansSaved] = useState(false);
+  const [membershipPlansError, setMembershipPlansError] = useState('');
+  const [savingMembershipPlans, setSavingMembershipPlans] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== 'admin-settings' || !isAdmin) return;
+    fetch('/api/membership-plans')
+      .then(async response => {
+        if (!response.ok) throw new Error(`Membership pricing API returned HTTP ${response.status}. Restart or deploy the latest backend, then reload this page.`);
+        const plans = await response.json();
+        if (!Array.isArray(plans)) throw new Error('Membership pricing API returned an unexpected response. Restart or deploy the latest backend, then reload this page.');
+        return plans as MembershipPlanPrice[];
+      })
+      .then(plans => setMembershipPlanPrices(plans))
+      .catch(error => setMembershipPlansError(error.message || 'Could not load membership prices.'));
+  }, [activeTab, isAdmin]);
+
+  const handleSaveMembershipPlans = async () => {
+    setSavingMembershipPlans(true);
+    setMembershipPlansError('');
+    setMembershipPlansSaved(false);
+    try {
+      const token = sessionStorage.getItem('Bv_auth_token') || localStorage.getItem('Bv_auth_token') || '';
+      const response = await fetch('/api/membership-plans', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plans: membershipPlanPrices })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not save membership prices.');
+      setMembershipPlanPrices(data);
+      setMembershipPlansSaved(true);
+      window.setTimeout(() => setMembershipPlansSaved(false), 3500);
+    } catch (error: any) {
+      setMembershipPlansError(error.message || 'Could not save membership prices.');
+    } finally {
+      setSavingMembershipPlans(false);
+    }
+  };
 
   // Payments Ledger state
   const [payments, setPayments] = useState<any[]>([]);
@@ -417,6 +462,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [prodOrigPrice, setProdOrigPrice] = useState(600);
   const [prodStock, setProdStock] = useState(20);
   const [prodCategory, setProdCategory] = useState('Immunity');
+  const [prodCategories, setProdCategories] = useState<string[]>(['Immunity']);
   const [prodDesc, setProdDesc] = useState('');
   const [prodImg, setProdImg] = useState('');
   const [prodImg2, setProdImg2] = useState('');
@@ -997,6 +1043,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdOrigPrice(prod.originalPrice);
     setProdStock(prod.stock);
     setProdCategory(prod.category);
+    setProdCategories(prod.categories?.length ? prod.categories : [prod.category]);
     setProdDesc(prod.description);
     setProdImg(prod.mainImage);
     setProdImg2(prod.images?.[0] || '');
@@ -1031,6 +1078,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdOrigPrice(600);
     setProdStock(20);
     setProdCategory('Immunity');
+    setProdCategories(['Immunity']);
     setProdDesc('');
     setProdImg('');
     setProdImg2('');
@@ -1074,6 +1122,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProdFormulation(targetForm);
     setProdFormLabel(targetLabel);
     setProdCategory(sourceProd.category);
+    setProdCategories(sourceProd.categories?.length ? sourceProd.categories : [sourceProd.category]);
     setProdBrand(sourceProd.brand || 'BV Life');
     setProdPrice(sourceProd.price);
     setProdOrigPrice(sourceProd.originalPrice);
@@ -1100,6 +1149,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       originalPrice: prodOrigPrice,
       stock: prodStock,
       category: prodCategory,
+      categories: prodCategories,
       subcategory: prodSubcategory,
       brand: prodBrand,
       description: prodDesc,
@@ -2688,7 +2738,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {activeTab === 'admin-catalog' && (() => {
             // Filter and search catalog
             const filteredCatalog = products.filter(prod => {
-              if (adminCatalogCategory && prod.category !== adminCatalogCategory) return false;
+              if (adminCatalogCategory && !(prod.categories?.length ? prod.categories : [prod.category]).includes(adminCatalogCategory)) return false;
               
               if (adminCatalogFamilyFilter) {
                 const targetFam = adminCatalogFamilyFilter.toLowerCase();
@@ -2912,23 +2962,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <input type="text" placeholder="E.g. GL-1001" value={prodSku} onChange={e => setProdSku(e.target.value)} className="w-full bg-white border border-slate-200 p-2 rounded-xl font-mono text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600" />
                       </div>
                       <div className="space-y-1 sm:col-span-1">
-                        <label className="font-bold text-slate-700">Category</label>
-                        <select value={prodCategory} onChange={e => setProdCategory(e.target.value)} className="w-full bg-white border border-slate-200 p-2 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-600">
-                          <option value="Immunity">Immunity</option>
-                          <option value="Skin Care">Skin Care</option>
-                          <option value="Hair Care">Hair Care</option>
-                          <option value="Digestion">Digestion</option>
-                          <option value="Diabetes">Diabetes</option>
-                          <option value="Joint Care">Joint Care</option>
-                          <option value="Women's Health">Women's Health</option>
-                          <option value="Men's Health">Men's Health</option>
-                          <option value="Brain & Memory">Brain & Memory</option>
-                          <option value="Sleep & Stress">Sleep & Stress</option>
-                          <option value="Sexual Wellness">Sexual Wellness</option>
-                          <option value="Liver & Detox">Liver & Detox</option>
-                          <option value="Heart Health">Heart Health</option>
-                          <option value="Respiratory Care">Respiratory Care</option>
-                        </select>
+                        <label className="font-bold text-slate-700">Categories <span className="font-normal text-slate-500">(select one or more)</span></label>
+                        <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-slate-200 bg-white p-2 max-h-36 overflow-y-auto">
+                          {PRODUCT_CATEGORIES.map(category => (
+                            <label key={category} className="flex items-center gap-1.5 text-[11px] text-slate-700 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={prodCategories.includes(category)}
+                                onChange={() => {
+                                  const nextCategories = prodCategories.includes(category)
+                                    ? prodCategories.filter(item => item !== category)
+                                    : [...prodCategories, category];
+                                  if (nextCategories.length > 0) {
+                                    setProdCategories(nextCategories);
+                                    setProdCategory(nextCategories[0]);
+                                  }
+                                }}
+                                className="accent-green-700 cursor-pointer"
+                              />
+                              {category}
+                            </label>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-slate-500">The first selected category is the product's primary category.</p>
                       </div>
                     </div>
 
@@ -5334,6 +5390,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   Save Settings
                 </button>
               </form>
+
+              <section className="max-w-3xl space-y-4 rounded-3xl border border-brand-gold-300/50 bg-gradient-to-br from-[#fffdf7] via-white to-emerald-50/50 p-5 shadow-sm sm:p-6">
+                <div>
+                  <h4 className="flex items-center gap-2 text-base font-bold text-slate-900"><Crown className="h-4 w-4 text-amber-500" /> Privilege Membership Plan Prices</h4>
+                  <p className="mt-1 text-xs text-slate-500">These saved database prices are used on the membership card and verified payment amount.</p>
+                </div>
+                {membershipPlansSaved && <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-bold text-emerald-800">Membership prices saved.</p>}
+                {membershipPlansError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700">{membershipPlansError}</p>}
+                <div className="space-y-2">
+                  {membershipPlanPrices.map((plan, index) => (
+                    <div key={plan.tier} className="grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 bg-white p-3 sm:grid-cols-[1fr_1fr_1fr] sm:items-center">
+                      <span className="text-xs font-bold text-slate-800">{plan.tier} Membership</span>
+                      <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">Sale price ₹
+                        <input type="number" min="1" value={plan.price} onChange={event => setMembershipPlanPrices(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, price: Number(event.target.value) } : item))} className="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none" />
+                      </label>
+                      <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">Display price ₹
+                        <input type="number" min="1" value={plan.originalPrice} onChange={event => setMembershipPlanPrices(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, originalPrice: Number(event.target.value) } : item))} className="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-900 focus:border-emerald-600 focus:outline-none" />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <button type="button" disabled={savingMembershipPlans || membershipPlanPrices.length !== 5} onClick={handleSaveMembershipPlans} className="rounded-xl bg-gradient-to-r from-brand-green-800 to-brand-green-700 px-5 py-3 text-xs font-extrabold text-white shadow-md transition hover:from-brand-green-900 hover:to-brand-green-800 disabled:cursor-not-allowed disabled:opacity-50">
+                  {savingMembershipPlans ? 'Saving Prices…' : 'Save Membership Prices'}
+                </button>
+              </section>
             </div>
           )}
 

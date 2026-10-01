@@ -21,8 +21,9 @@ import {
   Zap,
   Gift
 } from 'lucide-react';
-import { User, UserMembership } from '../types';
+import { MembershipPlanPrice, User, UserMembership } from '../types';
 import { loadRazorpayScript } from '../utils/razorpay';
+import bvlifeLogo from '../../assets/Bvlogo.png';
 
 interface MembershipCardSectionProps {
   user: User;
@@ -119,12 +120,30 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
   user,
   onUserUpdated
 }) => {
+  const [membershipTiers, setMembershipTiers] = useState<TierPlan[]>(MEMBERSHIP_TIERS);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedTier, setSelectedTier] = useState<TierPlan>(MEMBERSHIP_TIERS[2]); // Default 5 Years
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    fetch('/api/membership-plans').then(response => response.ok ? response.json() : Promise.reject()).then((prices: MembershipPlanPrice[]) => {
+      if (!active || !Array.isArray(prices)) return;
+      setMembershipTiers(current => current.map(plan => {
+        const storedPrice = prices.find(item => item.tier === plan.tier);
+        return storedPrice ? { ...plan, price: Number(storedPrice.price), originalPrice: Number(storedPrice.originalPrice) } : plan;
+      }));
+    }).catch(error => console.warn('Could not load membership plan prices:', error));
+    return () => { active = false; };
+  }, []);
+
+  React.useEffect(() => {
+    const updatedSelection = membershipTiers.find(plan => plan.tier === selectedTier.tier);
+    if (updatedSelection && (updatedSelection.price !== selectedTier.price || updatedSelection.originalPrice !== selectedTier.originalPrice)) setSelectedTier(updatedSelection);
+  }, [membershipTiers, selectedTier]);
 
   const membershipExpiry = user.membership?.expiryDate;
   const membershipIsValid = membershipExpiry?.toLowerCase() === 'lifetime' ||
@@ -273,7 +292,7 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
         
         {/* PHYSICAL CARD MOCKUP (Left 7 Cols) */}
         <div className="lg:col-span-7 flex justify-center">
-          <div className="relative -mx-2 w-[calc(100%+1rem)] max-w-[506px] min-h-[224px] sm:mx-0 sm:w-full sm:max-w-[490px] sm:min-h-0 sm:aspect-[1.586/1] rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-2xl overflow-hidden border border-brand-gold-400/50 bg-gradient-to-br from-[#0c2417] via-[#16432d] to-[#081810] text-white flex flex-col justify-between select-none">
+          <div className="relative -mx-2 w-[calc(100%+1rem)] max-w-[506px] min-h-[224px] sm:mx-0 sm:w-full sm:max-w-[490px] sm:min-h-0 sm:aspect-[1.65/1] rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-2xl overflow-hidden border border-brand-gold-400/50 bg-[radial-gradient(circle_at_top_right,rgba(217,163,80,0.22),transparent_48%),linear-gradient(135deg,#0c2417,#16432d,#081810)] text-white flex flex-col justify-between select-none">
             
             {/* Hologram & Sheen overlays */}
             <div className="absolute -top-24 -left-24 w-60 h-60 bg-brand-gold-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -281,12 +300,13 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
             
             {/* Etched watermark pattern */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(217,163,80,0.12),transparent_60%)] pointer-events-none" />
+            <span aria-hidden="true" className="membership-card-shine" />
 
             {/* Card Header */}
             <div className="relative z-10 flex items-start justify-between gap-2">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-brand-gold-400 animate-pulse" />
+                  <img src={bvlifeLogo} alt="BV Life" className="h-7 w-7 rounded-full border border-brand-gold-300 bg-white object-cover p-0.5" />
                   <span className="font-serif font-extrabold text-sm sm:text-base tracking-widest text-brand-gold-300">
                     BV LIFE
                   </span>
@@ -304,13 +324,9 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
                     : 'bg-white/10 text-white/70 border-white/20'
                 }`}>
                   <Crown className="w-3 h-3 text-brand-gold-400" />
-                  <span>{activeMembership ? `${activeMembership.tier} Member` : 'Sample Preview'}</span>
+                  <span>{activeMembership ? `${activeMembership.tier} Member` : 'Privilege Pass'}</span>
                 </span>
-                {activeMembership && (
-                  <span className="text-[9px] text-brand-gold-400/90 font-mono mt-0.5">
-                    30% Discount Active
-                  </span>
-                )}
+                <span className="text-[9px] text-brand-gold-300 font-mono mt-0.5">30% MEMBER SAVINGS</span>
               </div>
             </div>
 
@@ -479,7 +495,7 @@ export const MembershipCardSection: React.FC<MembershipCardSectionProps> = ({
 
             {/* Tiers List */}
             <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-              {MEMBERSHIP_TIERS.map((tierPlan) => {
+              {membershipTiers.map((tierPlan) => {
                 const isSelected = selectedTier.tier === tierPlan.tier;
                 return (
                   <div

@@ -99,7 +99,7 @@ export const Shop: React.FC<ShopProps> = ({
 
     // Category filter
     if (selectedCategory) {
-      result = result.filter(p => p.category === selectedCategory);
+      result = result.filter(p => (p.categories?.length ? p.categories : [p.category]).includes(selectedCategory));
     }
 
     // Price range filter

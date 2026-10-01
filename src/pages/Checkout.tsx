@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { ShieldCheck, Plus, ShoppingBag, ArrowLeft, ArrowRight, CheckCircle2, Ticket, Mail, Lock, Phone as PhoneIcon, Sparkles, User as UserIcon, Shield, RotateCw, Star, MessageSquare } from 'lucide-react';
+import { ShieldCheck, Plus, ShoppingBag, ArrowLeft, ArrowRight, CheckCircle2, Ticket, Mail, Lock, Phone as PhoneIcon, Sparkles, User as UserIcon, Shield, RotateCw, Star, MessageSquare, Crown } from 'lucide-react';
 import { CartItem, Address, Coupon, WebsiteSettings, Order } from '../types';
 import { validateAndFormatIndianPhone } from '../utils';
 import { loadRazorpayScript } from '../utils/razorpay';
@@ -1313,6 +1313,21 @@ export const Checkout: React.FC<CheckoutProps> = ({
                   Edit bag
                 </button>
               </div>
+
+              {isPrivilegeMember ? (
+                <div className="rounded-xl border border-brand-gold-400/45 bg-[linear-gradient(135deg,#0c2417,#1d5639)] px-3 py-2.5 text-white shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-xs font-bold"><Crown className="h-4 w-4 text-brand-gold-300" /> BV Life Privilege Pass</span>
+                    <span className="rounded-full bg-brand-gold-400 px-2 py-0.5 text-[10px] font-extrabold text-brand-green-950">30% ACTIVE</span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-brand-cream-100/80">Your member savings are included below.</p>
+                </div>
+              ) : (
+                <button type="button" onClick={() => onNavigate('dashboard', { tab: 'membership' })} className="w-full rounded-xl border border-brand-gold-400/45 bg-[linear-gradient(135deg,#0c2417,#1d5639)] px-3 py-2.5 text-left text-white shadow-sm transition hover:-translate-y-0.5">
+                  <div className="flex items-center justify-between gap-2"><span className="flex items-center gap-2 text-xs font-bold"><Crown className="h-4 w-4 text-brand-gold-300" /> Get your BV Life Privilege Pass</span><span className="text-[10px] font-extrabold text-brand-gold-300">30% OFF</span></div>
+                  <p className="mt-1 text-[10px] text-brand-cream-100/80">Save on this and future orders. Selected plans include free doctor consultations.</p>
+                </button>
+              )}
 
               {/* Items listing */}
               <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">

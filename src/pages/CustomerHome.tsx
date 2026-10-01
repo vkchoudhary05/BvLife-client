@@ -415,7 +415,7 @@ export const CustomerHome: React.FC<CustomerHomeProps> = ({
             <p className="mt-1 max-w-[28rem] text-[11px] leading-relaxed sm:text-sm text-brand-green-800/60">A handpicked selection from our full range.</p>
           </div>
           <button 
-            onClick={() => onNavigate('shop', { featured: true })} 
+            onClick={() => onNavigate('shop')} 
             aria-label={t('section_feat_browse', language)}
             className="shrink-0 rounded-full border border-brand-green-700/15 bg-white px-2.5 py-2 text-[10px] text-brand-green-800 hover:text-brand-gold-600 font-bold flex items-center gap-1 cursor-pointer sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-sm"
           >
