@@ -655,6 +655,18 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
                   </div>
                 </div>
 
+                <div className="flex items-start gap-3.5">
+                  <div className="w-9 h-9 rounded-full bg-brand-green-50 flex items-center justify-center flex-shrink-0 text-brand-green-700">
+                    <MapPin className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-brand-green-900 uppercase tracking-wider">Factory Address</h4>
+                    <p className="text-xs text-brand-green-800 font-medium mt-0.5">
+                      Blue Star Laboratories, Plot No-6, Sector-56, Phase-4, HSIIDC, Kundli, Haryana-131028 (INDIA)
+                    </p>
+                  </div>
+                </div>
+
               </div>
 
               {/* Consultation Teaser */}

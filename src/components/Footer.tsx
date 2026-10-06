@@ -187,6 +187,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
               <MapPin className="w-5 h-5 text-brand-green-800 flex-shrink-0" />
               <span className="leading-tight">Bv Life,Jhundpur Industrial Area, Sonipat, Haryana - 131021</span>
             </div>
+            <div className="flex items-start gap-2.5">
+              <MapPin className="w-5 h-5 text-brand-green-800 flex-shrink-0 mt-0.5" />
+              <span className="leading-tight"><strong>Factory:</strong> Blue Star Laboratories, Plot No-6, Sector-56, Phase-4, HSIIDC, Kundli, Haryana-131028 (INDIA)</span>
+            </div>
           </div>
           {socialLinks.length > 0 && (
             <div className="space-y-2.5">
