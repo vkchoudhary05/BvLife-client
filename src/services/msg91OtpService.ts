@@ -476,7 +476,9 @@ async function dispatchMSG91Otp(formattedId: string): Promise<OTPResponse> {
  * Headless Retry OTP using MSG91 Widget window.retryOtp()
  */
 export async function retryMSG91Otp(
-  channel: '11' | '4' | '3' | '12' | null = null,
+  // MSG91 requires an explicit retry channel. `11` is the SMS channel used
+  // by this application for login OTPs.
+  channel: '11' | '4' | '3' | '12' = '11',
   reqId?: string,
   _identifier?: string
 ): Promise<OTPResponse> {
@@ -492,7 +494,7 @@ export async function retryMSG91Otp(
 
   return new Promise((resolve) => {
     try {
-      console.log(`[MSG91 Widget] Resending OTP via window.retryOtp (reqId: ${resolvedReqId || 'store'})...`);
+      console.log(`[MSG91 Widget] Resending OTP via window.retryOtp (channel: ${channel}, reqId: ${resolvedReqId || 'store'})...`);
       const handleSuccess = (data: any) => {
         console.log('[MSG91 Widget] retryOtp success response:', data);
         const newReqId = extractReqIdFromData(data) || resolvedReqId;
@@ -669,6 +671,8 @@ export async function verifyMSG91Otp(
           extractedToken = data.trim();
         } else if (data?.['access-token'] && typeof data['access-token'] === 'string') {
           extractedToken = data['access-token'];
+        } else if (data?.access_token && typeof data.access_token === 'string') {
+          extractedToken = data.access_token;
         } else if (data?.accessToken && typeof data.accessToken === 'string') {
           extractedToken = data.accessToken;
         } else if (data?.token && typeof data.token === 'string') {
@@ -677,10 +681,14 @@ export async function verifyMSG91Otp(
           extractedToken = data.jwt;
         } else if (data?.data?.['access-token']) {
           extractedToken = data.data['access-token'];
+        } else if (data?.data?.access_token) {
+          extractedToken = data.data.access_token;
         } else if (data?.data?.token) {
           extractedToken = data.data.token;
         } else if (data?.data?.accessToken) {
           extractedToken = data.data.accessToken;
+        } else if (data?.data?.jwt) {
+          extractedToken = data.data.jwt;
         } else if (data?.message && typeof data.message === 'string' && (data.message.startsWith('eyJ') || data.message.split('.').length === 3)) {
           extractedToken = data.message.trim();
         }
@@ -689,6 +697,7 @@ export async function verifyMSG91Otp(
         if (!extractedToken && typeof window !== 'undefined' && typeof window.getWidgetData === 'function') {
           const wd = window.getWidgetData();
           if (wd?.['access-token']) extractedToken = wd['access-token'];
+          else if (wd?.access_token) extractedToken = wd.access_token;
           else if (wd?.token) extractedToken = wd.token;
           else if (wd?.jwt) extractedToken = wd.jwt;
         }
@@ -751,13 +760,18 @@ export async function performOtpLogin(params: {
   autoCreate?: boolean;
 }): Promise<{ success: boolean; user?: any; token?: string; error?: string; isNewUser?: boolean; message?: string }> {
   try {
-    const payload: any = { ...params };
-    // SINGLE OTP FLOW: When accessToken is provided (verified on frontend by MSG91),
-    // omit code & reqId so backend strictly hits verify token API and avoids double OTP!
-    if (payload.accessToken) {
-      delete payload.code;
-      delete payload.reqId;
-    }
+    // The OTP itself and its request ID never leave the browser. The only
+    // verification credential sent to our API is the access token returned by
+    // MSG91 after its widget has verified the code.
+    const payload = params.accessToken
+      ? {
+          identifier: params.identifier,
+          accessToken: params.accessToken.trim(),
+          ...(params.fullName ? { fullName: params.fullName } : {}),
+          ...(params.email ? { email: params.email } : {}),
+          ...(params.autoCreate !== undefined ? { autoCreate: params.autoCreate } : {})
+        }
+      : { ...params };
 
     const res = await fetch('/api/auth/otp-login', {
       method: 'POST',

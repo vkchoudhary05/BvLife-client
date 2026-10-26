@@ -490,7 +490,7 @@ export const Login: React.FC<LoginProps> = ({
         '[Login] Resending OTP...'
       );
 
-      const res = await retryMSG91Otp(null, activeReqId, formattedPhone || mobileNumber);
+      const res = await retryMSG91Otp('11', activeReqId, formattedPhone || mobileNumber);
 
       console.log(
         '[Login] Resend result:',

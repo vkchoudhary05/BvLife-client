@@ -100,7 +100,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
     setAuthLoading(true);
     setLoginError('');
     try {
-      const retryResult = await retryMSG91Otp(null, activeReqId);
+      const retryResult = await retryMSG91Otp('11', activeReqId);
       if (retryResult.success) {
         setOtpMessage(retryResult.message || 'A new verification passcode has been dispatched.');
         setResendTimer(30);
