@@ -25,6 +25,8 @@ import { Wishlist } from './pages/Wishlist';
 import { Login } from './pages/Login';
 import { DoctorConsultation } from './pages/DoctorConsultation';
 import { DoctorDashboard } from './pages/DoctorDashboard';
+import { AffiliateReferral } from './pages/AffiliateReferral';
+import { AffiliateFooter, AffiliatePortal } from './pages/AffiliatePortal';
 
 // Types & Custom Hooks
 import { Product, ProductVariant } from './types';
@@ -261,6 +263,8 @@ export default function App() {
         }
       } else if (page === 'admin') {
         path = '/admin';
+      } else if (page === 'affiliate') {
+        path = `/affiliate/${params?.section || 'dashboard'}`;
       } else if (page === 'order-confirmation' || page === 'order-success') {
         path = params?.id ? `/order-confirmation?id=${params.id}` : '/order-confirmation';
       } else if (page !== 'home') {
@@ -308,11 +312,15 @@ export default function App() {
     return handlePlaceOrder(orderData, cart, clearCart);
   };
 
+  // The partner programme is a dedicated experience, not a store page. It
+  // intentionally has its own visual shell inside AffiliatePortal.
+  const isAffiliateExperience = currentPage === 'affiliate' || currentPage === 'affiliate-referral';
+
   return (
     <div className="bg-brand-cream-50 min-h-screen text-brand-green-950 font-sans selection:bg-brand-gold-500/30 flex flex-col justify-between">
       
       {/* Header Navigation Bar */}
-      {currentPage !== 'admin' && (
+      {currentPage !== 'admin' && !isAffiliateExperience && (
         <Navbar 
           currentUser={currentUser}
           onNavigate={handleNavigate}
@@ -333,6 +341,10 @@ export default function App() {
       <main className="flex-grow">
         
         {/* Customer Home */}
+        {currentPage === 'affiliate-referral' && (
+          <AffiliateReferral code={pageParams?.code || ''} onNavigate={handleNavigate} />
+        )}
+        {currentPage === 'affiliate' && <AffiliatePortal section={pageParams?.section || 'dashboard'} onNavigate={handleNavigate} onLogin={(token, user) => { setCurrentUser(user); handleLoginSuccess(token); }} />}
         {currentPage === 'home' && (
           <CustomerHome
             products={products}
@@ -588,7 +600,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      {currentPage !== 'admin' && (
+      {currentPage !== 'admin' && !isAffiliateExperience && (
         <Footer 
           onNavigate={handleNavigate}
           onOpenConsultant={() => setIsConsultantOpen(true)}
@@ -598,7 +610,7 @@ export default function App() {
       )}
 
       {/* FLOATING QUICK VIEW POPUP */}
-      {currentPage !== 'admin' && quickViewProduct && (
+      {currentPage !== 'admin' && !isAffiliateExperience && quickViewProduct && (
         <QuickViewModal
           product={quickViewProduct}
           onClose={() => setQuickViewProduct(null)}
@@ -613,7 +625,7 @@ export default function App() {
       )}
 
       {/* FLOATING VEDIC AI CONSULTANT MODAL */}
-      {currentPage !== 'admin' && isConsultantOpen && (
+      {currentPage !== 'admin' && !isAffiliateExperience && isConsultantOpen && (
         <AIConsultantModal
           onClose={() => setIsConsultantOpen(false)}
           products={products}
@@ -625,7 +637,7 @@ export default function App() {
         />
       )}
 
-      {currentPage !== 'admin' && showMembershipOffer && (
+      {currentPage !== 'admin' && !isAffiliateExperience && showMembershipOffer && (
         <MembershipOfferPopup
           isSignedIn={Boolean(currentUser || authToken)}
           onClose={() => setShowMembershipOffer(false)}
@@ -635,9 +647,10 @@ export default function App() {
           }}
         />
       )}
+      {isAffiliateExperience && <AffiliateFooter onNavigate={handleNavigate} />}
 
       {/* FLOATING EXPRESS BUY NOW MODAL */}
-      {currentPage !== 'admin' && buyNowProduct && (
+      {currentPage !== 'admin' && !isAffiliateExperience && buyNowProduct && (
         <BuyNowModal
           product={buyNowProduct}
           selectedVariant={buyNowVariant}

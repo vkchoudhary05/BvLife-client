@@ -23,7 +23,7 @@ import {
   Check,
   Sparkle
 } from 'lucide-react';
-import { sendMSG91Otp, formatMSG91Identifier, performOtpLogin } from '../services/msg91OtpService';
+import { performOtpLogin } from '../services/msg91OtpService';
 import { SecureOtpWidget } from './secureOtpWidget';
 
 interface AdminGatewayLoginProps {
@@ -130,24 +130,15 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
         }
       }
 
-      // 3. Extract clean phone and format for MSG91 SMS dispatch
+      // 3. Show the mounted OTP screen. It dispatches the first SMS only once
+      // its MSG91 widget is ready, which avoids the lost first request.
       const cleanPhone = adminTargetPhone.replace(/\D/g, '').slice(-10);
-      const msg91Target = formatMSG91Identifier(cleanPhone);
 
       setAdminPhone(cleanPhone);
       setAdminName(adminFullName);
-
-      // 4. Dispatch Mobile SMS OTP via the unified MSG91 OTP service
-      const otpRes = await sendMSG91Otp(msg91Target);
-
-      if (otpRes.success) {
-        if (otpRes.reqId) setActiveReqId(otpRes.reqId);
-        setStep('otp');
-        setSuccessMsg(`Verification code sent to +91 ${cleanPhone}`);
-      } else {
-        setStep('otp');
-        setSuccessMsg(`Credentials verified! Complete mobile verification for +91 ${cleanPhone}`);
-      }
+      setActiveReqId(undefined);
+      setStep('otp');
+      setSuccessMsg(`Credentials verified. Sending a verification code to +91 ${cleanPhone}…`);
     } catch (err: any) {
       console.error('[Admin Login Error]:', err);
       setError('Connection failure: Unable to establish contact with the server.');
@@ -185,22 +176,12 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
         return;
       }
 
-      // 2. Dispatch SMS OTP
-      const msg91Target = formatMSG91Identifier(cleanPhone);
-      const otpRes = await sendMSG91Otp(msg91Target);
-
-      if (otpRes.success) {
-        if (otpRes.reqId) setActiveReqId(otpRes.reqId);
-        setAdminPhone(cleanPhone);
-        setAdminName(cleanPhone === '7451050607' ? 'Vivek Baliyan (Director)' : 'Aacharya Dhanvantari');
-        setStep('otp');
-        setSuccessMsg(`Verification code sent to +91 ${cleanPhone}`);
-      } else {
-        setAdminPhone(cleanPhone);
-        setAdminName('Administrator');
-        setStep('otp');
-        setSuccessMsg(`Mobile verified! Enter verification passcode for +91 ${cleanPhone}`);
-      }
+      // 2. Mount the OTP widget before it sends the first SMS.
+      setActiveReqId(undefined);
+      setAdminPhone(cleanPhone);
+      setAdminName(cleanPhone === '7451050607' ? 'Vivek Baliyan (Director)' : 'Aacharya Dhanvantari');
+      setStep('otp');
+      setSuccessMsg(`Mobile number confirmed. Sending a verification code to +91 ${cleanPhone}…`);
     } catch (err: any) {
       console.error('[Admin Direct OTP Error]:', err);
       setError('Connection failure during mobile verification.');
@@ -503,6 +484,7 @@ export const AdminGatewayLogin: React.FC<AdminGatewayLoginProps> = ({
                 widgetName="Admin Verification"
                 smsOnly={true}
                 initialReqId={activeReqId}
+                autoSend={!activeReqId}
                 theme="light"
                 onVerified={handleAdminOtpVerified}
                 onCancel={() => {

@@ -13,6 +13,13 @@ export const getPageFromUrl = () => {
   }
   
   const cleanPath = path.substring(1); // remove leading slash
+
+  if (cleanPath.startsWith('r/')) {
+    return { page: 'affiliate-referral', params: { code: decodeURIComponent(cleanPath.slice(2)) } };
+  }
+  if (cleanPath === 'affiliate' || cleanPath.startsWith('affiliate/')) {
+    return { page: 'affiliate', params: { section: cleanPath.split('/')[1] || 'dashboard' } };
+  }
   
   if (cleanPath === 'shop') {
     const search = searchParams.get('search') || '';

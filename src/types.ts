@@ -232,7 +232,7 @@ export interface UserMembership {
 export interface User {
   email: string;
   fullName: string;
-  role: 'customer' | 'admin';
+  role: 'customer' | 'affiliate' | 'admin';
   phone?: string;
   addresses: Address[];
   password?: string;

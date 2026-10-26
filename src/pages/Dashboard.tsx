@@ -20,6 +20,7 @@ import { ImageUploadField } from '../components/ImageUploadField';
 import { MembershipCardSection } from '../components/MembershipCardSection';
 import { sendMSG91Otp, formatMSG91Identifier } from '../services/msg91OtpService';
 import { Pagination } from '../components/Pagination';
+import { AffiliateAdminPanel } from '../components/AffiliateAdminPanel';
 import { FORMULATION_PRESET_IMAGES, FORMULATION_IMAGES_MAP, getVariantImage, getFormulationPresetImage } from '../utils/variantImages';
 
 const PRODUCT_CATEGORIES = [
@@ -1616,6 +1617,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <span>Remedies Catalog CRUD</span>
                 </button>
                 <button
+                  onClick={() => setActiveTab('admin-affiliates')}
+                  className="shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer bg-brand-gold-300/40 text-brand-green-900 hover:bg-brand-gold-300"
+                >
+                  <TrendingUp className="w-4 h-4 shrink-0" />
+                  <span>Affiliate Management</span>
+                </button>
+                <button
                   onClick={() => setActiveTab('admin-orders')}
                   className={`shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
                     activeTab === 'admin-orders' 
@@ -1697,6 +1705,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Content Panel Area */}
         <div className={`min-w-0 lg:col-span-1 bg-white border ${isAdmin ? 'border-green-100 shadow-xl shadow-green-100/40' : 'border-brand-green-600/5'} p-4 sm:p-6 lg:p-8 rounded-3xl min-h-[450px]`}>
           
+          {activeTab === 'admin-affiliates' && isAdmin && <AffiliateAdminPanel />}
+
           {/* TAB: MY PROFILE & ACCOUNT (CUSTOMER) */}
           {activeTab === 'account' && user && (
             <div className="space-y-6 animate-in fade-in duration-300">
@@ -5413,6 +5423,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
                 <button type="button" disabled={savingMembershipPlans || membershipPlanPrices.length !== 5} onClick={handleSaveMembershipPlans} className="rounded-xl bg-gradient-to-r from-brand-green-800 to-brand-green-700 px-5 py-3 text-xs font-extrabold text-white shadow-md transition hover:from-brand-green-900 hover:to-brand-green-800 disabled:cursor-not-allowed disabled:opacity-50">
                   {savingMembershipPlans ? 'Saving Prices…' : 'Save Membership Prices'}
+                </button>
+                <button
+                  onClick={() => setActiveTab('admin-affiliates')}
+                  className="shrink-0 snap-start lg:w-full text-left px-3.5 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                >
+                  <TrendingUp className="w-4 h-4 shrink-0" />
+                  <span>Affiliate Management</span>
                 </button>
               </section>
             </div>

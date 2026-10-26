@@ -20,6 +20,8 @@ export interface SecureOtpWidgetProps {
   smsOnly?: boolean; // strictly SMS
   allowedChannels?: string[];
   initialReqId?: string;
+  /** Send the first code after this widget has mounted. */
+  autoSend?: boolean;
   initialOtp?: string;
   theme?: 'light' | 'dark'; // Theme mode
   onVerified: (data: { code: string; accessToken?: string; reqId?: string }) => void;
@@ -34,6 +36,7 @@ export const SecureOtpWidget: React.FC<SecureOtpWidgetProps> = ({
   purpose = 'Verification',
   widgetName = 'BvAuth',
   initialReqId,
+  autoSend = false,
   theme = 'light',
   onVerified,
   onCancel,
@@ -46,9 +49,12 @@ export const SecureOtpWidget: React.FC<SecureOtpWidgetProps> = ({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [timer, setTimer] = useState(30);
+  // A code supplied by the parent has already been sent. For an automatic
+  // first send, keep resend available until the initial request succeeds.
+  const [timer, setTimer] = useState(initialReqId ? 30 : (autoSend ? 0 : 30));
   const [activeReqId, setActiveReqId] = useState<string | undefined>(initialReqId);
   const inputRef = useRef<HTMLInputElement>(null);
+  const hasAutoSent = useRef(false);
 
   const isEmailTarget = identifier.includes('@');
   const otpLength = 4;
@@ -105,6 +111,40 @@ export const SecureOtpWidget: React.FC<SecureOtpWidgetProps> = ({
       setLoading(false);
     }
   };
+
+  // Admin login reaches this screen only after its credentials/phone have
+  // been checked. Dispatch here (after the MSG91 widget and captcha target
+  // exist) instead of attempting to send from the previous screen.
+  useEffect(() => {
+    if (!autoSend || initialReqId || hasAutoSent.current) return;
+    hasAutoSent.current = true;
+
+    const sendInitialOtp = async () => {
+      setLoading(true);
+      setErrorMsg('');
+      setSuccessMsg('');
+      try {
+        const formattedTarget = isEmailTarget
+          ? identifier.trim().toLowerCase()
+          : formatMSG91Identifier(identifier);
+        const res = await sendMSG91Otp(formattedTarget);
+        if (res.success) {
+          if (res.reqId) setActiveReqId(res.reqId);
+          setSuccessMsg('SMS passcode sent. Please enter it below.');
+          setTimer(30);
+        } else {
+          setErrorMsg(res.error || 'Unable to send the SMS code. Please use Resend SMS OTP to try again.');
+        }
+      } catch (err: any) {
+        console.error('[OTP Initial Send Error]:', err);
+        setErrorMsg('Unable to send the SMS code. Please use Resend SMS OTP to try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void sendInitialOtp();
+  }, [autoSend, identifier, initialReqId, isEmailTarget]);
 
   // Form submission handler
   const handleFormSubmit = async (e: React.FormEvent) => {

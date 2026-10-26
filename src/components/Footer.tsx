@@ -225,6 +225,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenConsultant, se
             <li><button onClick={() => onNavigate('static', { page: 'privacy' })} className="hover:text-brand-green-800 transition-colors text-left">Privacy Guard & Cookies</button></li>
             <li><button onClick={() => onNavigate('static', { page: 'terms' })} className="hover:text-brand-green-800 transition-colors text-left">Terms & Conditions of Service</button></li>
             <li><button onClick={() => onNavigate('static', { page: 'faq' })} className="hover:text-brand-green-800 transition-colors text-left">Help Centers & FAQs</button></li>
+            <li className="pt-2">
+              <button onClick={() => onNavigate('affiliate', { section: 'register' })} className="group w-full rounded-xl border border-brand-gold-400/50 bg-brand-cream-100 p-3 text-left transition hover:border-brand-green-800 hover:bg-brand-green-900">
+                <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-brand-gold-700 group-hover:text-brand-gold-300">BV Life Partners</span>
+                <span className="mt-1 flex items-center justify-between gap-2 text-sm font-bold text-brand-green-900 group-hover:text-white">Join the affiliate program <ArrowRight className="h-4 w-4 shrink-0" /></span>
+              </button>
+            </li>
           </ul>
         </div>
 
